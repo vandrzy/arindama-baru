@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand Primary: Athletic Deep Green */
+  --brand-primary: #0d5c3a;
+  --brand-primary-hover: #09472c;
+  --brand-primary-light: #e8f5e9;
+  --brand-primary-border: #a7f3d0;
+
+  /* Accent: Championship Podium Gold */
+  --brand-accent: #f59e0b;
+  --brand-accent-hover: #d97706;
+  --brand-accent-surface: #fef3c7;
+
+  /* Canvas & Surfaces */
+  --bg-app: #f8faf9;
+  --bg-card: #ffffff;
+  --bg-card-muted: #f1f5f3;
+
+  /* Typography Colors */
+  --text-primary: #0f291e;
+  --text-secondary: #4a5d54;
+  --text-muted: #7c9085;
+
+  /* Status Colors */
+  --status-success: #16a34a;
+  --status-warning: #ea580c;
+  --status-error: #dc2626;
+  --status-info: #0284c7;
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px rgba(15, 41, 30, 0.06), 0 4px 12px rgba(15, 41, 30, 0.04);
+  --shadow-elevated: 0 4px 6px -1px rgba(15, 41, 30, 0.07), 0 12px 24px -4px rgba(15, 41, 30, 0.08);
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', var(--font-plus-jakarta), sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessible and Themed Text Selection */
+::selection {
+  background-color: var(--brand-primary-light);
+  color: var(--brand-primary);
+}
+
+/* High Contrast Keyboard Focus Rings */
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* Tabular Numerics for Data Precision */
+.tabular-nums,
+.stat-number,
+.table-metric {
+  font-family: var(--font-plus-jakarta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom Themed Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f3;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a7f3d0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0d5c3a;
+}
