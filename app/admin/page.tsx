@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,16 @@ import {
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
-  const { submissions, updateSubmissionStatus } = useApp();
+  const router = useRouter();
+  const { submissions, updateSubmissionStatus, currentUser, role } = useApp();
+
+  // Route protection: redirect ke login jika tidak authenticated atau bukan ADMIN
+  React.useEffect(() => {
+    if (!currentUser || role !== "ADMIN") {
+      router.push("/login");
+      return;
+    }
+  }, [currentUser, role, router]);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [verifyingSubmission, setVerifyingSubmission] = useState<SurveySubmission | null>(null);
@@ -343,7 +353,7 @@ export default function AdminDashboardPage() {
 
                       <td className="py-4 px-4">
                         <span className="inline-flex items-center gap-1 font-bold text-brand-primary tabular-nums">
-                          {sub.totalIndikatorTerisi} / 8 Indikator
+                          {sub.totalIndikatorTerisi} / 16 Indikator
                         </span>
                       </td>
 

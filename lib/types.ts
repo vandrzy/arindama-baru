@@ -25,7 +25,7 @@ export interface SurveyAnswer {
   namaKegiatan: string;
   cabangOlahraga: string;
   tingkatPenyelenggaraan: "Nasional" | "Internasional" | "";
-  sumberPendanaan: "APBD" | "APBN" | "Swasta/Sponsorship" | "Kombinasi" | "";
+  sumberPendanaan: "APBD" | "APBN" | "Swasta/Sponsorship" | "Kombinasi" | "Mandiri" | "";
   capaianPrestasi?: string;
   medaliEmas?: number;
   medaliPerak?: number;
@@ -36,6 +36,8 @@ export interface SurveyAnswer {
   fileBuktiName?: string;
   fileBuktiSize?: string;
   fileBuktiHash?: string;
+  bobotNilai?: number; // Bobot nilai otomatis (Partisipasi=1, Event/Prestasi=3, SDM=2)
+  tingkatWilayah?: "Kabupaten/Kota" | "Provinsi" | "Nasional" | "Internasional" | "";
 }
 
 export interface SurveySubmission {

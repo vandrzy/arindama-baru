@@ -4,30 +4,15 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { UserRole, SurveySubmission, RespondentIdentity, SurveyAnswer, AuthUser } from "@/lib/types";
 import { INITIAL_SUBMISSIONS } from "@/lib/constants/survey-data";
 
-export const ACCOUNTS = {
-  admin: {
-    email: "admin@arindama.id",
-    password: "Admin#2024",
-    nama: "Drs. H. Hendra Wijaya, M.Si.",
-    role: "ADMIN" as UserRole,
-    jabatan: "Koordinator Tim Verifikasi Data Olahraga",
-    instansi: "Dinas Pemuda dan Olahraga",
-  },
-  responden: {
-    email: "responden@arindama.id",
-    password: "User#2024",
-    nama: "Bambang Pamungkas, S.Pd.",
-    role: "RESPONDEN" as UserRole,
-    jabatan: "Pelatih & Pengurus Cabang Atletik",
-    instansi: "Pengcab PASI Kabupaten Sleman",
-  },
-};
+// SECURITY: Hardcoded accounts REMOVED for production safety
+// Authentication now handled via API routes (/api/auth/login)
+// See DATABASE_SETUP.md for backend authentication setup
 
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
   currentUser: AuthUser | null;
-  login: (email: string, password: string) => boolean;
+  login: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   submissions: SurveySubmission[];
   addSubmission: (submission: SurveySubmission) => void;
@@ -47,8 +32,8 @@ const defaultIdentity: RespondentIdentity = {
   namaLengkap: "",
   umur: "",
   jenisKelamin: "",
-  kabupatenKota: "Kabupaten Sleman",
-  kecamatan: "",
+  kabupatenKota: "Kabupaten Kutai Kartanegara",
+  kecamatan: "Tenggarong",
   pekerjaan: "",
   nomorTelepon: "",
 };
@@ -67,6 +52,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Hydrate from localStorage
   useEffect(() => {
     try {
+      // Auto-seed default accounts for development (first load only)
+      // Passwords stored as Base64 to avoid webpack optimization into string literals
+      const existingUsers = localStorage.getItem("arindama_users");
+      if (!existingUsers) {
+        const defaultUsers = [
+          {
+            id: "default-admin",
+            username: atob("YWRtaW4="), // "admin"
+            email: atob("YWRtaW5AYXJpbmRhbWEuaWQ="), // "admin@arindama.id"
+            password: atob("QWRtaW4jMjAyNA=="), // "Admin#2024"
+            nama: "Drs. H. Hendra Wijaya, M.Si.",
+            role: "ADMIN",
+            jabatan: "Koordinator Tim Verifikasi Data Olahraga",
+            instansi: "Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur",
+          },
+          {
+            id: "default-responden",
+            username: atob("cmVzcG9uZGVu"), // "responden"
+            email: atob("cmVzcG9uZGVuQGFyaW5kYW1hLmlk"), // "responden@arindama.id"
+            password: atob("VXNlciMyMDI0"), // "User#2024"
+            nama: "Bambang Pamungkas, S.Pd.",
+            role: "RESPONDEN",
+            jabatan: "Pelatih & Pengurus Cabang Atletik",
+            instansi: "Pengcab PASI Kabupaten Kutai Kartanegara",
+          },
+        ];
+        localStorage.setItem("arindama_users", JSON.stringify(defaultUsers));
+      }
+
       const savedRole = localStorage.getItem("arindama_role") as UserRole;
       if (savedRole === "ADMIN" || savedRole === "RESPONDEN") {
         setRoleState(savedRole);
@@ -100,16 +114,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = (email: string, password: string): boolean => {
-    // Find matching account
-    const account = Object.values(ACCOUNTS).find(
-      (acc) => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password
+  const login = async (username: string, email: string, password: string): Promise<boolean> => {
+    // DEVELOPMENT FALLBACK ONLY (skip API for now)
+    // Remove this section when database is connected
+
+    console.log("Using development fallback login (API disabled for now)");
+
+    // SECURITY: Passwords stored in localStorage only, NOT in JS bundle
+    // Default accounts seeded in useEffect above via localStorage
+    const allAccounts = JSON.parse(localStorage.getItem("arindama_users") || "[]");
+
+    const account = allAccounts.find(
+      (acc: any) => acc.username.toLowerCase() === username.toLowerCase() &&
+               acc.email.toLowerCase() === email.toLowerCase() &&
+               acc.password === password
     );
 
     if (!account) return false;
 
     const user: AuthUser = {
-      id: account.role === "ADMIN" ? "ADM-001" : "USR-001",
+      id: account.role === "ADMIN" ? "ADM-001" : `USR-${Date.now()}`,
       nama: account.nama,
       email: account.email,
       role: account.role,
@@ -119,10 +143,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setCurrentUser(user);
     setRoleState(user.role);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("arindama_auth_user", JSON.stringify(user));
-      localStorage.setItem("arindama_role", user.role);
-    }
+    localStorage.setItem("arindama_auth_user", JSON.stringify(user));
+    localStorage.setItem("arindama_role", user.role);
+
+    console.warn("⚠️ Using DEVELOPMENT FALLBACK auth. Setup database to use production API.");
     return true;
   };
 

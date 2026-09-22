@@ -37,9 +37,9 @@ export default function KuesionerPage() {
   } = useApp();
 
   // Step 0: Identitas Diri
-  // Step 1 - 8: Indikator 1 sampai 8
-  // Step 9: Tinjauan Akhir & Konfirmasi
-  // Step 10: Halaman Sukses
+  // Step 1 - 16: Indikator 1 sampai 16 (8 Kab/Kota + 8 Provinsi)
+  // Step 17: Tinjauan Akhir & Konfirmasi
+  // Step 18: Halaman Sukses
   const [currentStep, setCurrentStep] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,11 +50,11 @@ export default function KuesionerPage() {
     setTouchedFields((prev) => ({ ...prev, [field]: true }));
   };
 
-  const totalSteps = 10; // 0 to 9
+  const totalSteps = 18; // 0 to 17
 
-  // Helper current indicator (if step 1 to 8)
+  // Helper current indicator (if step 1 to 16)
   const currentIndicator =
-    currentStep >= 1 && currentStep <= 8 ? SURVEY_INDICATORS[currentStep - 1] : null;
+    currentStep >= 1 && currentStep <= 16 ? SURVEY_INDICATORS[currentStep - 1] : null;
 
   // Active answer object for current indicator
   const currentAnswer: SurveyAnswer = (currentIndicator && draftAnswers[currentIndicator.id]) || {
@@ -126,7 +126,7 @@ export default function KuesionerPage() {
 
   const handleNext = () => {
     if (validateStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, 9));
+      setCurrentStep((prev) => Math.min(prev + 1, 17));
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -157,13 +157,13 @@ export default function KuesionerPage() {
       clearDraft();
       setIsSubmitting(false);
       setSubmittedId(newId);
-      setCurrentStep(10); // Halaman Sukses
+      setCurrentStep(18); // Halaman Sukses
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 800);
   };
 
-  // Step 10: Halaman Sukses (Sesuai Mockup Step 6 di Poster arindama.jpeg)
-  if (currentStep === 10) {
+  // Step 18: Halaman Sukses (Sesuai Mockup Step 6 di Poster arindama.jpeg)
+  if (currentStep === 18) {
     return (
       <div className="max-w-md mx-auto py-10 sm:py-16 text-center animate-in fade-in zoom-in-95 duration-300">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-elevated p-8 sm:p-10">
@@ -244,7 +244,7 @@ export default function KuesionerPage() {
             <h1 className="text-base sm:text-lg font-extrabold text-brand-text">
               {currentStep === 0
                 ? "Identitas Responden"
-                : currentStep === 9
+                : currentStep === 17
                 ? "Tinjauan & Konfirmasi Pengiriman"
                 : `${currentIndicator?.numberStr}: ${currentIndicator?.title}`}
             </h1>
@@ -252,10 +252,10 @@ export default function KuesionerPage() {
 
           <span className="text-xs font-bold text-brand-primary bg-brand-primary-light px-3 py-1 rounded-full tabular-nums">
             {currentStep === 0
-              ? "Tahap 1 dari 10"
-              : currentStep === 9
+              ? "Tahap 1 dari 18"
+              : currentStep === 17
               ? "Tahap Akhir"
-              : `Indikator ${currentStep} dari 8`}
+              : `Indikator ${currentStep} dari 16`}
           </span>
         </div>
 
@@ -416,11 +416,17 @@ export default function KuesionerPage() {
                   }
                   className="w-full h-11 px-3 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none bg-white transition-all"
                 >
-                  <option value="Kabupaten Sleman">Kabupaten Sleman</option>
-                  <option value="Kabupaten Bantul">Kabupaten Bantul</option>
-                  <option value="Kabupaten Gunungkidul">Kabupaten Gunungkidul</option>
-                  <option value="Kabupaten Kulon Progo">Kabupaten Kulon Progo</option>
-                  <option value="Kota Yogyakarta">Kota Yogyakarta</option>
+                  <option value="Kabupaten Berau">Kabupaten Berau</option>
+                  <option value="Kabupaten Kutai Barat">Kabupaten Kutai Barat</option>
+                  <option value="Kabupaten Kutai Kartanegara">Kabupaten Kutai Kartanegara</option>
+                  <option value="Kabupaten Kutai Timur">Kabupaten Kutai Timur</option>
+                  <option value="Kabupaten Mahakam Ulu">Kabupaten Mahakam Ulu</option>
+                  <option value="Kabupaten Paser">Kabupaten Paser</option>
+                  <option value="Kabupaten Penajam Paser Utara">Kabupaten Penajam Paser Utara</option>
+                  <option value="Kota Balikpapan">Kota Balikpapan</option>
+                  <option value="Kota Bontang">Kota Bontang</option>
+                  <option value="Kota Samarinda">Kota Samarinda</option>
+                  <option value="Kota Tarakan">Kota Tarakan</option>
                 </select>
               </div>
 
@@ -442,7 +448,7 @@ export default function KuesionerPage() {
                   onChange={(e) =>
                     setDraftIdentity((prev) => ({ ...prev, kecamatan: e.target.value }))
                   }
-                  placeholder="Contoh: Depok / Mlati"
+                  placeholder="Contoh: Tenggarong / Loa Janan / Samboja"
                   className={`w-full h-11 px-3.5 rounded-xl border text-sm focus:ring-1 outline-none transition-all ${
                     touchedFields.kecamatan && !draftIdentity.kecamatan.trim()
                       ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-red-500"
@@ -499,26 +505,41 @@ export default function KuesionerPage() {
         </Card>
       )}
 
-      {/* STEP 1 s/d 8: Pengisian 8 Indikator Keolahragaan Terstruktur */}
-      {currentStep >= 1 && currentStep <= 8 && currentIndicator && (
-        <Card className="space-y-6">
-          {/* Card Info Indikator Sesuai Juknis kuesioner-hint.pdf */}
-          <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4">
-            <div className="flex items-start gap-2.5">
-              <HelpCircle className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
-                  Petunjuk Teknis Pengisian
-                </h4>
-                <p className="text-xs text-emerald-900 mt-1 leading-relaxed">
-                  {currentIndicator.fullDesc}
-                </p>
-                <p className="text-xs font-semibold text-emerald-800 mt-2">
-                  📌 {currentIndicator.focusHint}
-                </p>
-              </div>
-            </div>
+      {/* STEP 1 s/d 16: Pengisian 16 Indikator Keolahragaan Terstruktur (8 Kab/Kota + 8 Provinsi) */}
+      {currentStep >= 1 && currentStep <= 16 && currentIndicator && (
+      <Card className="space-y-6">
+      {/* Card Info Indikator Sesuai Juknis kuesioner-hint.pdf */}
+      <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 space-y-3">
+        <div className="flex items-start gap-2.5">
+          <HelpCircle className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+              Petunjuk Teknis Pengisian
+            </h4>
+            <p className="text-xs text-emerald-900 mt-1 leading-relaxed">
+              {currentIndicator.fullDesc}
+            </p>
+            <p className="text-xs font-semibold text-emerald-800 mt-2">
+              📌 {currentIndicator.focusHint}
+            </p>
           </div>
+        </div>
+            
+        {/* Keterangan Inklusivitas Penyandang Disabilitas (UPDATE.md poin d) */}
+        {currentIndicator.keteranganInklusif && (
+          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-lg p-3 flex items-start gap-2.5">
+            <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              Aspek Inklusivitas Penyandang Disabilitas
+            </span>
+            <p className="text-xs text-indigo-900 leading-relaxed">
+              {currentIndicator.keteranganInklusif}
+            </p>
+          </div>
+        )}
+      </div>
 
           <div className="space-y-4">
             {/* Nama Kegiatan / Kejuaraan */}
@@ -589,20 +610,21 @@ export default function KuesionerPage() {
                   <option value="APBN">APBN (Pusat / Kemenpora)</option>
                   <option value="Swasta/Sponsorship">Swasta / Sponsorship</option>
                   <option value="Kombinasi">Kombinasi (Pemerintah &amp; Swasta)</option>
+                  <option value="Mandiri">Mandiri</option>
                 </select>
               </div>
             </div>
 
             {/* Perolehan Medali (Khusus Indikator 1 & 6) */}
             {(currentIndicator.id === 1 || currentIndicator.id === 6) && (
-              <div className="bg-amber-50/50 border border-amber-200/80 rounded-xl p-4">
+              <div className="bg-amber-50/50 border border-amber-200/80 rounded-xl p-3 sm:p-4">
                 <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Medal className="w-4 h-4 text-brand-accent" />
                   Perolehan Medali Prestasi
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div>
-                    <span className="block text-xs text-amber-900 font-semibold mb-1">
+                    <span className="block text-[10px] sm:text-xs text-amber-900 font-semibold mb-1">
                       🥇 Emas
                     </span>
                     <input
@@ -612,11 +634,11 @@ export default function KuesionerPage() {
                       onChange={(e) =>
                         handleUpdateAnswer("medaliEmas", parseInt(e.target.value) || 0)
                       }
-                      className="w-full h-10 px-3 rounded-lg border border-amber-200 text-sm bg-white tabular-nums"
+                      className="w-full h-9 sm:h-10 px-2 sm:px-3 rounded-lg border border-amber-200 text-xs sm:text-sm bg-white tabular-nums"
                     />
                   </div>
                   <div>
-                    <span className="block text-xs text-amber-900 font-semibold mb-1">
+                    <span className="block text-[10px] sm:text-xs text-amber-900 font-semibold mb-1">
                       🥈 Perak
                     </span>
                     <input
@@ -626,11 +648,11 @@ export default function KuesionerPage() {
                       onChange={(e) =>
                         handleUpdateAnswer("medaliPerak", parseInt(e.target.value) || 0)
                       }
-                      className="w-full h-10 px-3 rounded-lg border border-amber-200 text-sm bg-white tabular-nums"
+                      className="w-full h-9 sm:h-10 px-2 sm:px-3 rounded-lg border border-amber-200 text-xs sm:text-sm bg-white tabular-nums"
                     />
                   </div>
                   <div>
-                    <span className="block text-xs text-amber-900 font-semibold mb-1">
+                    <span className="block text-[10px] sm:text-xs text-amber-900 font-semibold mb-1">
                       🥉 Perunggu
                     </span>
                     <input
@@ -640,7 +662,7 @@ export default function KuesionerPage() {
                       onChange={(e) =>
                         handleUpdateAnswer("medaliPerunggu", parseInt(e.target.value) || 0)
                       }
-                      className="w-full h-10 px-3 rounded-lg border border-amber-200 text-sm bg-white tabular-nums"
+                      className="w-full h-9 sm:h-10 px-2 sm:px-3 rounded-lg border border-amber-200 text-xs sm:text-sm bg-white tabular-nums"
                     />
                   </div>
                 </div>
@@ -686,8 +708,8 @@ export default function KuesionerPage() {
         </Card>
       )}
 
-      {/* STEP 9: Tinjauan & Konfirmasi Sebelum Kirim */}
-      {currentStep === 9 && (
+      {/* STEP 17: Tinjauan & Konfirmasi Sebelum Kirim */}
+      {currentStep === 17 && (
         <Card className="space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
             <div className="w-8 h-8 rounded-lg bg-brand-primary-light text-brand-primary flex items-center justify-center">
@@ -698,7 +720,7 @@ export default function KuesionerPage() {
                 Periksa Kembali Isian Anda
               </h2>
               <p className="text-xs text-brand-text-secondary">
-                Pastikan data identitas dan jawaban 8 indikator telah sesuai dengan kondisi sebenarnya.
+                Pastikan data identitas dan jawaban 16 indikator telah sesuai dengan kondisi sebenarnya.
               </p>
             </div>
           </div>
@@ -708,7 +730,7 @@ export default function KuesionerPage() {
             <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider mb-2">
               Identitas Responden:
             </h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="text-gray-400 block">Nama:</span>
                 <span className="font-semibold text-brand-text">{draftIdentity.namaLengkap}</span>
@@ -732,10 +754,10 @@ export default function KuesionerPage() {
             </div>
           </div>
 
-          {/* Ringkasan Isian 8 Indikator */}
+          {/* Ringkasan Isian 16 Indikator */}
           <div>
             <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider mb-3">
-              Ringkasan 8 Indikator Keolahragaan:
+              Ringkasan 16 Indikator Keolahragaan:
             </h3>
             <div className="space-y-2.5">
               {SURVEY_INDICATORS.map((ind) => {
@@ -779,6 +801,47 @@ export default function KuesionerPage() {
             </div>
           </div>
 
+          {/* Ringkasan Bobot & Auto-Scoring */}
+          {(() => {
+            let totalBobot = 0;
+            let bobotMax = 0;
+            SURVEY_INDICATORS.forEach((ind) => {
+              const ans = draftAnswers[ind.id];
+              const isFilled = ans && ans.namaKegiatan;
+              if (ind.bobotNilai) {
+                bobotMax += ind.bobotNilai;
+                if (isFilled) totalBobot += ind.bobotNilai;
+              }
+            });
+            const skor = bobotMax > 0 ? Math.round((totalBobot / bobotMax) * 100) : 0;
+            return (
+              <div className="bg-gradient-to-r from-brand-primary-light to-emerald-50 rounded-xl p-4 border border-brand-primary/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-brand-primary uppercase tracking-wider mb-1">
+                      📊 Bobot Nilai Otomatis
+                    </h3>
+                    <p className="text-xs text-brand-text-secondary">
+                      Indikator terisi: {totalBobot} dari {bobotMax} bobot maksimal
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-brand-primary tabular-nums">
+                      {skor}
+                    </div>
+                    <div className="text-xs text-brand-text-secondary">Skor Akhir</div>
+                  </div>
+                </div>
+                <div className="mt-3 w-full bg-white/60 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-brand-primary h-full rounded-full transition-all duration-500"
+                    style={{ width: `${skor}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Pernyataan Kebenaran Data */}
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-950 flex items-start gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
@@ -801,7 +864,7 @@ export default function KuesionerPage() {
           <div />
         )}
 
-        {currentStep < 9 ? (
+        {currentStep < 17 ? (
           <Button variant="primary" size="md" onClick={handleNext}>
             <span>
               {currentStep === 0 ? "Mulai Jawab Pertanyaan" : "Indikator Selanjutnya"}

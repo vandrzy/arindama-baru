@@ -1,0 +1,205 @@
+// Prisma Schema for ARINDAMA Survey Application
+// Database: PostgreSQL
+// Setup: Production-ready dengan enkripsi password & audit logging
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  email       String   @unique
+  password    String   // Hashed with bcrypt
+  nama        String
+  role        UserRole @default(RESPONDEN)
+  jabatan     String?
+  instansi    String?
+  
+  // Relations
+  submissions Submission[]
+  auditLogs   AuditLog[]
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  RESPONDEN
+}
+
+// ============================================
+// SURVEY SUBMISSIONS
+// ============================================
+
+model Submission {
+  id                  String           @id @default(cuid())
+  userId              String
+  tahunSurvei         Int              @default(2024)
+  status              SubmissionStatus @default(DRAFT)
+  catatanVerifikator  String?
+  totalIndikatorTerisi Int             @default(0)
+  
+  // Respondent Identity (embedded)
+  namaLengkap         String
+  umur                Int
+  jenisKelamin        JenisKelamin
+  kabupatenKota       String
+  kecamatan           String
+  pekerjaan           String
+  nomorTelepon        String
+  
+  // Relations
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers             SurveyAnswer[]
+  
+  // Timestamps
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  verifiedAt          DateTime?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([tahunSurvei])
+  @@map("submissions")
+}
+
+enum SubmissionStatus {
+  DRAFT
+  TERKIRIM
+  TERVERIFIKASI
+  PERLU_REVISI
+}
+
+enum JenisKelamin {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+// ============================================
+// SURVEY ANSWERS (Indicators)
+// ============================================
+
+model SurveyAnswer {
+  id                      String    @id @default(cuid())
+  submissionId            String
+  
+  // Indicator details
+  indicatorId             Int
+  indicatorTitle          String
+  namaKegiatan            String
+  cabangOlahraga          String
+  tingkatPenyelenggaraan  TingkatPenyelenggaraan?
+  sumberPendanaan         SumberPendanaan?
+  capaianPrestasi         String?
+  
+  // Medals
+  medaliEmas              Int       @default(0)
+  medaliPerak             Int       @default(0)
+  medaliPerunggu          Int       @default(0)
+  
+  // Additional info
+  jumlahPeserta           Int?
+  nomorSuratTugas         String?
+  uraianKegiatan          String
+  tingkatWilayah          TingkatWilayah?
+  bobotNilai              Int       @default(1)
+  
+  // File attachment (stored separately or as reference)
+  fileBuktiName           String?
+  fileBuktiSize           Int?
+  fileBuktiHash           String?
+  
+  // Relations
+  submission              Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+  
+  @@index([submissionId])
+  @@index([indicatorId])
+  @@map("survey_answers")
+}
+
+enum TingkatPenyelenggaraan {
+  NASIONAL
+  INTERNASIONAL
+}
+
+enum SumberPendanaan {
+  APBD
+  APBN
+  SWASTA_SPONSORSHIP
+  KOMBINASI
+  MANDIRI
+}
+
+enum TingkatWilayah {
+  KABUPATEN_KOTA
+  PROVINSI
+  NASIONAL
+  INTERNASIONAL
+}
+
+// ============================================
+// AUDIT LOG (Security & Tracking)
+// ============================================
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  userId      String
+  action      String      // LOGIN, LOGOUT, CREATE_SUBMISSION, UPDATE_STATUS, etc.
+  entity      String?     // Submission, User, etc.
+  entityId    String?     // ID of affected entity
+  ipAddress   String?
+  userAgent   String?
+  details     Json?       // Additional metadata
+  
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Timestamp
+  createdAt   DateTime    @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// FILE ATTACHMENTS (Optional - for production)
+// ============================================
+
+model FileAttachment {
+  id              String   @id @default(cuid())
+  submissionId    String
+  fileName        String
+  filePath        String   // S3 path or local path
+  fileSize        Int
+  mimeType        String
+  fileHash        String   // SHA-256 for integrity
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  
+  @@index([submissionId])
+  @@map("file_attachments")
+}

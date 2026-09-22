@@ -17,41 +17,54 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useApp();
+  const { login, currentUser, role } = useApp();
 
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!email.trim() || !password.trim()) {
-      setError("Email dan Password wajib diisi.");
-      return;
-    }
-
-    setLoading(true);
-    setTimeout(() => {
-      const success = login(email, password);
-      setLoading(false);
-
-      if (!success) {
-        setError("Email atau password salah. Silakan coba lagi.");
-        return;
-      }
-
-      // Redirect based on role
-      const isAdmin = email.toLowerCase().includes("admin");
-      if (isAdmin) {
+  // Handle redirect in useEffect after state settles
+  React.useEffect(() => {
+    if (shouldRedirect && currentUser) {
+      // Redirect based on role from context, not email
+      if (role === "ADMIN") {
         router.push("/admin");
       } else {
         router.push("/kuesioner");
       }
-    }, 500);
+    }
+  }, [shouldRedirect, currentUser, role, router]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setError("Username, Email, dan Password wajib diisi.");
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const success = await login(username, email, password);
+      setLoading(false);
+
+      if (!success) {
+        setError("Username, Email, atau Password salah. Silakan coba lagi.");
+        return;
+      }
+
+      // Set flag to redirect in useEffect after state settles
+      setShouldRedirect(true);
+    } catch (err) {
+      setLoading(false);
+      setError("Terjadi kesalahan. Silakan coba lagi.");
+    }
   };
 
   return (
@@ -91,6 +104,25 @@ export default function LoginPage() {
             )}
 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
+              {/* Username */}
+              <div>
+                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
+                  Username
+                </label>
+                <div className="relative flex items-center">
+                  <svg className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Masukkan username Anda"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
+                  />
+                </div>
+              </div>
+
               {/* Email */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
@@ -147,8 +179,8 @@ export default function LoginPage() {
               <div className="text-center pt-2">
                 <span className="text-xs text-brand-text-secondary">
                   Belum punya akun?{" "}
-                  <Link href="/kuesioner" className="text-brand-primary font-bold hover:underline">
-                    Langsung Isi Kuesioner
+                  <Link href="/register" className="text-brand-primary font-bold hover:underline">
+                    Daftar Sekarang
                   </Link>
                 </span>
               </div>

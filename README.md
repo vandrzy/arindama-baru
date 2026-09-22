@@ -1,103 +1,126 @@
-# 🏅 ARINDAMA SPORT SURVEY
+# ARINDAMA SPORT SURVEY
 
-Aplikasi kuesioner keolahragaan terpadu untuk pengumpulan data dan evaluasi capaian prestasi olahraga nasional & internasional tingkat kabupaten/kota.
+Aplikasi kuesioner keolahragaan terpadu untuk pengumpulan data dan evaluasi capaian prestasi olahraga nasional & internasional tingkat kabupaten/kota Provinsi Kalimantan Timur.
 
-## 📋 Tentang Aplikasi
+## Tentang Aplikasi
 
 ARINDAMA Sport Survey adalah platform berbasis web untuk:
 
-- **Responden** — Mengisi kuesioner 8 indikator keolahragaan secara bertahap, lengkap dengan upload dokumen bukti PDF sah.
-- **Admin / Verifikator Dispora** — Mengelola dan memverifikasi seluruh kuesioner yang masuk melalui dashboard audit.
+- **Responden** — Mengisi kuesioner 16 indikator keolahragaan secara bertahap, lengkap dengan upload dokumen bukti PDF sah
+- **Admin / Verifikator Dispora** — Mengelola dan memverifikasi seluruh kuesioner yang masuk melalui dashboard audit
 
-## 🛠️ Teknologi
+## Teknologi
 
-| Teknologi | Versi |
-|-----------|-------|
-| Next.js | 14.2 |
-| React | 18.3 |
-| TypeScript | 5.7 |
-| Tailwind CSS | 3.4 |
-| Lucide Icons | 0.469 |
+- Next.js 14.2
+- React 18.3
+- TypeScript 5.7
+- Tailwind CSS 3.4
+- Prisma 5.22.0 + PostgreSQL
+- Lucide Icons 0.469
 
-## 🚀 Cara Menjalankan
+## Cara Menjalankan
 
 ### Prasyarat
 
-- **Node.js** versi 18 atau lebih baru — [Download di sini](https://nodejs.org/)
-- **npm** (sudah termasuk bersama Node.js)
+- Node.js versi 18 atau lebih baru
+- npm (sudah termasuk bersama Node.js)
+- PostgreSQL (untuk production)
 
-### Langkah Instalasi
+### Instalasi
 
 ```bash
-# 1. Clone repository
+# Clone repository
 git clone <url-repo-anda>
+cd arindama
 
-# 2. Masuk ke folder project
-cd arindama-project-2
-
-# 3. Install dependencies
+# Install dependencies
 npm install
 
-# 4. Jalankan server development
+# Setup environment variables
+cp .env.example .env.local
+# Edit .env.local sesuai konfigurasi database Anda
+
+# Jalankan server development
 npm run dev
 ```
 
-Setelah berhasil, buka browser dan akses:
+Buka browser dan akses: http://localhost:3000
 
-```
-http://localhost:3000
-```
+### Login Development
 
-> Jika port 3000 sudah terpakai, Next.js otomatis mencari port lain (3001, 3002, dst). Cek terminal untuk melihat port yang aktif.
+Akun default sudah di-seed otomatis saat pertama kali membuka aplikasi:
+
+**Admin:**
+- Username: `admin`
+- Email: `admin@arindama.id`
+- Password: `Admin#2024`
+
+**Responden:**
+- Username: `responden`
+- Email: `responden@arindama.id`
+- Password: `User#2024`
+
+> **Catatan:** Development accounts di-seed ke localStorage pada first load. Production menggunakan database yang di-setup via `prisma/seed.ts`.
 
 ### Build untuk Produksi
 
 ```bash
-# Build
 npm run build
-
-# Jalankan server produksi
 npm start
 ```
 
-### Alur Penggunaan
+## Alur Penggunaan
 
-**Sebagai Responden:**
-1. Buka halaman Login → masuk dengan akun responden
+### Sebagai Responden
+
+1. Login dengan akun responden
 2. Klik "Isi Kuesioner" di navbar
 3. Isi data identitas diri
-4. Jawab 8 indikator keolahragaan satu per satu
-5. Upload dokumen bukti PDF di setiap indikator
-6. Tinjau jawaban → Kirimkan kuesioner
+4. Jawab 16 indikator keolahragaan
+5. Upload dokumen bukti PDF
+6. Tinjau dan kirimkan kuesioner
 
-**Sebagai Admin:**
-1. Buka halaman Login → masuk dengan akun admin
+### Sebagai Admin
+
+1. Login dengan akun admin
 2. Klik "Portal Admin" di navbar
-3. Lihat dashboard statistik (total submisi, terverifikasi, menunggu, perlu revisi)
-4. Klik baris tabel untuk membuka detail & audit dokumen
-5. Verifikasi atau minta revisi pada kuesioner responden
+3. Lihat dashboard statistik
+4. Audit dan verifikasi kuesioner responden
 
-## 📁 Struktur Folder
+## Struktur Folder
 
 ```
-arindama-project-2/
-├── app/                  # Halaman aplikasi (Next.js App Router)
+arindama/
+├── app/
 │   ├── page.tsx          # Beranda
 │   ├── login/            # Halaman login
-│   ├── kuesioner/        # Form kuesioner 8 indikator
+│   ├── register/         # Halaman registrasi
+│   ├── kuesioner/        # Form kuesioner 16 indikator
 │   ├── riwayat/          # Riwayat pengisian
 │   ├── admin/            # Dashboard admin & audit
-│   ├── layout.tsx        # Layout global (navbar + footer)
-│   └── globals.css       # Variabel warna & style global
-├── components/           # Komponen UI reusable
+│   └── api/              # API endpoints
+├── components/
 │   ├── navbar.tsx        # Navigasi utama
-│   ├── brand-logo.tsx    # Logo ARINDAMA
-│   └── ui/               # Button, Card, Badge, PdfDropzone, dll
-├── lib/                  # Logic & data
-│   ├── context/          # App context (auth, state management)
-│   ├── constants/        # Data indikator & submisi awal
-│   └── types.ts          # TypeScript type definitions
-├── tailwind.config.ts    # Konfigurasi Tailwind CSS
-├── package.json          # Dependencies & scripts
-└── README.md             # Dokumentasi ini
+│   └── ui/               # Komponen UI reusable
+├── lib/
+│   ├── context/          # App context (auth, state)
+│   ├── constants/        # Data indikator
+│   ├── prisma.ts         # Database client
+│   └── auth.ts           # Auth utilities
+├── prisma/
+│   └── schema.prisma     # Database schema
+└── public/               # Static assets
 ```
+
+## Fitur Utama
+
+- Form kuesioner 16 indikator keolahragaan
+- Upload dokumen PDF sebagai bukti
+- Dashboard admin untuk verifikasi
+- Manajemen user (register, login, role)
+- Responsive design (mobile-first)
+- Data Kab/Kota Kalimantan Timur (7 kabupaten + 4 kota)
+
+## Lisensi
+
+Dikembangkan untuk Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur.

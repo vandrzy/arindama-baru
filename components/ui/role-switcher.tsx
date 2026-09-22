@@ -54,7 +54,7 @@ export function RoleSwitcher() {
                   <span>1. User / Responden</span>
                 </div>
                 <p className="text-xs text-brand-text-secondary mt-1">
-                  Melihat kuesioner, isi identitas, jawab 8 indikator bertahap, upload PDF sah.
+                  Melihat kuesioner, isi identitas, jawab 16 indikator bertahap, upload PDF sah.
                 </p>
               </div>
               {isResponden && <Check className="w-4 h-4 shrink-0 text-brand-primary mt-0.5" />}

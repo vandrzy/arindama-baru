@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,17 @@ import {
 } from "lucide-react";
 
 export default function RiwayatPage() {
-  const { submissions } = useApp();
+  const router = useRouter();
+  const { submissions, currentUser } = useApp();
+
+  // Route protection: redirect ke login jika tidak authenticated
+  React.useEffect(() => {
+    if (!currentUser) {
+      router.push("/login");
+      return;
+    }
+  }, [currentUser, router]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

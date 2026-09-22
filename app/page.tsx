@@ -12,13 +12,9 @@ import {
   FileText,
   UserCheck,
   ListOrdered,
-  History,
-  ShieldCheck,
   ArrowRight,
   Sparkles,
-  Users,
   LayoutDashboard,
-  CheckCircle2,
   Calendar,
   Award,
   ChevronRight,
@@ -61,32 +57,6 @@ export default function HomePage() {
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
-
-            <Link href="/admin">
-              <Button
-                variant="outline"
-                size="lg"
-                className="bg-white/10 text-white border-white/20 hover:bg-white/20 hover:border-white/40"
-              >
-                <LayoutDashboard className="w-5 h-5" />
-                <span>Portal Admin Olahraga</span>
-              </Button>
-            </Link>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-emerald-200/80">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-brand-accent" />
-              <span>Standar 8 Indikator Resmi</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-300" />
-              <span>Verifikasi Dokumen Bukti Sah (PDF)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <LockSecurityIcon className="w-4 h-4 text-emerald-300" />
-              <span>Kerahasiaan Terjamin (UU PDP No. 27/2022)</span>
-            </div>
           </div>
         </div>
       </section>
@@ -132,7 +102,7 @@ export default function HomePage() {
             <div className="flex items-center gap-4 text-xs text-brand-text-secondary py-3 border-y border-gray-100 my-4">
               <div className="flex items-center gap-1.5">
                 <ListOrdered className="w-4 h-4 text-brand-primary" />
-                <span>8 Indikator Terstruktur</span>
+                <span>16 Indikator (8 Kab/Kota + 8 Provinsi)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-brand-accent" />
@@ -152,172 +122,10 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-
-          {/* Card 2: Status Pengisian Responden */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-card p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <History className="w-5 h-5 text-brand-primary" />
-                  <h3 className="font-bold text-brand-text text-base">
-                    Riwayat Pengisian Anda
-                  </h3>
-                </div>
-                <Badge variant="neutral">
-                  {submissions.length} Submisi Tercatat
-                </Badge>
-              </div>
-              <p className="text-xs text-brand-text-secondary leading-relaxed mb-4">
-                Lihat status peninjauan dan riwayat kuesioner yang telah Anda kirimkan ke tim verifikator dinas.
-              </p>
-
-              <div className="space-y-2">
-                {submissions.slice(0, 2).map((sub) => (
-                  <div
-                    key={sub.id}
-                    className="p-3 bg-brand-surface rounded-xl border border-gray-100 flex items-center justify-between text-xs"
-                  >
-                    <div>
-                      <span className="font-bold text-brand-text block">
-                        {sub.responden.namaLengkap}
-                      </span>
-                      <span className="text-gray-400 text-xs">
-                        {sub.responden.kabupatenKota} • {new Date(sub.createdAt).toLocaleDateString("id-ID")}
-                      </span>
-                    </div>
-                    <Badge
-                      variant={
-                        sub.status === "TERVERIFIKASI"
-                          ? "success"
-                          : sub.status === "TERKIRIM"
-                          ? "info"
-                          : "warning"
-                      }
-                    >
-                      {sub.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-4 mt-2">
-              <Link href="/riwayat">
-                <Button variant="outline" size="sm" className="w-full">
-                  Lihat Semua Riwayat Pengisian
-                </Button>
-              </Link>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Pemetaan 2 Jenis Pengguna Sesuai Panduan arindama.jpeg */}
-      <section className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-card">
-        <div className="text-center max-w-2xl mx-auto mb-8">
-          <Badge variant="gold" className="mb-2">
-            PANDUAN PENGGUNA
-          </Badge>
-          <h2 className="text-2xl font-extrabold text-brand-text tracking-tight">
-            2 Jenis Pengguna dalam Sistem ARINDAMA
-          </h2>
-          <p className="text-xs sm:text-sm text-brand-text-secondary mt-1.5">
-            Sistem dirancang dengan alur kerja khusus yang terisolasi sesuai kebutuhan masing-masing pengguna
-          </p>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Kolom 1: ADMIN */}
-          <div className="rounded-2xl bg-amber-50/50 border border-amber-200/80 p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-brand-accent text-white flex items-center justify-center font-extrabold shadow-subtle">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-amber-950">
-                    ADMIN KEOLAHRAGAAN
-                  </h3>
-                  <span className="text-xs font-semibold text-amber-800">
-                    Pengelola Survei &amp; Verifikator Dinas
-                  </span>
-                </div>
-              </div>
-
-              <ul className="space-y-2.5 text-xs text-amber-900 mb-6">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-accent shrink-0 mt-0.5" />
-                  <span>Membuat dan mengelola kuesioner keolahragaan daerah.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-accent shrink-0 mt-0.5" />
-                  <span>Mengatur 8 indikator teknis, pertanyaan terstruktur, dan bobot penilaian.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-accent shrink-0 mt-0.5" />
-                  <span>Melihat data jawaban responden dan meninjau berkas bukti fisik PDF secara langsung.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-accent shrink-0 mt-0.5" />
-                  <span>Menghasilkan laporan resmi, rekapitulasi data, dan visualisasi grafik capaian olahraga.</span>
-                </li>
-              </ul>
-            </div>
-
-            <Link href="/admin">
-              <Button variant="gold" size="md" className="w-full">
-                <span>Akses Portal Admin Olahraga</span>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-
-          {/* Kolom 2: USER / RESPONDEN */}
-          <div className="rounded-2xl bg-emerald-50/50 border border-emerald-200/80 p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-brand-primary text-white flex items-center justify-center font-extrabold shadow-subtle">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-emerald-950">
-                    USER / RESPONDEN
-                  </h3>
-                  <span className="text-xs font-semibold text-emerald-800">
-                    Perwakilan Cabor, Atlet, Pelatih &amp; Pengurus
-                  </span>
-                </div>
-              </div>
-
-              <ul className="space-y-2.5 text-xs text-emerald-900 mb-6">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-                  <span>Melihat kuesioner keolahragaan yang sedang aktif dan terbuka.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-                  <span>Mengisi data identitas diri dan instansi/kabupaten asal.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-                  <span>Menjawab pertanyaan kuesioner secara bertahap dan mengunggah dokumen PDF pendukung.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-                  <span>Melihat riwayat pengisian dan memantau status validasi dari verifikator.</span>
-                </li>
-              </ul>
-            </div>
-
-            <Link href="/kuesioner">
-              <Button variant="primary" size="md" className="w-full">
-                <span>Mulai Alur Responden</span>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* 6 Langkah Alur Pengisian Kuesioner (Infografis Poster arindama.jpeg) */}
       <section className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-card">
@@ -349,7 +157,7 @@ export default function HomePage() {
             },
             {
               step: 4,
-              title: "4. 8 Indikator",
+              title: "4. 16 Indikator",
               desc: "Jawab pertanyaan capaian nasional / internasional terstruktur.",
             },
             {
@@ -388,10 +196,10 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-brand-text">
-              8 Indikator Arindama Keolahragaan
+              16 Indikator Arindama Keolahragaan
             </h2>
             <p className="text-xs sm:text-sm text-brand-text-secondary mt-0.5">
-              Standar indikator prestasi nasional &amp; internasional sesuai petunjuk teknis kuesioner
+              8 Indikator Kabupaten/Kota + 8 Indikator Provinsi
             </p>
           </div>
         </div>
@@ -403,9 +211,14 @@ export default function HomePage() {
               className="bg-white rounded-2xl border border-gray-100 p-4 shadow-card hover:shadow-elevated transition-all flex flex-col justify-between"
             >
               <div>
-                <span className="text-xs font-extrabold text-brand-primary bg-brand-primary-light px-2.5 py-0.5 rounded-full inline-block mb-2">
-                  {ind.numberStr}
-                </span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-extrabold text-brand-primary bg-brand-primary-light px-2.5 py-0.5 rounded-full inline-block">
+                    {ind.numberStr}
+                  </span>
+                  <Badge variant={ind.tingkatWilayah === "Provinsi" ? "info" : "neutral"} className="text-[10px] px-2 py-0">
+                    {ind.tingkatWilayah}
+                  </Badge>
+                </div>
                 <h4 className="text-sm font-bold text-brand-text mb-1.5 leading-snug">
                   {ind.title}
                 </h4>
@@ -413,9 +226,12 @@ export default function HomePage() {
                   {ind.shortDesc}
                 </p>
               </div>
-              <div className="mt-3 pt-2.5 border-t border-gray-50 text-xs text-gray-500 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-brand-accent shrink-0" />
-                <span className="truncate">Wajib lampiran PDF sah</span>
+              <div className="mt-3 pt-2.5 border-t border-gray-50 text-xs text-gray-500 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5 text-brand-accent shrink-0" />
+                  <span className="truncate">PDF sah</span>
+                </div>
+                <span className="text-[10px] font-bold text-brand-accent">Bobot {ind.bobotNilai}</span>
               </div>
             </div>
           ))}
