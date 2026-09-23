@@ -18,7 +18,57 @@ import {
   Calendar,
   Award,
   ChevronRight,
+  FileSpreadsheet,
+  Download,
 } from "lucide-react";
+
+const SURVEY_TEMPLATES = [
+  {
+    id: 1,
+    name: "IdentitasResponden_Fixed.xlsx",
+    file: "IdentitasResponden_Fixed.xlsx",
+  },
+  {
+    id: 2,
+    name: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx",
+    file: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx",
+  },
+  {
+    id: 3,
+    name: "Indikator 2_Peningkatan Mutu SDM Olahraga.xlsx",
+    file: "Indikator 2_Peningkatan Mutu SDM Olahraga.xlsx",
+  },
+  {
+    id: 4,
+    name: "Indikator 3_Pelatih Cabor Membawa Tim Tingkat Nasional Internasional.xlsx",
+    file: "Indikator 3_Pelatih Cabor Membawa Tim Tingkat Nasional Internasional.xlsx",
+  },
+  {
+    id: 5,
+    name: "Indikator 4_ Wasit Cabang Olahraga Masuk dalam Wasit Nasional Internasional.xlsx",
+    file: "Indikator 4_ Wasit Cabang Olahraga Masuk dalam Wasit Nasional Internasional.xlsx",
+  },
+  {
+    id: 6,
+    name: "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional.xlsx",
+    file: "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional.xlsx",
+  },
+  {
+    id: 7,
+    name: "Indikator 6_Atlet Cabang Olahraga Mewakili Tim Nasional Internasional.xlsx",
+    file: "Indikator 6_Atlet Cabang Olahraga Mewakili Tim Nasional Internasional.xlsx",
+  },
+  {
+    id: 8,
+    name: "Indikator 7_Penyelenggaraan Event Olahraga Nasional Internasional.xlsx",
+    file: "Indikator 7_Penyelenggaraan Event Olahraga Nasional Internasional.xlsx",
+  },
+  {
+    id: 9,
+    name: "Indikator 8_Prestasi Event Olahraga Masyarakat Tingkat Nasional.xlsx",
+    file: "Indikator 8_Prestasi Event Olahraga Masyarakat Tingkat Nasional.xlsx",
+  },
+];
 
 export default function HomePage() {
   const { role, setRole, submissions } = useApp();
@@ -125,7 +175,42 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Template Excell Kuisioner */}
+      <section className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-card">
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-brand-text tracking-tight">
+            Template Excell Kuisioner
+          </h2>
+          <p className="text-xs sm:text-sm text-brand-text-secondary mt-1">
+            Unduh template format spreadsheet Excel kuesioner keolahragaan resmi di bawah ini
+          </p>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {SURVEY_TEMPLATES.map((item) => (
+            <a
+              key={item.id}
+              href={`/templates/${encodeURIComponent(item.file)}`}
+              download={item.file}
+              className="flex items-center justify-between p-4 border border-gray-200/80 rounded-2xl hover:border-brand-primary/40 hover:bg-emerald-50/40 transition-all duration-200 group cursor-pointer shadow-sm hover:shadow-md"
+              title={item.name}
+            >
+              <div className="flex items-center gap-3.5 min-w-0 pr-2">
+                <div className="p-3 bg-emerald-100/80 text-emerald-700 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-emerald-200/70 transition-colors">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <span className="font-semibold text-brand-text text-xs sm:text-sm line-clamp-2 leading-snug group-hover:text-brand-primary transition-colors">
+                  {item.name}
+                </span>
+              </div>
+
+              <div className="p-2.5 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center shrink-0 group-hover:bg-brand-primary group-hover:text-white transition-all duration-200">
+                <Download className="w-4 h-4" />
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
 
       {/* 6 Langkah Alur Pengisian Kuesioner (Infografis Poster arindama.jpeg) */}
       <section className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-card">
