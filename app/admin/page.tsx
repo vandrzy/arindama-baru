@@ -353,7 +353,7 @@ export default function AdminDashboardPage() {
 
                       <td className="py-4 px-4">
                         <span className="inline-flex items-center gap-1 font-bold text-brand-primary tabular-nums">
-                          {sub.totalIndikatorTerisi} / 16 Indikator
+                          {sub.totalIndikatorTerisi} / 8 Indikator
                         </span>
                       </td>
 

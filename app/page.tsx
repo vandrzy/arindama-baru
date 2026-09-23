@@ -152,7 +152,7 @@ export default function HomePage() {
             <div className="flex items-center gap-4 text-xs text-brand-text-secondary py-3 border-y border-gray-100 my-4">
               <div className="flex items-center gap-1.5">
                 <ListOrdered className="w-4 h-4 text-brand-primary" />
-                <span>16 Indikator (8 Kab/Kota + 8 Provinsi)</span>
+                <span>8 Indikator (Kabupaten/Kota)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-brand-accent" />
@@ -242,7 +242,7 @@ export default function HomePage() {
             },
             {
               step: 4,
-              title: "4. 16 Indikator",
+              title: "4. 8 Indikator",
               desc: "Jawab pertanyaan capaian nasional / internasional terstruktur.",
             },
             {
@@ -281,10 +281,10 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-brand-text">
-              16 Indikator Arindama Keolahragaan
+              8 Indikator Arindama Keolahragaan
             </h2>
             <p className="text-xs sm:text-sm text-brand-text-secondary mt-0.5">
-              8 Indikator Kabupaten/Kota + 8 Indikator Provinsi
+              8 Indikator Kabupaten/Kota
             </p>
           </div>
         </div>

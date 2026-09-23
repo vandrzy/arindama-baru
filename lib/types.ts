@@ -17,6 +17,7 @@ export interface RespondentIdentity {
   kecamatan: string;
   pekerjaan: string;
   nomorTelepon: string;
+  fileBuktiName?: string;
 }
 
 export interface SurveyAnswer {

@@ -23,6 +23,9 @@ import {
   Check,
   AlertCircle,
   HelpCircle,
+  UploadCloud,
+  FileSpreadsheet,
+  X,
 } from "lucide-react";
 
 export default function KuesionerPage() {
@@ -37,24 +40,25 @@ export default function KuesionerPage() {
   } = useApp();
 
   // Step 0: Identitas Diri
-  // Step 1 - 16: Indikator 1 sampai 16 (8 Kab/Kota + 8 Provinsi)
-  // Step 17: Tinjauan Akhir & Konfirmasi
-  // Step 18: Halaman Sukses
+  // Step 1 - 8: Indikator 1 sampai 8 (Kabupaten/Kota)
+  // Step 9: Tinjauan Akhir & Konfirmasi
+  // Step 10: Halaman Sukses
   const [currentStep, setCurrentStep] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [uploadedExcelFiles, setUploadedExcelFiles] = useState<Record<number, { name: string; size: string }>>({});
 
   const markTouched = (field: string) => {
     setTouchedFields((prev) => ({ ...prev, [field]: true }));
   };
 
-  const totalSteps = 18; // 0 to 17
+  const totalSteps = 10; // 0 to 9
 
-  // Helper current indicator (if step 1 to 16)
+  // Helper current indicator (if step 1 to 8)
   const currentIndicator =
-    currentStep >= 1 && currentStep <= 16 ? SURVEY_INDICATORS[currentStep - 1] : null;
+    currentStep >= 1 && currentStep <= 8 ? SURVEY_INDICATORS[currentStep - 1] : null;
 
   // Active answer object for current indicator
   const currentAnswer: SurveyAnswer = (currentIndicator && draftAnswers[currentIndicator.id]) || {
@@ -86,19 +90,47 @@ export default function KuesionerPage() {
     }));
   };
 
+  const handleExcelFileSelected = (step: number, file: File | null) => {
+    setFormError(null);
+    if (!file) return;
+
+    const fileName = file.name;
+    const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
+
+    if (!isExcel) {
+      setFormError("Gagal: Hanya file berekstensi .xlsx atau .xls yang diperbolehkan!");
+      return;
+    }
+
+    const fileSize = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+    const fileData = { name: fileName, size: fileSize };
+
+    setUploadedExcelFiles((prev) => ({
+      ...prev,
+      [step]: fileData,
+    }));
+
+    if (step === 0) {
+      setDraftIdentity((prev) => ({
+        ...prev,
+        namaLengkap: prev.namaLengkap || "Responden (File Excel)",
+        fileBuktiName: fileName,
+      }));
+    } else if (currentIndicator) {
+      handleUpdateAnswer("fileBuktiName", fileName);
+      handleUpdateAnswer("fileBuktiSize", fileSize);
+      handleUpdateAnswer("namaKegiatan", `Upload Excel Indikator ${currentIndicator.id}`);
+      handleUpdateAnswer("cabangOlahraga", "Sesuai Excel");
+      handleUpdateAnswer("uraianKegiatan", `Dokumen Excel ${fileName} telah diunggah.`);
+    }
+  };
+
   const validateStep = (): boolean => {
     setFormError(null);
     if (currentStep === 0) {
-      const missing: Record<string, boolean> = {};
-      if (!draftIdentity.namaLengkap.trim()) missing.namaLengkap = true;
-      if (!draftIdentity.umur) missing.umur = true;
-      if (!draftIdentity.jenisKelamin) missing.jenisKelamin = true;
-      if (!draftIdentity.kecamatan.trim()) missing.kecamatan = true;
-      if (!draftIdentity.pekerjaan.trim()) missing.pekerjaan = true;
-
-      if (Object.keys(missing).length > 0) {
-        setTouchedFields((prev) => ({ ...prev, ...missing }));
-        setFormError("Mohon lengkapi seluruh kolom wajib identitas yang ditandai merah.");
+      const hasFile = uploadedExcelFiles[0] || draftIdentity.fileBuktiName;
+      if (!hasFile) {
+        setFormError("Mohon unggah dokumen Excel Identitas Responden terlebih dahulu (.xlsx / .xls).");
         return false;
       }
       return true;
@@ -106,16 +138,10 @@ export default function KuesionerPage() {
 
     if (currentStep >= 1 && currentStep <= 8 && currentIndicator) {
       const ans = draftAnswers[currentIndicator.id];
-      const missing: Record<string, boolean> = {};
-      const prefix = `ind_${currentIndicator.id}_`;
+      const hasFile = uploadedExcelFiles[currentStep] || ans?.fileBuktiName;
 
-      if (!ans || !ans.namaKegiatan?.trim()) missing[`${prefix}namaKegiatan`] = true;
-      if (!ans || !ans.cabangOlahraga?.trim()) missing[`${prefix}cabangOlahraga`] = true;
-      if (!ans || !ans.uraianKegiatan?.trim()) missing[`${prefix}uraianKegiatan`] = true;
-
-      if (Object.keys(missing).length > 0) {
-        setTouchedFields((prev) => ({ ...prev, ...missing }));
-        setFormError("Mohon lengkapi kolom nama kegiatan, cabang olahraga, dan uraian capaian yang ditandai merah.");
+      if (!hasFile) {
+        setFormError(`Mohon unggah dokumen Excel Indikator ${currentStep} (${currentIndicator.title}) terlebih dahulu (.xlsx / .xls).`);
         return false;
       }
       return true;
@@ -126,7 +152,7 @@ export default function KuesionerPage() {
 
   const handleNext = () => {
     if (validateStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, 17));
+      setCurrentStep((prev) => Math.min(prev + 1, 9));
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -157,13 +183,13 @@ export default function KuesionerPage() {
       clearDraft();
       setIsSubmitting(false);
       setSubmittedId(newId);
-      setCurrentStep(18); // Halaman Sukses
+      setCurrentStep(10); // Halaman Sukses
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, 800);
   };
 
-  // Step 18: Halaman Sukses (Sesuai Mockup Step 6 di Poster arindama.jpeg)
-  if (currentStep === 18) {
+  // Step 10: Halaman Sukses
+  if (currentStep === 10) {
     return (
       <div className="max-w-md mx-auto py-10 sm:py-16 text-center animate-in fade-in zoom-in-95 duration-300">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-elevated p-8 sm:p-10">
@@ -244,7 +270,7 @@ export default function KuesionerPage() {
             <h1 className="text-base sm:text-lg font-extrabold text-brand-text">
               {currentStep === 0
                 ? "Identitas Responden"
-                : currentStep === 17
+                : currentStep === 9
                 ? "Tinjauan & Konfirmasi Pengiriman"
                 : `${currentIndicator?.numberStr}: ${currentIndicator?.title}`}
             </h1>
@@ -252,10 +278,10 @@ export default function KuesionerPage() {
 
           <span className="text-xs font-bold text-brand-primary bg-brand-primary-light px-3 py-1 rounded-full tabular-nums">
             {currentStep === 0
-              ? "Tahap 1 dari 18"
-              : currentStep === 17
+              ? "Tahap 1 dari 10"
+              : currentStep === 9
               ? "Tahap Akhir"
-              : `Indikator ${currentStep} dari 16`}
+              : `Indikator ${currentStep} dari 8`}
           </span>
         </div>
 
@@ -284,7 +310,7 @@ export default function KuesionerPage() {
         </div>
       )}
 
-      {/* STEP 0: Formulir Identitas Responden (Sesuai Mockup Step 3 arindama.jpeg) */}
+      {/* STEP 0: Formulir Identitas Responden (Upload Form Excel) */}
       {currentStep === 0 && (
         <Card>
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
@@ -296,420 +322,186 @@ export default function KuesionerPage() {
                 Data Diri &amp; Afiliasi Responden
               </h2>
               <p className="text-xs text-brand-text-secondary">
-                Isi data diri Anda dengan lengkap dan benar sebelum mengisi pertanyaan kuesioner.
+                Unggah dokumen Excel identitas responden yang telah diisi sesuai template resmi.
               </p>
             </div>
           </div>
 
           <div className="space-y-4">
-            {/* Nama Lengkap */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider">
-                  Nama Lengkap &amp; Gelar <span className="text-red-500">*</span>
-                </label>
-                {touchedFields.namaLengkap && !draftIdentity.namaLengkap.trim() && (
-                  <span className="text-xs font-semibold text-red-600 animate-in fade-in">
-                    Nama wajib diisi
-                  </span>
-                )}
-              </div>
+            <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">
+              Unggah Dokumen Excell Identitas Responden <span className="text-red-500">*</span>
+            </h3>
+
+            <label className="relative flex flex-col items-center justify-center w-full p-8 sm:p-10 border-2 border-dashed border-gray-300 rounded-2xl bg-white hover:bg-emerald-50/20 hover:border-brand-primary cursor-pointer transition-all group">
               <input
-                type="text"
-                value={draftIdentity.namaLengkap}
-                onBlur={() => markTouched("namaLengkap")}
-                onChange={(e) =>
-                  setDraftIdentity((prev) => ({ ...prev, namaLengkap: e.target.value }))
-                }
-                placeholder="Contoh: Drs. Agus Prasetyo, M.Or."
-                className={`w-full h-11 px-3.5 rounded-xl border text-sm focus:ring-1 outline-none transition-all ${
-                  touchedFields.namaLengkap && !draftIdentity.namaLengkap.trim()
-                    ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-red-500"
-                    : "border-gray-200 focus:border-brand-primary focus:ring-brand-primary"
-                }`}
-              />
-            </div>
-
-            {/* Baris Umur & Jenis Kelamin */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-brand-text uppercase tracking-wider">
-                    Umur <span className="text-red-500">*</span>
-                  </label>
-                  {touchedFields.umur && !draftIdentity.umur && (
-                    <span className="text-xs font-semibold text-red-600 animate-in fade-in">
-                      Umur wajib diisi
-                    </span>
-                  )}
-                </div>
-                <div className="relative flex items-center">
-                  <input
-                    type="number"
-                    value={draftIdentity.umur}
-                    onBlur={() => markTouched("umur")}
-                    onChange={(e) =>
-                      setDraftIdentity((prev) => ({ ...prev, umur: e.target.value }))
-                    }
-                    placeholder="Contoh: 35"
-                    className={`w-full h-11 px-3.5 pr-12 rounded-xl border text-sm focus:ring-1 outline-none transition-all tabular-nums ${
-                      touchedFields.umur && !draftIdentity.umur
-                        ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-red-500"
-                        : "border-gray-200 focus:border-brand-primary focus:ring-brand-primary"
-                    }`}
-                  />
-                  <span className="absolute right-3.5 text-xs text-gray-400">tahun</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-brand-text uppercase tracking-wider">
-                    Jenis Kelamin <span className="text-red-500">*</span>
-                  </label>
-                  {touchedFields.jenisKelamin && !draftIdentity.jenisKelamin && (
-                    <span className="text-xs font-semibold text-red-600 animate-in fade-in">
-                      Pilih jenis kelamin
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 h-11">
-                  {["Laki-laki", "Perempuan"].map((gender) => (
-                    <button
-                      key={gender}
-                      type="button"
-                      onClick={() => {
-                        markTouched("jenisKelamin");
-                        setDraftIdentity((prev) => ({
-                          ...prev,
-                          jenisKelamin: gender as "Laki-laki" | "Perempuan",
-                        }));
-                      }}
-                      className={`rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all ${
-                        draftIdentity.jenisKelamin === gender
-                          ? "bg-brand-primary text-white border-brand-primary"
-                          : touchedFields.jenisKelamin && !draftIdentity.jenisKelamin
-                          ? "bg-white border-red-300 text-red-700 hover:bg-red-50/30"
-                          : "bg-white border-gray-200 text-brand-text hover:bg-gray-50"
-                      }`}
-                    >
-                      {draftIdentity.jenisKelamin === gender && (
-                        <Check className="w-3.5 h-3.5" />
-                      )}
-                      <span>{gender}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Baris Kabupaten/Kota & Kecamatan */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Kabupaten / Kota Asal <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={draftIdentity.kabupatenKota}
-                  onChange={(e) =>
-                    setDraftIdentity((prev) => ({ ...prev, kabupatenKota: e.target.value }))
-                  }
-                  className="w-full h-11 px-3 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none bg-white transition-all"
-                >
-                  <option value="Kabupaten Berau">Kabupaten Berau</option>
-                  <option value="Kabupaten Kutai Barat">Kabupaten Kutai Barat</option>
-                  <option value="Kabupaten Kutai Kartanegara">Kabupaten Kutai Kartanegara</option>
-                  <option value="Kabupaten Kutai Timur">Kabupaten Kutai Timur</option>
-                  <option value="Kabupaten Mahakam Ulu">Kabupaten Mahakam Ulu</option>
-                  <option value="Kabupaten Paser">Kabupaten Paser</option>
-                  <option value="Kabupaten Penajam Paser Utara">Kabupaten Penajam Paser Utara</option>
-                  <option value="Kota Balikpapan">Kota Balikpapan</option>
-                  <option value="Kota Bontang">Kota Bontang</option>
-                  <option value="Kota Samarinda">Kota Samarinda</option>
-                  <option value="Kota Tarakan">Kota Tarakan</option>
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-brand-text uppercase tracking-wider">
-                    Kecamatan <span className="text-red-500">*</span>
-                  </label>
-                  {touchedFields.kecamatan && !draftIdentity.kecamatan.trim() && (
-                    <span className="text-xs font-semibold text-red-600 animate-in fade-in">
-                      Kecamatan wajib diisi
-                    </span>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  value={draftIdentity.kecamatan}
-                  onBlur={() => markTouched("kecamatan")}
-                  onChange={(e) =>
-                    setDraftIdentity((prev) => ({ ...prev, kecamatan: e.target.value }))
-                  }
-                  placeholder="Contoh: Tenggarong / Loa Janan / Samboja"
-                  className={`w-full h-11 px-3.5 rounded-xl border text-sm focus:ring-1 outline-none transition-all ${
-                    touchedFields.kecamatan && !draftIdentity.kecamatan.trim()
-                      ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-red-500"
-                      : "border-gray-200 focus:border-brand-primary focus:ring-brand-primary"
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Pekerjaan / Instansi */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider">
-                  Pekerjaan / Jabatan di Bidang Olahraga <span className="text-red-500">*</span>
-                </label>
-                {touchedFields.pekerjaan && !draftIdentity.pekerjaan.trim() && (
-                  <span className="text-xs font-semibold text-red-600 animate-in fade-in">
-                    Pekerjaan wajib diisi
-                  </span>
-                )}
-              </div>
-              <input
-                type="text"
-                value={draftIdentity.pekerjaan}
-                onBlur={() => markTouched("pekerjaan")}
-                onChange={(e) =>
-                  setDraftIdentity((prev) => ({ ...prev, pekerjaan: e.target.value }))
-                }
-                placeholder="Contoh: Pelatih Cabor Renang / Pengurus KONI / Guru PJOK"
-                className={`w-full h-11 px-3.5 rounded-xl border text-sm focus:ring-1 outline-none transition-all ${
-                  touchedFields.pekerjaan && !draftIdentity.pekerjaan.trim()
-                    ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-red-500"
-                    : "border-gray-200 focus:border-brand-primary focus:ring-brand-primary"
-                }`}
-              />
-            </div>
-
-            {/* Nomor Kontak WhatsApp / Telepon */}
-            <div>
-              <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                Nomor Telepon / WhatsApp Aktif
-              </label>
-              <input
-                type="tel"
-                value={draftIdentity.nomorTelepon}
-                onChange={(e) =>
-                  setDraftIdentity((prev) => ({ ...prev, nomorTelepon: e.target.value }))
-                }
-                placeholder="Contoh: 0812-3456-7890"
-                className="w-full h-11 px-3.5 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all tabular-nums"
-              />
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* STEP 1 s/d 16: Pengisian 16 Indikator Keolahragaan Terstruktur (8 Kab/Kota + 8 Provinsi) */}
-      {currentStep >= 1 && currentStep <= 16 && currentIndicator && (
-      <Card className="space-y-6">
-      {/* Card Info Indikator Sesuai Juknis kuesioner-hint.pdf */}
-      <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 space-y-3">
-        <div className="flex items-start gap-2.5">
-          <HelpCircle className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
-              Petunjuk Teknis Pengisian
-            </h4>
-            <p className="text-xs text-emerald-900 mt-1 leading-relaxed">
-              {currentIndicator.fullDesc}
-            </p>
-            <p className="text-xs font-semibold text-emerald-800 mt-2">
-              📌 {currentIndicator.focusHint}
-            </p>
-          </div>
-        </div>
-            
-        {/* Keterangan Inklusivitas Penyandang Disabilitas (UPDATE.md poin d) */}
-        {currentIndicator.keteranganInklusif && (
-          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-lg p-3 flex items-start gap-2.5">
-            <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              Aspek Inklusivitas Penyandang Disabilitas
-            </span>
-            <p className="text-xs text-indigo-900 leading-relaxed">
-              {currentIndicator.keteranganInklusif}
-            </p>
-          </div>
-        )}
-      </div>
-
-          <div className="space-y-4">
-            {/* Nama Kegiatan / Kejuaraan */}
-            <div>
-              <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                Nama Kegiatan / Kejuaraan Olahraga <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={currentAnswer.namaKegiatan}
-                onChange={(e) => handleUpdateAnswer("namaKegiatan", e.target.value)}
-                placeholder="Contoh: Kejuaraan Nasional Pelajar 2024 / Pelatnas PB PRSI"
-                className="w-full h-11 px-3.5 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
-              />
-            </div>
-
-            {/* Cabang Olahraga */}
-            <div>
-              <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                Cabang Olahraga <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={currentAnswer.cabangOlahraga}
-                onChange={(e) => handleUpdateAnswer("cabangOlahraga", e.target.value)}
-                placeholder="Contoh: Atletik / Renang / Bulu Tangkis / Taekwondo"
-                className="w-full h-11 px-3.5 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
-              />
-            </div>
-
-            {/* Tingkat Penyelenggaraan (Nasional / Internasional) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Tingkat Penyelenggaraan <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2 h-11">
-                  {["Nasional", "Internasional"].map((tingkat) => (
-                    <button
-                      key={tingkat}
-                      type="button"
-                      onClick={() => handleUpdateAnswer("tingkatPenyelenggaraan", tingkat)}
-                      className={`rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all ${
-                        currentAnswer.tingkatPenyelenggaraan === tingkat
-                          ? "bg-brand-primary text-white border-brand-primary"
-                          : "bg-white border-gray-200 text-brand-text hover:bg-gray-50"
-                      }`}
-                    >
-                      {currentAnswer.tingkatPenyelenggaraan === tingkat && (
-                        <Check className="w-3.5 h-3.5" />
-                      )}
-                      <span>{tingkat}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Sumber Pendanaan Kegiatan <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={currentAnswer.sumberPendanaan}
-                  onChange={(e) => handleUpdateAnswer("sumberPendanaan", e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none bg-white transition-all"
-                >
-                  <option value="APBD">APBD (Daerah)</option>
-                  <option value="APBN">APBN (Pusat / Kemenpora)</option>
-                  <option value="Swasta/Sponsorship">Swasta / Sponsorship</option>
-                  <option value="Kombinasi">Kombinasi (Pemerintah &amp; Swasta)</option>
-                  <option value="Mandiri">Mandiri</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Perolehan Medali (Khusus Indikator 1 & 6) */}
-            {(currentIndicator.id === 1 || currentIndicator.id === 6) && (
-              <div className="bg-amber-50/50 border border-amber-200/80 rounded-xl p-3 sm:p-4">
-                <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Medal className="w-4 h-4 text-brand-accent" />
-                  Perolehan Medali Prestasi
-                </label>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <div>
-                    <span className="block text-[10px] sm:text-xs text-amber-900 font-semibold mb-1">
-                      🥇 Emas
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={currentAnswer.medaliEmas || 0}
-                      onChange={(e) =>
-                        handleUpdateAnswer("medaliEmas", parseInt(e.target.value) || 0)
-                      }
-                      className="w-full h-9 sm:h-10 px-2 sm:px-3 rounded-lg border border-amber-200 text-xs sm:text-sm bg-white tabular-nums"
-                    />
-                  </div>
-                  <div>
-                    <span className="block text-[10px] sm:text-xs text-amber-900 font-semibold mb-1">
-                      🥈 Perak
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={currentAnswer.medaliPerak || 0}
-                      onChange={(e) =>
-                        handleUpdateAnswer("medaliPerak", parseInt(e.target.value) || 0)
-                      }
-                      className="w-full h-9 sm:h-10 px-2 sm:px-3 rounded-lg border border-amber-200 text-xs sm:text-sm bg-white tabular-nums"
-                    />
-                  </div>
-                  <div>
-                    <span className="block text-[10px] sm:text-xs text-amber-900 font-semibold mb-1">
-                      🥉 Perunggu
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={currentAnswer.medaliPerunggu || 0}
-                      onChange={(e) =>
-                        handleUpdateAnswer("medaliPerunggu", parseInt(e.target.value) || 0)
-                      }
-                      className="w-full h-9 sm:h-10 px-2 sm:px-3 rounded-lg border border-amber-200 text-xs sm:text-sm bg-white tabular-nums"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Uraian Keterangan Capaian */}
-            <div>
-              <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                Uraian Capaian &amp; Keterangan Pendukung <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                rows={3}
-                value={currentAnswer.uraianKegiatan}
-                onChange={(e) => handleUpdateAnswer("uraianKegiatan", e.target.value)}
-                placeholder="Jelaskan secara ringkas hasil capaian, nomor pertandingan, nama atlet/pelatih/wasit yang terlibat..."
-                className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all leading-relaxed"
-              />
-            </div>
-
-            {/* Komponen Upload PDF Sah */}
-            <div className="pt-2">
-              <PdfDropzone
-                label="Unggah Dokumen Bukti Sah (PDF)"
-                hint={currentIndicator.requiredProof}
-                value={
-                  currentAnswer.fileBuktiName
-                    ? {
-                        name: currentAnswer.fileBuktiName,
-                        size: currentAnswer.fileBuktiSize || "1.5 MB",
-                        hash: currentAnswer.fileBuktiHash,
-                      }
-                    : undefined
-                }
-                onChange={(meta) => {
-                  handleUpdateAnswer("fileBuktiName", meta?.name || "");
-                  handleUpdateAnswer("fileBuktiSize", meta?.size || "");
-                  handleUpdateAnswer("fileBuktiHash", meta?.hash || "");
+                type="file"
+                accept=".xlsx, .xls"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  handleExcelFileSelected(0, file);
                 }}
               />
-            </div>
+
+              <div className="w-14 h-14 bg-white border border-gray-100 shadow-sm rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <UploadCloud className="w-6 h-6 text-brand-primary" />
+              </div>
+
+              <p className="text-sm font-medium text-gray-700 text-center">
+                <span className="text-brand-primary underline underline-offset-2 decoration-brand-primary/40 font-semibold">
+                  Pilih dokumen Excell
+                </span>{" "}
+                atau seret ke area ini
+              </p>
+
+              <p className="text-xs text-gray-500 mt-2 text-center max-w-sm leading-relaxed">
+                Dokumen Data Diri, Afiliasi, &amp; Kontak Responden (Format .xlsx / .xls)
+              </p>
+            </label>
+
+            {(uploadedExcelFiles[0] || draftIdentity.fileBuktiName) && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-emerald-950">
+                      {uploadedExcelFiles[0]?.name || draftIdentity.fileBuktiName}
+                    </p>
+                    <p className="text-[11px] text-emerald-700">
+                      {uploadedExcelFiles[0]?.size || "File Excel Siap Diunggah"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadedExcelFiles((prev) => {
+                      const copy = { ...prev };
+                      delete copy[0];
+                      return copy;
+                    });
+                    setDraftIdentity((prev) => ({ ...prev, fileBuktiName: "" }));
+                  }}
+                  className="p-1 rounded-lg hover:bg-emerald-200/50 text-emerald-700 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         </Card>
       )}
 
-      {/* STEP 17: Tinjauan & Konfirmasi Sebelum Kirim */}
-      {currentStep === 17 && (
+      {/* STEP 1 s/d 8: Form Upload Excel per Indikator */}
+      {currentStep >= 1 && currentStep <= 8 && currentIndicator && (
+        <Card className="space-y-6">
+          {/* Card Info Indikator */}
+          <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <HelpCircle className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+                  Petunjuk Teknis Pengisian
+                </h4>
+                <p className="text-xs text-emerald-900 mt-1 leading-relaxed">
+                  {currentIndicator.fullDesc}
+                </p>
+                <p className="text-xs font-semibold text-emerald-800 mt-2">
+                  📌 {currentIndicator.focusHint}
+                </p>
+              </div>
+            </div>
+
+            {currentIndicator.keteranganInklusif && (
+              <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-lg p-3 flex items-start gap-2.5">
+                <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                  Aspek Inklusivitas Penyandang Disabilitas
+                </span>
+                <p className="text-xs text-indigo-900 leading-relaxed">
+                  {currentIndicator.keteranganInklusif}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {/* Label Dinamis mengikuti Indikator */}
+            <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">
+              Unggah Dokumen Excell {currentIndicator.title} <span className="text-red-500">*</span>
+            </h3>
+
+            {/* Area Drag & Drop */}
+            <label className="relative flex flex-col items-center justify-center w-full p-8 sm:p-10 border-2 border-dashed border-gray-300 rounded-2xl bg-white hover:bg-emerald-50/20 hover:border-brand-primary cursor-pointer transition-all group">
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  handleExcelFileSelected(currentStep, file);
+                }}
+              />
+
+              <div className="w-14 h-14 bg-white border border-gray-100 shadow-sm rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <UploadCloud className="w-6 h-6 text-brand-primary" />
+              </div>
+
+              <p className="text-sm font-medium text-gray-700 text-center">
+                <span className="text-brand-primary underline underline-offset-2 decoration-brand-primary/40 font-semibold">
+                  Pilih dokumen Excell
+                </span>{" "}
+                atau seret ke area ini
+              </p>
+
+              <p className="text-xs text-gray-500 mt-2 text-center max-w-sm leading-relaxed">
+                Surat Penugasan Resmi, Hasil Pertandingan Resmi, Sertifikat, atau Piagam Medali (Format .xlsx / .xls)
+              </p>
+            </label>
+
+            {/* File Terpilih Info */}
+            {(uploadedExcelFiles[currentStep] || currentAnswer.fileBuktiName) && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-emerald-950">
+                      {uploadedExcelFiles[currentStep]?.name || currentAnswer.fileBuktiName}
+                    </p>
+                    <p className="text-[11px] text-emerald-700">
+                      {uploadedExcelFiles[currentStep]?.size || currentAnswer.fileBuktiSize || "File Excel Siap Diunggah"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadedExcelFiles((prev) => {
+                      const copy = { ...prev };
+                      delete copy[currentStep];
+                      return copy;
+                    });
+                    handleUpdateAnswer("fileBuktiName", "");
+                    handleUpdateAnswer("fileBuktiSize", "");
+                  }}
+                  className="p-1 rounded-lg hover:bg-emerald-200/50 text-emerald-700 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* STEP 9: Tinjauan & Konfirmasi Sebelum Kirim */}
+      {currentStep === 9 && (
         <Card className="space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
             <div className="w-8 h-8 rounded-lg bg-brand-primary-light text-brand-primary flex items-center justify-center">
@@ -720,7 +512,7 @@ export default function KuesionerPage() {
                 Periksa Kembali Isian Anda
               </h2>
               <p className="text-xs text-brand-text-secondary">
-                Pastikan data identitas dan jawaban 16 indikator telah sesuai dengan kondisi sebenarnya.
+                Pastikan data identitas dan jawaban 8 indikator telah sesuai dengan kondisi sebenarnya.
               </p>
             </div>
           </div>
@@ -754,10 +546,10 @@ export default function KuesionerPage() {
             </div>
           </div>
 
-          {/* Ringkasan Isian 16 Indikator */}
+          {/* Ringkasan Isian 8 Indikator */}
           <div>
             <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider mb-3">
-              Ringkasan 16 Indikator Keolahragaan:
+              Ringkasan 8 Indikator Keolahragaan:
             </h3>
             <div className="space-y-2.5">
               {SURVEY_INDICATORS.map((ind) => {
@@ -864,7 +656,7 @@ export default function KuesionerPage() {
           <div />
         )}
 
-        {currentStep < 17 ? (
+        {currentStep < 9 ? (
           <Button variant="primary" size="md" onClick={handleNext}>
             <span>
               {currentStep === 0 ? "Mulai Jawab Pertanyaan" : "Indikator Selanjutnya"}
