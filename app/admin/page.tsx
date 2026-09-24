@@ -493,11 +493,12 @@ export default function AdminDashboardPage() {
         </div>
       </Card>
 
-      {/* Modal / Dialog Audit & Verifikasi Berkas Fisik PDF Sah */}
+      {/* Modal / Dialog Audit & Verifikasi Berkas Fisik Excell Sah */}
       {verifyingSubmission && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-elevated border border-gray-100 p-6 sm:p-8 space-y-6">
-            <div className="flex items-start justify-between pb-4 border-b border-gray-100">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-elevated border border-gray-100">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 sm:px-8 sm:pt-8 sm:pb-4 border-b border-gray-100 shrink-0">
               <div>
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">
                   Pemeriksaan Berkas Sah
@@ -514,113 +515,116 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
-            {/* Responden Quick Summary */}
-            <div className="bg-brand-surface rounded-2xl p-4 border border-gray-100 text-xs grid grid-cols-2 gap-2">
-              <div>
-                <span className="text-gray-400 block">Nama Responden:</span>
-                <span className="font-bold text-brand-text">
-                  {verifyingSubmission.responden.namaLengkap}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-400 block">Asal Wilayah:</span>
-                <span className="font-bold text-brand-text">
-                  {verifyingSubmission.responden.kecamatan},{" "}
-                  {verifyingSubmission.responden.kabupatenKota}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-400 block">Instansi / Jabatan:</span>
-                <span className="font-semibold text-brand-text">
-                  {verifyingSubmission.responden.pekerjaan}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-400 block">Status Saat Ini:</span>
-                <Badge variant="info">{verifyingSubmission.status}</Badge>
-              </div>
-            </div>
-
-            {/* List of Attached PDF Evidence */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-text">
-                Pemeriksaan Dokumen Pendukung (PDF Sah):
-              </h4>
-
-              {Object.values(verifyingSubmission.answers).map((ans, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white border border-gray-200 rounded-xl p-3.5 text-xs space-y-2 hover:border-emerald-300 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-brand-primary text-xs">
-                      {ans.indicatorTitle || `Indikator ${ans.indicatorId}`}
-                    </span>
-                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-semibold">
-                      {ans.tingkatPenyelenggaraan} ({ans.sumberPendanaan})
-                    </span>
-                  </div>
-
-                  <p className="text-gray-600 text-xs leading-relaxed">
-                    <strong>Kegiatan:</strong> {ans.namaKegiatan} ({ans.cabangOlahraga})
-                    <br />
-                    <strong>Keterangan:</strong> {ans.uraianKegiatan}
-                  </p>
-
-                  {ans.fileBuktiName ? (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 flex items-center justify-between gap-3 text-xs">
-                      <div className="truncate">
-                        <span className="font-bold text-emerald-950 block truncate">
-                          📄 {ans.fileBuktiName} ({ans.fileBuktiSize || "PDF Sah"})
-                        </span>
-                        {ans.fileBuktiHash && (
-                          <span className="text-xs text-emerald-700 tabular-nums tracking-wider font-semibold block truncate">
-                            SHA256: {ans.fileBuktiHash}
-                          </span>
-                        )}
-                      </div>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          setPreviewingPdfDoc({
-                            name: ans.fileBuktiName || "Dokumen_Bukti.pdf",
-                            title: ans.indicatorTitle || `Indikator ${ans.indicatorId}`,
-                            size: ans.fileBuktiSize,
-                            hash: ans.fileBuktiHash,
-                          })
-                        }
-                        className="shrink-0 text-xs h-7 px-2.5"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        <span>Pratinjau PDF</span>
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-amber-700 text-xs italic">
-                      ⚠️ Responden belum melampirkan berkas bukti PDF untuk indikator ini.
-                    </p>
-                  )}
+            {/* Scrollable Content Container */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+              {/* Responden Quick Summary */}
+              <div className="bg-brand-surface rounded-2xl p-4 border border-gray-100 text-xs grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-gray-400 block">Nama Responden:</span>
+                  <span className="font-bold text-brand-text">
+                    {verifyingSubmission.responden.namaLengkap}
+                  </span>
                 </div>
-              ))}
+                <div>
+                  <span className="text-gray-400 block">Asal Wilayah:</span>
+                  <span className="font-bold text-brand-text">
+                    {verifyingSubmission.responden.kabupatenKota}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block">Instansi / Jabatan:</span>
+                  <span className="font-semibold text-brand-text">
+                    {verifyingSubmission.responden.pekerjaan}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block">Status Saat Ini:</span>
+                  <Badge variant="info">{verifyingSubmission.status}</Badge>
+                </div>
+              </div>
+
+              {/* List of Attached Excell Evidence */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-text">
+                  Pemeriksaan Dokumen Pendukung (Dokumen Excell):
+                </h4>
+
+                {Object.values(verifyingSubmission.answers).map((ans, idx) => {
+                  const getIndicatorTitle = () => {
+                    if (ans.indicatorId === 0) return "Data Diri & Afiliasi Responden";
+                    const matched = SURVEY_INDICATORS.find((i) => i.id === ans.indicatorId);
+                    const titleText = matched ? matched.title : ans.indicatorTitle || "";
+                    return `Indikator ${ans.indicatorId}: ${titleText}`;
+                  };
+
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-white border border-gray-200 rounded-xl p-3.5 text-xs space-y-2 hover:border-emerald-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-brand-primary text-xs">
+                          {getIndicatorTitle()}
+                        </span>
+                      </div>
+
+                      <div className="text-gray-700 font-semibold text-xs pt-1">
+                        Dokumen Excell:
+                      </div>
+
+                      {ans.fileBuktiUrl || ans.fileBuktiName ? (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 flex items-center justify-between gap-3 text-xs">
+                          <div className="truncate">
+                            <span className="font-bold text-emerald-950 block truncate">
+                              📊 {ans.fileBuktiName || "Dokumen_Excell.xlsx"} ({ans.fileBuktiSize || "Dokumen Excell"})
+                            </span>
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const downloadUrl = ans.fileBuktiUrl || "#";
+                              const link = document.createElement("a");
+                              link.href = downloadUrl;
+                              link.download = ans.fileBuktiName || "Dokumen_Excell.xlsx";
+                              link.target = "_blank";
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                            className="shrink-0 text-xs h-7 px-2.5 gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download</span>
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-amber-700 text-xs italic">
+                          ⚠️ Responden belum melampirkan berkas bukti Excell untuk indikator ini.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Catatan Verifikator Dispora */}
+              <div>
+                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
+                  Catatan Pemeriksaan Verifikator:
+                </label>
+                <textarea
+                  rows={3}
+                  value={verificationNote}
+                  onChange={(e) => setVerificationNote(e.target.value)}
+                  placeholder="Tuliskan catatan verifikasi (misal: 'Semua dokumen SK dan piagam terbukti sah dan stempel jelas' atau 'Mohon unggah ulang SK penugasan resmi')..."
+                  className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:border-brand-primary outline-none leading-relaxed"
+                />
+              </div>
             </div>
 
-            {/* Catatan Verifikator Dispora */}
-            <div>
-              <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                Catatan Pemeriksaan Verifikator:
-              </label>
-              <textarea
-                rows={3}
-                value={verificationNote}
-                onChange={(e) => setVerificationNote(e.target.value)}
-                placeholder="Tuliskan catatan verifikasi (misal: 'Semua dokumen SK dan piagam terbukti sah dan stempel jelas' atau 'Mohon unggah ulang SK penugasan resmi')..."
-                className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:border-brand-primary outline-none leading-relaxed"
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
+            {/* Action Buttons (Footer) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-8 sm:py-5 border-t border-gray-100 bg-gray-50/50 shrink-0">
               <span className="text-xs text-gray-400">
                 Pintasan: tekan <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-semibold tracking-wider">Esc</kbd> untuk menutup
               </span>

@@ -37,6 +37,7 @@ export interface SurveyAnswer {
   fileBuktiName?: string;
   fileBuktiSize?: string;
   fileBuktiHash?: string;
+  fileBuktiUrl?: string;
   bobotNilai?: number; // Bobot nilai otomatis (Partisipasi=1, Event/Prestasi=3, SDM=2)
   tingkatWilayah?: "Kabupaten/Kota" | "Provinsi" | "Nasional" | "Internasional" | "";
 }
