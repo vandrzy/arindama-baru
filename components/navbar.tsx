@@ -107,20 +107,14 @@ export function Navbar() {
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = link.match(pathname);
-              const isKuesioner = link.href === "/kuesioner";
-              const isAdminLink = link.href === "/admin";
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${
-                    isKuesioner && isActive
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 ${
+                    isActive
                       ? "bg-brand-primary text-white shadow-subtle"
-                      : isAdminLink && isActive
-                      ? "bg-brand-accent text-white shadow-subtle"
-                      : isActive
-                      ? "bg-brand-primary-light text-brand-primary"
-                      : "text-brand-text-secondary hover:text-brand-primary hover:bg-brand-surface"
+                      : "text-brand-text-secondary hover:text-brand-primary hover:bg-brand-primary-light"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -189,21 +183,15 @@ export function Navbar() {
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = link.match(pathname);
-                const isKuesioner = link.href === "/kuesioner";
-                const isAdminLink = link.href === "/admin";
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                      isKuesioner && isActive
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-150 ${
+                      isActive
                         ? "bg-brand-primary text-white shadow-subtle"
-                        : isAdminLink && isActive
-                        ? "bg-brand-accent text-white shadow-subtle"
-                        : isActive
-                        ? "bg-brand-primary-light text-brand-primary"
-                        : "text-brand-text-secondary hover:text-brand-primary hover:bg-brand-surface border border-gray-100"
+                        : "text-brand-text-secondary hover:text-brand-primary hover:bg-brand-primary-light"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
