@@ -22,6 +22,7 @@ export default function KuesionerPage() {
   const router = useRouter();
   const {
     currentUser,
+    isLoading,
     draftIdentity,
     setDraftIdentity,
     draftAnswers,
@@ -29,12 +30,12 @@ export default function KuesionerPage() {
     clearDraft,
   } = useApp();
 
-  // Route protection: Must be logged in
+  // Route protection: Tunggu proses rehidrasi sesi (isLoading === false) sebelum redirect ke login
   useEffect(() => {
-    if (!currentUser) {
+    if (!isLoading && !currentUser) {
       router.push("/login");
     }
-  }, [currentUser, router]);
+  }, [isLoading, currentUser, router]);
 
   const [rawFiles, setRawFiles] = useState<Record<number, File>>({});
   const [uploadedExcelFiles, setUploadedExcelFiles] = useState<
@@ -150,8 +151,7 @@ export default function KuesionerPage() {
     setFormError(null);
 
     // Check step 0 (Identitas)
-    const hasIdentityFile = rawFiles[0] || uploadedExcelFiles[0] || draftIdentity.fileBuktiName;
-    if (!hasIdentityFile) {
+    if (!rawFiles[0]) {
       setFormError("Mohon unggah dokumen Excel Identitas Responden terlebih dahulu (.xlsx / .xls).");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -160,8 +160,7 @@ export default function KuesionerPage() {
     // Check step 1 to 8 (8 Indikator)
     for (let i = 1; i <= 8; i++) {
       const indicator = SURVEY_INDICATORS[i - 1];
-      const hasIndFile = rawFiles[i] || uploadedExcelFiles[i] || draftAnswers[indicator.id]?.fileBuktiName;
-      if (!hasIndFile) {
+      if (!rawFiles[i]) {
         setFormError(
           `Mohon unggah dokumen Excel Indikator ${i} (${indicator.title}) terlebih dahulu (.xlsx / .xls).`
         );
@@ -211,8 +210,8 @@ export default function KuesionerPage() {
     }
   };
 
-  // If not logged in, prevent rendering content while redirecting
-  if (!currentUser) {
+  // Jika sedang memuat sesi atau tidak logged in, tahan render sementara redirect berjalan
+  if (isLoading || !currentUser) {
     return null;
   }
 
@@ -358,7 +357,7 @@ export default function KuesionerPage() {
             </p>
           </label>
 
-          {(uploadedExcelFiles[0] || draftIdentity.fileBuktiName) && (
+          {rawFiles[0] && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
@@ -366,7 +365,7 @@ export default function KuesionerPage() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-emerald-950">
-                    {uploadedExcelFiles[0]?.name || draftIdentity.fileBuktiName}
+                    {uploadedExcelFiles[0]?.name || rawFiles[0].name}
                   </p>
                   <p className="text-[11px] text-emerald-700">
                     {uploadedExcelFiles[0]?.size || "File Excel Siap Diunggah"}
@@ -390,9 +389,9 @@ export default function KuesionerPage() {
         {SURVEY_INDICATORS.map((indicator, index) => {
           const stepNum = index + 1;
           const uploadedFile = uploadedExcelFiles[stepNum];
-          const draftAns = draftAnswers[indicator.id];
-          const fileName = uploadedFile?.name || draftAns?.fileBuktiName;
-          const fileSize = uploadedFile?.size || draftAns?.fileBuktiSize;
+          const rawFile = rawFiles[stepNum];
+          const fileName = uploadedFile?.name || rawFile?.name;
+          const fileSize = uploadedFile?.size;
 
           return (
             <Card key={indicator.id} className="p-6 space-y-6">
@@ -474,7 +473,7 @@ export default function KuesionerPage() {
                   </p>
                 </label>
 
-                {fileName && (
+                {rawFile && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">

@@ -21,15 +21,17 @@ import {
 
 export default function RiwayatPage() {
   const router = useRouter();
-  const { submissions, currentUser } = useApp();
+  const { submissions, currentUser, isLoading: isSessionLoading } = useApp();
 
   const [dataSubmissions, setDataSubmissions] = useState<any[]>(submissions);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Route protection & Fetch submissions dari backend API (HttpOnly Cookie)
   React.useEffect(() => {
+    if (isSessionLoading) return;
+
     if (!currentUser) {
       router.push("/login");
       return;
@@ -71,12 +73,16 @@ export default function RiwayatPage() {
       } catch (err) {
         console.error("Gagal memuat riwayat submisi:", err);
       } finally {
-        setIsLoading(false);
+        setIsFetchingData(false);
       }
     }
 
     fetchUserSubmissions();
-  }, [currentUser, router]);
+  }, [isSessionLoading, currentUser, router]);
+
+  if (isSessionLoading || !currentUser) {
+    return null;
+  }
 
   const displayList = dataSubmissions.length > 0 ? dataSubmissions : submissions;
 

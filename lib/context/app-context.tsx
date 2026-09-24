@@ -12,6 +12,7 @@ interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
   currentUser: AuthUser | null;
+  isLoading: boolean;
   login: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   submissions: SurveySubmission[];
@@ -43,6 +44,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [role, setRoleState] = useState<UserRole>("RESPONDEN");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [submissions, setSubmissions] = useState<SurveySubmission[]>(INITIAL_SUBMISSIONS);
   const [draftIdentity, setDraftIdentity] = useState<RespondentIdentity>(defaultIdentity);
@@ -63,6 +65,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error("Session rehydration error:", err);
+      } finally {
+        setIsLoading(false);
       }
 
       // Hydrate non-auth survey drafts & submissions from localStorage
@@ -193,6 +197,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         role,
         setRole,
         currentUser,
+        isLoading,
         login,
         logout,
         submissions,

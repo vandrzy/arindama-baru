@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import { useApp } from "@/lib/context/app-context";
 import {
   Lock,
   Mail,
@@ -20,6 +21,14 @@ import {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { currentUser, isLoading } = useApp();
+
+  // Pengecekan autentikasi: Jika pengguna sudah login, langsung arahkan ke beranda (/) setelah rehidrasi selesai
+  React.useEffect(() => {
+    if (!isLoading && currentUser) {
+      router.push("/");
+    }
+  }, [isLoading, currentUser, router]);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -108,6 +117,10 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (isLoading || currentUser) {
+    return null;
+  }
 
   if (success) {
     return (

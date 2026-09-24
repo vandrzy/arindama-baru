@@ -30,15 +30,21 @@ import {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { submissions, updateSubmissionStatus, currentUser, role } = useApp();
+  const { submissions, updateSubmissionStatus, currentUser, role, isLoading } = useApp();
 
   // Route protection: redirect ke login jika tidak authenticated atau bukan ADMIN
   React.useEffect(() => {
+    if (isLoading) return;
+
     if (!currentUser || role !== "ADMIN") {
       router.push("/login");
       return;
     }
-  }, [currentUser, role, router]);
+  }, [isLoading, currentUser, role, router]);
+
+  if (isLoading || !currentUser || role !== "ADMIN") {
+    return null;
+  }
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [verifyingSubmission, setVerifyingSubmission] = useState<SurveySubmission | null>(null);

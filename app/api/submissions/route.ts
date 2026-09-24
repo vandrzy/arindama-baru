@@ -186,9 +186,21 @@ export async function POST(request: NextRequest) {
 
     const uploadPromises = filesToUpload.map(async (item) => {
       const safeFileName = sanitizeFileName(item.file.name);
-      const blob = await put(`submissions/${userFolder}/${Date.now()}-${safeFileName}`, item.file, {
-        access: "public",
-      });
+      let blob;
+      try {
+        blob = await put(`submissions/${userFolder}/${Date.now()}-${safeFileName}`, item.file, {
+          access: "public",
+        });
+      } catch (blobErr: any) {
+        // Jika Vercel Blob Store dikonfigurasi sebagai private store, gunakan access: "private"
+        if (blobErr?.message?.includes("private store") || blobErr?.message?.includes("private access")) {
+          blob = await put(`submissions/${userFolder}/${Date.now()}-${safeFileName}`, item.file, {
+            access: "private",
+          });
+        } else {
+          throw blobErr;
+        }
+      }
 
       return {
         indicatorId: item.indicatorId,

@@ -17,7 +17,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, currentUser, role } = useApp();
+  const { login, currentUser, isLoading } = useApp();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -25,19 +25,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  // Handle redirect in useEffect after state settles
+  // Pengecekan autentikasi: Jika pengguna sudah login, langsung arahkan ke beranda (/) setelah rehidrasi selesai
   React.useEffect(() => {
-    if (shouldRedirect && currentUser) {
-      // Redirect based on role from context, not email
-      if (role === "ADMIN") {
-        router.push("/admin");
-      } else {
-        router.push("/kuesioner");
-      }
+    if (!isLoading && currentUser) {
+      router.push("/");
     }
-  }, [shouldRedirect, currentUser, role, router]);
+  }, [isLoading, currentUser, router]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,13 +53,16 @@ export default function LoginPage() {
         return;
       }
 
-      // Set flag to redirect in useEffect after state settles
-      setShouldRedirect(true);
+      // Sesi login berhasil diupdate di context, useEffect akan otomatis melakukan redirect ke beranda (/)
     } catch (err) {
       setLoading(false);
       setError("Terjadi kesalahan. Silakan coba lagi.");
     }
   };
+
+  if (isLoading || currentUser) {
+    return null;
+  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-8 sm:py-12">
