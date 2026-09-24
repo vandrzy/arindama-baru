@@ -22,8 +22,9 @@ model User {
   password    String   // Hashed with bcrypt
   nama        String
   role        UserRole @default(RESPONDEN)
-  jabatan     String?
-  instansi    String?
+  jabatan       String   @default("")
+  kabupatenKota String   @default("")
+  instansi      String   @default("")
   
   // Relations
   submissions Submission[]

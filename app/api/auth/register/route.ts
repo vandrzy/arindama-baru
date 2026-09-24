@@ -7,10 +7,11 @@ import { z } from "zod";
 const registerSchema = z.object({
   username: z.string().min(3, "Username minimal 3 karakter").max(30),
   email: z.string().email("Email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter"),
+  password: z.string().min(8, "Password minimal 8 karakter"),
   nama: z.string().min(3, "Nama wajib diisi"),
-  jabatan: z.string().optional(),
-  instansi: z.string().optional(),
+  jabatan: z.string().min(2, "Jabatan wajib diisi"),
+  kabupatenKota: z.string().min(3, "Kabupaten/Kota wajib diisi"),
+  instansi: z.string().min(2, "Instansi wajib diisi"),
 });
 
 export async function POST(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, email, password, nama, jabatan, instansi } = validation.data;
+    const { username, email, password, nama, jabatan, kabupatenKota, instansi } = validation.data;
 
     // Check if username or email already exists
     const existingUser = await prisma.user.findFirst({
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
         nama,
         role: "RESPONDEN",
         jabatan,
+        kabupatenKota,
         instansi,
       },
     });
