@@ -56,18 +56,20 @@ export function Navbar() {
       icon: Home,
       match: (p: string) => p === "/",
     });
-    navLinks.push({
-      href: "/kuesioner",
-      label: "Isi Kuesioner",
-      icon: FileText,
-      match: (p: string) => p.startsWith("/kuesioner"),
-    });
-    navLinks.push({
-      href: "/riwayat",
-      label: "Riwayat",
-      icon: History,
-      match: (p: string) => p.startsWith("/riwayat"),
-    });
+    if (!isAdmin) {
+      navLinks.push({
+        href: "/kuesioner",
+        label: "Isi Kuesioner",
+        icon: FileText,
+        match: (p: string) => p.startsWith("/kuesioner"),
+      });
+      navLinks.push({
+        href: "/riwayat",
+        label: "Riwayat",
+        icon: History,
+        match: (p: string) => p.startsWith("/riwayat"),
+      });
+    }
   }
 
   // "Portal Admin" hanya untuk ADMIN
