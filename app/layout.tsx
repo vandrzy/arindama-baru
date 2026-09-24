@@ -37,7 +37,7 @@ export default function RootLayout({
       <body className={`min-h-screen flex flex-col font-sans ${plusJakartaSans.className} bg-brand-surface text-brand-text selection:bg-brand-primary-light selection:text-brand-primary`}>
         <AppProvider>
           <Navbar />
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-6 sm:pb-8">
             {children}
           </main>
 

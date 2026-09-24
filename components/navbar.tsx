@@ -44,18 +44,27 @@ export function Navbar() {
   // Hide navbar on login page (after all hooks)
   if (pathname === "/login") return null;
 
-  const navLinks = [
-    { href: "/", label: "Beranda", icon: Home, match: (p: string) => p === "/" },
-    {
+  const navLinks: Array<{
+    href: string;
+    label: string;
+    icon: React.ElementType;
+    match: (p: string) => boolean;
+  }> = [];
+
+  // Link navigasi hanya untuk user yang sudah login
+  if (currentUser) {
+    navLinks.push({
+      href: "/",
+      label: "Beranda",
+      icon: Home,
+      match: (p: string) => p === "/",
+    });
+    navLinks.push({
       href: "/kuesioner",
       label: "Isi Kuesioner",
       icon: FileText,
       match: (p: string) => p.startsWith("/kuesioner"),
-    },
-  ];
-
-  // "Riwayat" hanya untuk user yang sudah login
-  if (currentUser) {
+    });
     navLinks.push({
       href: "/riwayat",
       label: "Riwayat",
@@ -75,7 +84,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Brand Logo & Title */}
