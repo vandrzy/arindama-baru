@@ -46,8 +46,14 @@ export interface SurveySubmission {
   createdAt: string;
   tahunSurvei: number;
   responden: RespondentIdentity;
+  user?: {
+    nama?: string;
+    instansi?: string;
+    kabupatenKota?: string;
+  };
   answers: Record<number, SurveyAnswer>;
-  status: "DRAFT" | "TERKIRIM" | "TERVERIFIKASI" | "PERLU_REVISI";
+  status: "TERKIRIM" | "TERVERIFIKASI" | "PERLU_REVISI";
   catatanVerifikator?: string;
   totalIndikatorTerisi: number;
 }
+

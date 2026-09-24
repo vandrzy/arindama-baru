@@ -45,7 +45,10 @@ export default function AdminDashboardPage() {
     hash?: string;
   } | null>(null);
 
-  // Route protection: redirect ke login jika tidak authenticated atau bukan ADMIN
+  const [dbSubmissions, setDbSubmissions] = useState<SurveySubmission[]>([]);
+  const [isFetchingDb, setIsFetchingDb] = useState(true);
+
+  // Route protection & fetch submissions dari database API (/api/admin/submissions)
   React.useEffect(() => {
     if (isLoading) return;
 
@@ -53,6 +56,56 @@ export default function AdminDashboardPage() {
       router.push("/login");
       return;
     }
+
+    async function fetchAdminSubmissions() {
+      try {
+        const response = await fetch("/api/admin/submissions");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.submissions)) {
+            const mapped: SurveySubmission[] = data.submissions.map((sub: any) => ({
+              id: sub.id,
+              createdAt: sub.createdAt,
+              tahunSurvei: sub.tahunSurvei,
+              status: sub.status,
+              catatanVerifikator: sub.catatanVerifikator || "",
+              totalIndikatorTerisi:
+                sub.totalIndikatorTerisi ||
+                (Array.isArray(sub.answers) ? sub.answers.length : 0),
+              user: sub.user
+                ? {
+                    nama: sub.user.nama,
+                    instansi: sub.user.instansi || "",
+                    kabupatenKota: sub.user.kabupatenKota || "",
+                  }
+                : undefined,
+              responden: {
+                namaLengkap: sub.user?.nama || "Responden",
+                kabupatenKota: sub.user?.kabupatenKota || "-",
+                kecamatan: "-",
+                pekerjaan: sub.user?.instansi || "Pengelola Olahraga",
+                umur: "-",
+                jenisKelamin: "",
+                nomorTelepon: "-",
+              },
+              answers: Array.isArray(sub.answers)
+                ? sub.answers.reduce((acc: any, ans: any) => {
+                    acc[ans.indicatorId] = ans;
+                    return acc;
+                  }, {})
+                : sub.answers || {},
+            }));
+            setDbSubmissions(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Gagal mengambil data submissions dari database:", err);
+      } finally {
+        setIsFetchingDb(false);
+      }
+    }
+
+    fetchAdminSubmissions();
   }, [isLoading, currentUser, role, router]);
 
   // Keyboard Navigation: Escape to close active modal/viewer
@@ -74,22 +127,29 @@ export default function AdminDashboardPage() {
     return null;
   }
 
+  const activeSubmissions = dbSubmissions;
+
   // Filtered submissions
-  const filteredSubmissions = submissions.filter((sub) => {
+  const filteredSubmissions = activeSubmissions.filter((sub) => {
     const matchesStatus = filterStatus === "ALL" || sub.status === filterStatus;
     const q = searchQuery.toLowerCase();
+    const nama = (sub.user?.nama || sub.responden.namaLengkap).toLowerCase();
+    const instansi = (sub.user?.instansi || "").toLowerCase();
+    const kab = (sub.user?.kabupatenKota || sub.responden.kabupatenKota).toLowerCase();
+
     const matchesSearch =
       sub.id.toLowerCase().includes(q) ||
-      sub.responden.namaLengkap.toLowerCase().includes(q) ||
-      sub.responden.kabupatenKota.toLowerCase().includes(q);
+      nama.includes(q) ||
+      instansi.includes(q) ||
+      kab.includes(q);
     return matchesStatus && matchesSearch;
   });
 
   // Calculate stats
-  const totalSubmissions = submissions.length;
-  const verifiedCount = submissions.filter((s) => s.status === "TERVERIFIKASI").length;
-  const pendingCount = submissions.filter((s) => s.status === "TERKIRIM").length;
-  const revisionCount = submissions.filter((s) => s.status === "PERLU_REVISI").length;
+  const totalSubmissions = activeSubmissions.length;
+  const verifiedCount = activeSubmissions.filter((s) => s.status === "TERVERIFIKASI").length;
+  const pendingCount = activeSubmissions.filter((s) => s.status === "TERKIRIM").length;
+  const revisionCount = activeSubmissions.filter((s) => s.status === "PERLU_REVISI").length;
 
   const handleOpenVerification = (sub: SurveySubmission) => {
     setVerifyingSubmission(sub);
@@ -97,15 +157,60 @@ export default function AdminDashboardPage() {
     setPreviewingPdfDoc(null);
   };
 
-  const handleApplyStatus = (newStatus: SurveySubmission["status"]) => {
+  const handleApplyStatus = async (newStatus: SurveySubmission["status"]) => {
     if (!verifyingSubmission) return;
+
+    try {
+      await fetch("/api/admin/submissions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: verifyingSubmission.id,
+          status: newStatus,
+          catatanVerifikator: verificationNote,
+        }),
+      });
+    } catch (err) {
+      console.error("Gagal meng-update status ke database:", err);
+    }
+
+    setDbSubmissions((prev) =>
+      prev.map((s) =>
+        s.id === verifyingSubmission.id
+          ? { ...s, status: newStatus, catatanVerifikator: verificationNote }
+          : s
+      )
+    );
     updateSubmissionStatus(verifyingSubmission.id, newStatus, verificationNote);
     setSuccessToast(`Status submisi ${verifyingSubmission.id} berhasil diperbarui menjadi ${newStatus}.`);
     setVerifyingSubmission(null);
     setTimeout(() => setSuccessToast(null), 3000);
   };
 
-  const handleBulkApprove = () => {
+  const handleBulkApprove = async () => {
+    for (const id of selectedSubmissions) {
+      try {
+        await fetch("/api/admin/submissions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id,
+            status: "TERVERIFIKASI",
+            catatanVerifikator: "Disetujui melalui verifikasi massal Dispora.",
+          }),
+        });
+      } catch (err) {
+        console.error("Gagal verifikasi massal id:", id, err);
+      }
+    }
+
+    setDbSubmissions((prev) =>
+      prev.map((item) =>
+        selectedSubmissions.includes(item.id)
+          ? { ...item, status: "TERVERIFIKASI", catatanVerifikator: "Disetujui melalui verifikasi massal Dispora." }
+          : item
+      )
+    );
     selectedSubmissions.forEach((id) => {
       updateSubmissionStatus(id, "TERVERIFIKASI", "Disetujui melalui verifikasi massal Dispora.");
     });
@@ -289,11 +394,10 @@ export default function AdminDashboardPage() {
                     className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary cursor-pointer"
                   />
                 </th>
-                <th className="py-3.5 px-4 sm:px-6">No. Registrasi</th>
-                <th className="py-3.5 px-4">Nama Responden &amp; Jabatan</th>
-                <th className="py-3.5 px-4">Kabupaten / Kecamatan</th>
-                <th className="py-3.5 px-4">Indikator Terisi</th>
-                <th className="py-3.5 px-4">Dokumen PDF</th>
+                <th className="py-3.5 px-4">Tanggal</th>
+                <th className="py-3.5 px-4">Nama Lengkap</th>
+                <th className="py-3.5 px-4">Instansi</th>
+                <th className="py-3.5 px-4">Kabupaten/Kota</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 sm:px-6 text-right">Aksi Audit</th>
               </tr>
@@ -301,13 +405,12 @@ export default function AdminDashboardPage() {
             <tbody className="divide-y divide-gray-100">
               {filteredSubmissions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-gray-400">
+                  <td colSpan={7} className="text-center py-12 text-gray-400">
                     Tidak ada rekaman yang sesuai dengan pencarian atau filter status.
                   </td>
                 </tr>
               ) : (
                 filteredSubmissions.map((sub) => {
-                  const pdfCount = Object.values(sub.answers).filter((a) => a.fileBuktiName).length;
                   const isChecked = selectedSubmissions.includes(sub.id);
 
                   return (
@@ -333,41 +436,26 @@ export default function AdminDashboardPage() {
                           className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary cursor-pointer"
                         />
                       </td>
-                      <td className="py-4 px-4 sm:px-6 font-bold text-brand-text tabular-nums">
-                        {sub.id}
-                        <span className="block text-xs text-gray-400 font-normal">
-                          {new Date(sub.createdAt).toLocaleDateString("id-ID")}
-                        </span>
+
+                      <td className="py-4 px-4 font-semibold text-brand-text tabular-nums text-sm">
+                        {new Date(sub.createdAt).toLocaleDateString("id-ID", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                        })}
                       </td>
 
-                      <td className="py-4 px-4">
-                        <span className="font-bold text-brand-text block text-sm">
-                          {sub.responden.namaLengkap}
-                        </span>
-                        <span className="text-xs text-brand-text-secondary">
-                          {sub.responden.pekerjaan}
-                        </span>
+                      <td className="py-4 px-4 font-bold text-brand-text text-sm">
+                        {sub.user?.nama || sub.responden.namaLengkap}
                       </td>
 
-                      <td className="py-4 px-4">
-                        <span className="font-semibold text-gray-700 block">
-                          {sub.responden.kabupatenKota}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          Kec. {sub.responden.kecamatan}
-                        </span>
+                      <td className="py-4 px-4 text-brand-text text-sm">
+                        {sub.user?.instansi || "-"}
                       </td>
 
-                      <td className="py-4 px-4">
-                        <span className="inline-flex items-center gap-1 font-bold text-brand-primary tabular-nums">
-                          {sub.totalIndikatorTerisi} / 8 Indikator
-                        </span>
-                      </td>
-
-                      <td className="py-4 px-4">
-                        <span className="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 font-semibold tabular-nums">
-                          <FileCheck className="w-3.5 h-3.5" />
-                          {pdfCount} Berkas Sah
+                      <td className="py-4 px-4 text-brand-text text-sm">
+                        <span className="font-semibold block">
+                          {sub.user?.kabupatenKota || sub.responden.kabupatenKota}
                         </span>
                       </td>
 

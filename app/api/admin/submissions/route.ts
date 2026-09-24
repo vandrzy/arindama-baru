@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
             id: true,
             nama: true,
             email: true,
+            role: true,
+            jabatan: true,
             instansi: true,
+            kabupatenKota: true,
           },
         },
         answers: {
@@ -61,11 +64,11 @@ export async function GET(request: NextRequest) {
 // PATCH: Update submission status (admin only)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params?: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
     const body = await request.json();
+    const id = body.id || (await params)?.id;
 
     // Validate input
     const validation = updateStatusSchema.safeParse(body);
