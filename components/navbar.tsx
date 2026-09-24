@@ -41,9 +41,6 @@ export function Navbar() {
     };
   }, [mobileOpen]);
 
-  // Hide navbar on login page (after all hooks)
-  if (pathname === "/login") return null;
-
   const navLinks: Array<{
     href: string;
     label: string;

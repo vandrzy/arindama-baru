@@ -15,6 +15,7 @@ import {
   User,
   Building,
   Briefcase,
+  MapPin,
 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -27,6 +28,7 @@ export default function RegisterPage() {
     confirmPassword: "",
     nama: "",
     jabatan: "",
+    kabupatenKota: "",
     instansi: "",
   });
 
@@ -36,7 +38,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -48,13 +50,21 @@ export default function RegisterPage() {
     setError(null);
 
     // Validation
-    if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim() || !formData.nama.trim()) {
-      setError("Username, Email, Password, dan Nama wajib diisi.");
+    if (
+      !formData.username.trim() ||
+      !formData.email.trim() ||
+      !formData.password.trim() ||
+      !formData.nama.trim() ||
+      !formData.jabatan.trim() ||
+      !formData.kabupatenKota.trim() ||
+      !formData.instansi.trim()
+    ) {
+      setError("Semua field (Username, Email, Password, Nama, Jabatan, Kabupaten/Kota, Instansi) wajib diisi.");
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password minimal 6 karakter.");
+    if (formData.password.length < 8) {
+      setError("Password minimal 8 karakter.");
       return;
     }
 
@@ -66,47 +76,34 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // DEVELOPMENT MODE: Skip API, use localStorage directly
-      // TODO: Uncomment API call when database is configured
-      console.log("Using development fallback register (API disabled for now)");
-
-      // Store in localStorage for development
-      const users = JSON.parse(localStorage.getItem("arindama_users") || "[]");
-
-      // Check if username/email exists
-      if (users.find((u: any) => u.username.toLowerCase() === formData.username.toLowerCase())) {
-        setError("Username sudah terdaftar.");
-        setLoading(false);
-        return;
-      }
-
-      if (users.find((u: any) => u.email.toLowerCase() === formData.email.toLowerCase())) {
-        setError("Email sudah terdaftar.");
-        setLoading(false);
-        return;
-      }
-
-      // Add new user
-      users.push({
-        id: `USR-${Date.now()}`,
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        nama: formData.nama,
-        role: "RESPONDEN",
-        jabatan: formData.jabatan,
-        instansi: formData.instansi,
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.username.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          nama: formData.nama.trim(),
+          jabatan: formData.jabatan.trim(),
+          kabupatenKota: formData.kabupatenKota.trim(),
+          instansi: formData.instansi.trim(),
+        }),
       });
 
-      localStorage.setItem("arindama_users", JSON.stringify(users));
-      console.warn("⚠️ Using DEVELOPMENT FALLBACK register. Setup database to use production API.");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal melakukan registrasi");
+      }
 
       setSuccess(true);
       setTimeout(() => {
         router.push("/login");
       }, 2000);
-    } catch (err) {
-      setError("Terjadi kesalahan. Silakan coba lagi.");
+    } catch (err: any) {
+      setError(err.message || "Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -177,7 +174,7 @@ export default function RegisterPage() {
               {/* Username */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Username *
+                  Username <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <User className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
@@ -195,7 +192,7 @@ export default function RegisterPage() {
               {/* Email */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Email *
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
@@ -213,7 +210,7 @@ export default function RegisterPage() {
               {/* Nama Lengkap */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Nama Lengkap *
+                  Nama Lengkap <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <User className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
@@ -231,7 +228,7 @@ export default function RegisterPage() {
               {/* Jabatan */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Jabatan
+                  Jabatan <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <Briefcase className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
@@ -246,28 +243,60 @@ export default function RegisterPage() {
                 </div>
               </div>
 
+              {/* Kabupaten/Kota */}
+              <div>
+                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
+                  Kabupaten/Kota <span className="text-red-500">*</span>
+                </label>
+                <div className="relative flex items-center">
+                  <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
+                  <select
+                    name="kabupatenKota"
+                    value={formData.kabupatenKota}
+                    onChange={handleChange}
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all appearance-none bg-white text-brand-text"
+                  >
+                    <option value="" disabled>Pilih Kabupaten/Kota</option>
+                    <option value="Berau">Berau</option>
+                    <option value="Kutai Barat">Kutai Barat</option>
+                    <option value="Kutai Kartanegara">Kutai Kartanegara</option>
+                    <option value="Kutai Timur">Kutai Timur</option>
+                    <option value="Mahakam Ulu">Mahakam Ulu</option>
+                    <option value="Paser">Paser</option>
+                    <option value="Penajam Paser Utara">Penajam Paser Utara</option>
+                    <option value="Balikpapan">Balikpapan</option>
+                    <option value="Bontang">Bontang</option>
+                    <option value="Samarinda">Samarinda</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Instansi */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Instansi
+                  Instansi <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <Building className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
+                  <select
                     name="instansi"
                     value={formData.instansi}
                     onChange={handleChange}
-                    placeholder="Contoh: Pengcab PASI Kutai Kartanegara"
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
-                  />
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all appearance-none bg-white text-brand-text"
+                  >
+                    <option value="" disabled>Pilih Instansi</option>
+                    <option value="DISPORA">DISPORA</option>
+                    <option value="KONI">KONI</option>
+                    <option value="KORMI">KORMI</option>
+                    <option value="NPC Indonesia">NPC Indonesia</option>
+                  </select>
                 </div>
               </div>
 
               {/* Password */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Password *
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
@@ -276,7 +305,7 @@ export default function RegisterPage() {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Minimal 6 karakter"
+                    placeholder="Minimal 8 karakter"
                     className="w-full h-11 pl-10 pr-10 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
                   />
                   <button
@@ -292,7 +321,7 @@ export default function RegisterPage() {
               {/* Confirm Password */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Konfirmasi Password *
+                  Konfirmasi Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
