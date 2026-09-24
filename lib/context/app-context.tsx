@@ -49,112 +49,94 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [draftAnswers, setDraftAnswers] = useState<Record<number, SurveyAnswer>>({});
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Hydrate from localStorage
+  // Rehydrate session from HTTP-Only Cookie via /api/auth/me
   useEffect(() => {
-    try {
-      // Auto-seed default accounts for development (first load only)
-      // Passwords stored as Base64 to avoid webpack optimization into string literals
-      const existingUsers = localStorage.getItem("arindama_users");
-      if (!existingUsers) {
-        const defaultUsers = [
-          {
-            id: "default-admin",
-            username: atob("YWRtaW4="), // "admin"
-            email: atob("YWRtaW5AYXJpbmRhbWEuaWQ="), // "admin@arindama.id"
-            password: atob("QWRtaW4jMjAyNA=="), // "Admin#2024"
-            nama: "Drs. H. Hendra Wijaya, M.Si.",
-            role: "ADMIN",
-            jabatan: "Koordinator Tim Verifikasi Data Olahraga",
-            instansi: "Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur",
-          },
-          {
-            id: "default-responden",
-            username: atob("cmVzcG9uZGVu"), // "responden"
-            email: atob("cmVzcG9uZGVuQGFyaW5kYW1hLmlk"), // "responden@arindama.id"
-            password: atob("VXNlciMyMDI0"), // "User#2024"
-            nama: "Bambang Pamungkas, S.Pd.",
-            role: "RESPONDEN",
-            jabatan: "Pelatih & Pengurus Cabang Atletik",
-            instansi: "Pengcab PASI Kabupaten Kutai Kartanegara",
-          },
-        ];
-        localStorage.setItem("arindama_users", JSON.stringify(defaultUsers));
+    async function initSession() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            setCurrentUser(data.user);
+            setRoleState(data.user.role as UserRole);
+          }
+        }
+      } catch (err) {
+        console.error("Session rehydration error:", err);
       }
 
-      const savedRole = localStorage.getItem("arindama_role") as UserRole;
-      if (savedRole === "ADMIN" || savedRole === "RESPONDEN") {
-        setRoleState(savedRole);
+      // Hydrate non-auth survey drafts & submissions from localStorage
+      try {
+        const savedSubmissions = localStorage.getItem("arindama_submissions");
+        if (savedSubmissions) {
+          setSubmissions(JSON.parse(savedSubmissions));
+        }
+        const savedDraftId = localStorage.getItem("arindama_draft_identity");
+        if (savedDraftId) {
+          setDraftIdentity(JSON.parse(savedDraftId));
+        }
+        const savedDraftAns = localStorage.getItem("arindama_draft_answers");
+        if (savedDraftAns) {
+          setDraftAnswers(JSON.parse(savedDraftAns));
+        }
+      } catch {
+        // fallback
       }
-      const savedUser = localStorage.getItem("arindama_auth_user");
-      if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
-      }
-      const savedSubmissions = localStorage.getItem("arindama_submissions");
-      if (savedSubmissions) {
-        setSubmissions(JSON.parse(savedSubmissions));
-      }
-      const savedDraftId = localStorage.getItem("arindama_draft_identity");
-      if (savedDraftId) {
-        setDraftIdentity(JSON.parse(savedDraftId));
-      }
-      const savedDraftAns = localStorage.getItem("arindama_draft_answers");
-      if (savedDraftAns) {
-        setDraftAnswers(JSON.parse(savedDraftAns));
-      }
-    } catch {
-      // fallback to initial
+
+      setIsHydrated(true);
     }
-    setIsHydrated(true);
+
+    initSession();
   }, []);
 
   const setRole = (newRole: UserRole) => {
     setRoleState(newRole);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("arindama_role", newRole);
-    }
   };
 
   const login = async (username: string, email: string, password: string): Promise<boolean> => {
-    // DEVELOPMENT FALLBACK ONLY (skip API for now)
-    // Remove this section when database is connected
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username.trim(),
+          email: email.trim(),
+          password,
+        }),
+      });
 
-    console.log("Using development fallback login (API disabled for now)");
+      const data = await response.json();
 
-    // SECURITY: Passwords stored in localStorage only, NOT in JS bundle
-    // Default accounts seeded in useEffect above via localStorage
-    const allAccounts = JSON.parse(localStorage.getItem("arindama_users") || "[]");
+      if (response.ok && data.success && data.user) {
+        const user: AuthUser = {
+          id: data.user.id,
+          nama: data.user.nama,
+          email: data.user.email,
+          role: data.user.role,
+          jabatan: data.user.jabatan,
+          instansi: data.user.instansi,
+        };
 
-    const account = allAccounts.find(
-      (acc: any) => acc.username.toLowerCase() === username.toLowerCase() &&
-               acc.email.toLowerCase() === email.toLowerCase() &&
-               acc.password === password
-    );
+        setCurrentUser(user);
+        setRoleState(user.role);
+        return true;
+      }
 
-    if (!account) return false;
-
-    const user: AuthUser = {
-      id: account.role === "ADMIN" ? "ADM-001" : `USR-${Date.now()}`,
-      nama: account.nama,
-      email: account.email,
-      role: account.role,
-      jabatan: account.jabatan,
-      instansi: account.instansi,
-    };
-
-    setCurrentUser(user);
-    setRoleState(user.role);
-    localStorage.setItem("arindama_auth_user", JSON.stringify(user));
-    localStorage.setItem("arindama_role", user.role);
-
-    console.warn("⚠️ Using DEVELOPMENT FALLBACK auth. Setup database to use production API.");
-    return true;
+      return false;
+    } catch (err) {
+      console.error("Login API error:", err);
+      return false;
+    }
   };
 
   const logout = () => {
+    fetch("/api/auth/logout", { method: "POST" }).catch((err) =>
+      console.error("Logout API error:", err)
+    );
     setCurrentUser(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("arindama_auth_user");
-    }
+    setRoleState("RESPONDEN");
   };
 
   const addSubmission = (sub: SurveySubmission) => {

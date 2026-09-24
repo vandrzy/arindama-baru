@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/auth";
+import { verifyPassword, signJwtToken } from "@/lib/auth";
 import { z } from "zod";
+
+export const dynamic = "force-dynamic";
 
 // Validation schema
 const loginSchema = z.object({
@@ -71,9 +73,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Return user data (without password)
-    return NextResponse.json({
+    // Generate JWT token (Payload: id, email, role | Expiration: 2h)
+    const token = signJwtToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    // Prepare HTTP response
+    const response = NextResponse.json({
       success: true,
+      message: "Login berhasil",
       user: {
         id: user.id,
         username: user.username,
@@ -84,6 +94,17 @@ export async function POST(request: NextRequest) {
         instansi: user.instansi,
       },
     });
+
+    // Set HTTP-Only Secure Cookie
+    response.cookies.set("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7200, // 2 jam (7200 detik)
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
@@ -92,3 +113,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
