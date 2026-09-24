@@ -23,18 +23,64 @@ export default function RiwayatPage() {
   const router = useRouter();
   const { submissions, currentUser } = useApp();
 
-  // Route protection: redirect ke login jika tidak authenticated
+  const [dataSubmissions, setDataSubmissions] = useState<any[]>(submissions);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Route protection & Fetch submissions dari backend API (HttpOnly Cookie)
   React.useEffect(() => {
     if (!currentUser) {
       router.push("/login");
       return;
     }
+
+    async function fetchUserSubmissions() {
+      try {
+        const response = await fetch("/api/submissions");
+        if (response.status === 401) {
+          router.push("/login");
+          return;
+        }
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.submissions) && data.submissions.length > 0) {
+            const mapped = data.submissions.map((sub: any) => ({
+              id: sub.id,
+              status: sub.status,
+              createdAt: sub.createdAt,
+              catatanVerifikator: sub.catatanVerifikator || null,
+              responden: {
+                namaLengkap: sub.user?.nama || currentUser?.nama || "Responden",
+                kabupatenKota: "Kabupaten Kutai Kartanegara",
+                pekerjaan: sub.user?.role === "ADMIN" ? "Administrator" : "Pengelola Cabang Olahraga",
+                jenisKelamin: "-",
+                umur: "-",
+                kecamatan: "Tenggarong",
+              },
+              answers: Array.isArray(sub.answers)
+                ? sub.answers.reduce((acc: any, ans: any) => {
+                    acc[ans.indicatorId] = ans;
+                    return acc;
+                  }, {})
+                : sub.answers || {},
+            }));
+            setDataSubmissions(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Gagal memuat riwayat submisi:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchUserSubmissions();
   }, [currentUser, router]);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const displayList = dataSubmissions.length > 0 ? dataSubmissions : submissions;
 
-  const filtered = submissions.filter((sub) => {
+  const filtered = displayList.filter((sub) => {
     const q = searchQuery.toLowerCase();
     return (
       sub.id.toLowerCase().includes(q) ||
@@ -44,7 +90,7 @@ export default function RiwayatPage() {
     );
   });
 
-  const activeDetail = submissions.find((s) => s.id === selectedId);
+  const activeDetail = displayList.find((s) => s.id === selectedId);
 
   return (
     <div className="space-y-6">
@@ -221,9 +267,9 @@ export default function RiwayatPage() {
                   Lampiran Berkas PDF Sah:
                 </span>
                 <div className="space-y-1.5">
-                  {Object.values(activeDetail.answers)
-                    .filter((a) => a.fileBuktiName)
-                    .map((ans, idx) => (
+                  {Object.values(activeDetail.answers || {})
+                    .filter((a: any) => a && a.fileBuktiName)
+                    .map((ans: any, idx: number) => (
                       <div
                         key={idx}
                         className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-2.5 text-xs flex items-center justify-between"

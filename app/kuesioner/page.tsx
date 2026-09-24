@@ -175,9 +175,6 @@ export default function KuesionerPage() {
     try {
       const formData = new FormData();
 
-      if (currentUser?.id) {
-        formData.append("userId", currentUser.id);
-      }
       formData.append("tahunSurvei", "2024");
 
       // Append all raw files with key fileIndicator_{step}
@@ -193,6 +190,9 @@ export default function KuesionerPage() {
       const result = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          router.push("/login");
+        }
         throw new Error(result.error || "Gagal mengirim kuesioner.");
       }
 

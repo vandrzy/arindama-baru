@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { put, del } from "@vercel/blob";
 import { SubmissionStatus } from "@prisma/client";
+import { verifyJwtToken } from "@/lib/auth";
 
 // Allowed Excel extensions & MIME types
 const ALLOWED_EXCEL_EXTENSIONS = [".xlsx", ".xls"];
@@ -35,21 +36,39 @@ function isExcelFile(file: File): boolean {
 
 // Validation schema untuk metadata submission
 const submissionSchema = z.object({
-  userId: z.string().optional().nullable(),
   tahunSurvei: z.number().int().min(2020).max(2100).default(2024),
 });
 
 // GET: List all submissions (with optional filters)
 export async function GET(request: NextRequest) {
   try {
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error: "Sesi tidak ditemukan atau kadaluarsa. Silakan login kembali." },
+        { status: 401 }
+      );
+    }
+
+    const payload = verifyJwtToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { error: "Sesi tidak valid atau telah kadaluarsa. Silakan login kembali." },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const filterUserId = searchParams.get("userId");
     const status = searchParams.get("status");
     const tahun = searchParams.get("tahun");
 
+    // Scoping akses: RESPONDEN hanya bisa melihat data milik sendiri
+    const targetUserId = payload.role === "RESPONDEN" ? payload.id : filterUserId || undefined;
+
     const submissions = await prisma.submission.findMany({
       where: {
-        ...(userId && { userId }),
+        ...(targetUserId && { userId: targetUserId }),
         ...(status && { status: status as SubmissionStatus }),
         ...(tahun && { tahunSurvei: parseInt(tahun) }),
       },
@@ -82,27 +101,29 @@ export async function GET(request: NextRequest) {
 // POST: Create new submission with Excel file uploads
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-
-    const rawUserId = formData.get("userId");
-    let validatedUserId: string | null = null;
-    
-    // Poin 6: Keamanan - Pengecekan keberadaan userId di DB untuk mencegah IDOR / Spoofing
-    if (typeof rawUserId === "string" && rawUserId.trim() !== "") {
-      const user = await prisma.user.findUnique({
-        where: { id: rawUserId.trim() },
-        select: { id: true },
-      });
-      if (user) {
-        validatedUserId = user.id;
-      }
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error: "Sesi tidak ditemukan atau kadaluarsa. Silakan login kembali." },
+        { status: 401 }
+      );
     }
+
+    const payload = verifyJwtToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { error: "Sesi tidak valid atau telah kadaluarsa. Silakan login kembali." },
+        { status: 401 }
+      );
+    }
+
+    const formData = await request.formData();
 
     const tahunRaw = formData.get("tahunSurvei");
     const tahunSurvei = tahunRaw ? parseInt(tahunRaw as string) : new Date().getFullYear();
 
     // Validate metadata input using Zod
-    const validation = submissionSchema.safeParse({ userId: validatedUserId, tahunSurvei });
+    const validation = submissionSchema.safeParse({ tahunSurvei });
     if (!validation.success) {
       return NextResponse.json(
         { error: "Validasi metadata gagal", details: validation.error.errors },
@@ -119,11 +140,11 @@ export async function POST(request: NextRequest) {
       if (typeof value === "object" && value !== null && "name" in value && "size" in value) {
         const file = value as File;
         
-        // Poin 4: Pencocokan key FormData secara ketat (misal: "file_1", "indicator_2", "fileIndicator3")
+        // Pencocokan key FormData secara ketat
         const keyMatch = key.match(/^(?:file|indicator|fileIndicator)[_-]?(\d+)$/i);
         if (keyMatch) {
           if (file.size > 0) {
-            // Poin 7: Batasan ukuran file (Max 10MB) untuk pencegahan DoS
+            // Batasan ukuran file (Max 10MB) untuk pencegahan DoS
             if (file.size > MAX_FILE_SIZE) {
               return NextResponse.json(
                 { error: `File '${file.name}' melebihi batas ukuran maksimum (10 MB)` },
@@ -160,8 +181,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Poin 1 & 3: Upload file ke Vercel Blob secara paralel (Promise.all) dengan nama ter-sanitasi
-    const userFolder = data.userId || "guest";
+    // Upload file ke Vercel Blob secara paralel dengan folder payload.id
+    const userFolder = payload.id;
 
     const uploadPromises = filesToUpload.map(async (item) => {
       const safeFileName = sanitizeFileName(item.file.name);
@@ -180,11 +201,11 @@ export async function POST(request: NextRequest) {
 
     const uploadedAnswers = await Promise.all(uploadPromises);
 
-    // Poin 2: Transaksi Prisma dengan Rollback Blob jika DB gagal
+    // Transaksi Prisma dengan Rollback Blob jika DB gagal
     try {
       const submission = await prisma.submission.create({
         data: {
-          userId: data.userId || undefined,
+          userId: payload.id,
           tahunSurvei: data.tahunSurvei,
           status: "TERKIRIM",
           totalIndikatorTerisi: uploadedAnswers.length,
@@ -197,10 +218,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Log audit for creation (supports optional userId for guests)
+      // Log audit for creation
       await prisma.auditLog.create({
         data: {
-          userId: data.userId || undefined,
+          userId: payload.id,
           action: "CREATE_SUBMISSION",
           entity: "Submission",
           entityId: submission.id,
