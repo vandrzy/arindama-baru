@@ -57,9 +57,6 @@ export interface SurveySubmission {
     jabatan?: string;
     kabupatenKota?: string;
   };
-  answers: Record<number, SurveyAnswer>;
-  status: "TERKIRIM" | "TERVERIFIKASI" | "PERLU_REVISI";
-  catatanVerifikator?: string;
   totalIndikatorTerisi: number;
 }
 

@@ -146,15 +146,45 @@ export default function KuesionerPage() {
       }
       const worksheet = workbook.Sheets[firstSheetName];
 
-      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      const nonEmptyRows = rawData.filter(
-        (row) => row.length > 0 && row.some((cell) => cell !== null && cell !== undefined && cell !== "")
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const nonEmptyRows = rawRows.filter(
+        (row) => row && row.length > 0 && row.some((cell) => cell !== null && cell !== undefined && String(cell).trim() !== "")
       );
 
       const HEADER_ROW_COUNT = 1;
       if (nonEmptyRows.length <= HEADER_ROW_COUNT) {
         setStepError(step, "Gagal: File Excel yang diunggah kosong atau hanya berisi template/header! Pastikan data telah diisi.");
         return;
+      }
+
+      // Validasi ketat kelengkapan kolom wajib per baris
+      const headerRow = rawRows[0].map((h: any) => String(h || "").trim());
+      const dataRows = rawRows.slice(1);
+
+      for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
+        const row = dataRows[rIdx];
+        const isRowEmpty = !row || !row.some((cell) => cell !== null && cell !== undefined && String(cell).trim() !== "");
+        if (isRowEmpty) continue;
+
+        const displayRow = rIdx + 2;
+
+        for (let cIdx = 0; cIdx < headerRow.length; cIdx++) {
+          const colName = headerRow[cIdx];
+          if (!colName) continue;
+
+          const colLower = colName.toLowerCase();
+          // Atribut medali bersifat opsional
+          if (colLower.includes("medali")) continue;
+
+          const val = row[cIdx];
+          if (val === null || val === undefined || String(val).trim() === "") {
+            setStepError(
+              step,
+              `Gagal: Data pada baris ke-${displayRow} kolom '${colName}' masih kosong. Harap lengkapi file Excel Anda.`
+            );
+            return;
+          }
+        }
       }
 
       const previewJsonData = XLSX.utils.sheet_to_json(worksheet);

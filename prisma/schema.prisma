@@ -54,60 +54,68 @@ model Submission {
   noRegistrasi        String           @unique @default(dbgenerated("gen_random_uuid()"))
   userId              String
   tahunSurvei         Int              @default(2024)
-  status              SubmissionStatus @default(DRAFT)
-  catatanVerifikator  String?
   totalIndikatorTerisi Int             @default(0)
   
   // Relations
   user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  answers             SurveyAnswer[]
+  respondenIdentity   RespondenIdentity?
+  indicatorRecords    IndicatorRecord[]
   validationEvidences ValidationEvidence[]
   
   // Timestamps
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
-  verifiedAt          DateTime?
   
   @@index([userId])
-  @@index([status])
   @@index([tahunSurvei])
   @@map("submissions")
 }
 
-enum SubmissionStatus {
-  DRAFT
-  TERKIRIM
-  TERVERIFIKASI
-  PERLU_REVISI
+// ============================================
+// RESPONDEN IDENTITY (Form Identitas Responden)
+// ============================================
+
+model RespondenIdentity {
+  id                  String     @id @default(cuid())
+  submissionId        String     @unique
+  namaLengkap         String
+  jenisKelamin        String
+  tanggalLahir        String
+  umur                String
+  kabupatenKotaAsal   String
+  kecamatan           String
+  pekerjaanJabatan    String
+  nomorTelepon        String
+
+  submission          Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@map("responden_identities")
 }
 
 // ============================================
-// SURVEY ANSWERS (Indicators)
+// INDICATOR RECORDS (Form Indikator 1 - 8)
 // ============================================
 
-model SurveyAnswer {
-  id                      String    @id @default(cuid())
+model IndicatorRecord {
+  id                      String     @id @default(cuid())
   submissionId            String
-  
-  // Indicator details
-  indicatorId             Int
-  indicatorTitle          String?
-  
-  // File attachment (stored separately or as reference)
-  fileBuktiName           String?
-  fileBuktiSize           Int?
-  fileBuktiHash           String?
-  
-  // Relations
+  indicatorId             Int        // 1 - 8
+  namaKegiatan            String
+  cabangOlahraga          String
+  tingkatPenyelenggaraan  String
+  sumberPendanaan         String
+  medali                  String?    // Atribut medali (opsional)
+  uraianCapaian           String
+
   submission              Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  
-  // Timestamps
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
-  
+
   @@index([submissionId])
   @@index([indicatorId])
-  @@map("survey_answers")
+  @@map("indicator_records")
 }
 
 // ============================================

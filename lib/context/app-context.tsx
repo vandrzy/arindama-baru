@@ -17,11 +17,6 @@ interface AppContextType {
   logout: () => void;
   submissions: SurveySubmission[];
   addSubmission: (submission: SurveySubmission) => void;
-  updateSubmissionStatus: (
-    id: string,
-    status: SurveySubmission["status"],
-    catatan?: string
-  ) => void;
   draftIdentity: RespondentIdentity;
   setDraftIdentity: React.Dispatch<React.SetStateAction<RespondentIdentity>>;
   draftAnswers: Record<number, SurveyAnswer>;
@@ -154,24 +149,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const updateSubmissionStatus = (
-    id: string,
-    status: SurveySubmission["status"],
-    catatan?: string
-  ) => {
-    setSubmissions((prev) => {
-      const updated = prev.map((item) =>
-        item.id === id
-          ? { ...item, status, catatanVerifikator: catatan || item.catatanVerifikator }
-          : item
-      );
-      if (typeof window !== "undefined") {
-        localStorage.setItem("arindama_submissions", JSON.stringify(updated));
-      }
-      return updated;
-    });
-  };
-
   const clearDraft = () => {
     setDraftIdentity(defaultIdentity);
     setDraftAnswers({});
@@ -203,7 +180,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logout,
         submissions,
         addSubmission,
-        updateSubmissionStatus,
         draftIdentity,
         setDraftIdentity,
         draftAnswers,

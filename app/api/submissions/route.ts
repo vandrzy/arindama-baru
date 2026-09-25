@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { put, del } from "@vercel/blob";
-import { SubmissionStatus } from "@prisma/client";
 import { verifyJwtToken } from "@/lib/auth";
+import * as XLSX from "xlsx";
+
+export const dynamic = "force-dynamic";
 
 // Allowed Excel extensions & MIME types
 const ALLOWED_EXCEL_EXTENSIONS = [".xlsx", ".xls"];
@@ -12,34 +13,27 @@ const ALLOWED_EXCEL_TYPES = [
   "application/vnd.ms-excel",
   "application/wps-office.xlsx",
 ];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit per file (Cegah DoS)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit per file
 
-// Poin 3: Helper sanitasi nama file agar URL-friendly
-function sanitizeFileName(fileName: string): string {
-  const parts = fileName.split(".");
-  const ext = parts.length > 1 ? `.${parts.pop()}` : "";
-  const baseName = parts.join(".");
-  const sanitizedBase = baseName
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9_-]/g, "");
-  return `${sanitizedBase || "file"}${ext.toLowerCase()}`;
-}
-
-// Poin 5: Validasi format file Excel dengan komentar penjelas !file.type
 function isExcelFile(file: File): boolean {
   const name = file.name.toLowerCase();
   const hasValidExt = ALLOWED_EXCEL_EXTENSIONS.some((ext) => name.endsWith(ext));
-  // Logika `!file.type` diperbolehkan karena beberapa browser/environment testing tidak mengirimkan MIME type pada FormData
   const hasValidType = !file.type || ALLOWED_EXCEL_TYPES.includes(file.type);
   return hasValidExt && hasValidType;
 }
 
-// Validation schema untuk metadata submission
 const submissionSchema = z.object({
   tahunSurvei: z.number().int().min(2020).max(2100).default(2024),
 });
 
-// GET: List all submissions (with optional filters)
+function getCellValue(row: any[], index: number): string {
+  if (index === -1 || !row || index >= row.length) return "";
+  const val = row[index];
+  if (val === null || val === undefined) return "";
+  return String(val).trim();
+}
+
+// GET: List all submissions with identity & indicator records
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get("auth_token")?.value;
@@ -60,16 +54,13 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const filterUserId = searchParams.get("userId");
-    const status = searchParams.get("status");
     const tahun = searchParams.get("tahun");
 
-    // Scoping akses: RESPONDEN hanya bisa melihat data milik sendiri
     const targetUserId = payload.role === "RESPONDEN" ? payload.id : filterUserId || undefined;
 
     const submissions = await prisma.submission.findMany({
       where: {
         ...(targetUserId && { userId: targetUserId }),
-        ...(status && { status: status as SubmissionStatus }),
         ...(tahun && { tahunSurvei: parseInt(tahun) }),
       },
       include: {
@@ -84,7 +75,9 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        answers: true,
+        respondenIdentity: true,
+        indicatorRecords: true,
+        validationEvidences: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -101,7 +94,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create new submission with Excel file uploads
+// POST: Create new submission by parsing Excel files directly into database tables
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get("auth_token")?.value;
@@ -121,11 +114,9 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
-
     const tahunRaw = formData.get("tahunSurvei");
     const tahunSurvei = tahunRaw ? parseInt(tahunRaw as string) : new Date().getFullYear();
 
-    // Validate metadata input using Zod
     const validation = submissionSchema.safeParse({ tahunSurvei });
     if (!validation.success) {
       return NextResponse.json(
@@ -136,129 +127,204 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
-    // Extract uploaded files from FormData
-    const filesToUpload: { file: File; indicatorId: number; indicatorTitle?: string }[] = [];
+    const fileEntries: { step: number; file: File }[] = [];
 
     for (const [key, value] of formData.entries()) {
       if (typeof value === "object" && value !== null && "name" in value && "size" in value) {
         const file = value as File;
-        
-        // Pencocokan key FormData secara ketat
         const keyMatch = key.match(/^(?:file|indicator|fileIndicator)[_-]?(\d+)$/i);
-        if (keyMatch) {
-          if (file.size > 0) {
-            // Batasan ukuran file (Max 10MB) untuk pencegahan DoS
-            if (file.size > MAX_FILE_SIZE) {
-              return NextResponse.json(
-                { error: `File '${file.name}' melebihi batas ukuran maksimum (10 MB)` },
-                { status: 400 }
-              );
-            }
-
-            // Validate Excel file format
-            if (!isExcelFile(file)) {
-              return NextResponse.json(
-                { error: `File '${file.name}' bukan file Excel yang valid (.xlsx / .xls)` },
-                { status: 400 }
-              );
-            }
-
-            const indicatorId = parseInt(keyMatch[1]);
-            const indicatorTitle =
-              (formData.get(`indicatorTitle_${indicatorId}`) as string) || `Indikator ${indicatorId}`;
-
-            filesToUpload.push({
-              file,
-              indicatorId,
-              indicatorTitle,
-            });
+        if (keyMatch && file.size > 0) {
+          if (file.size > MAX_FILE_SIZE) {
+            return NextResponse.json(
+              { error: `File '${file.name}' melebihi batas ukuran maksimum (10 MB)` },
+              { status: 400 }
+            );
           }
+
+          if (!isExcelFile(file)) {
+            return NextResponse.json(
+              { error: `File '${file.name}' bukan file Excel yang valid (.xlsx / .xls)` },
+              { status: 400 }
+            );
+          }
+
+          fileEntries.push({
+            step: parseInt(keyMatch[1]),
+            file,
+          });
         }
       }
     }
 
-    if (filesToUpload.length === 0) {
+    if (fileEntries.length === 0) {
       return NextResponse.json(
         { error: "Tidak ada file Excel yang diunggah" },
         { status: 400 }
       );
     }
 
-    // Upload file ke Vercel Blob secara paralel dengan folder payload.id
-    const userFolder = payload.id;
+    let parsedIdentity: any = null;
+    const parsedIndicatorRecords: any[] = [];
 
-    const uploadPromises = filesToUpload.map(async (item) => {
-      const safeFileName = sanitizeFileName(item.file.name);
-      let blob;
-      try {
-        blob = await put(`submissions/${userFolder}/${Date.now()}-${safeFileName}`, item.file, {
-          access: "public",
-        });
-      } catch (blobErr: any) {
-        // Jika Vercel Blob Store dikonfigurasi sebagai private store, gunakan access: "private"
-        if (blobErr?.message?.includes("private store") || blobErr?.message?.includes("private access")) {
-          blob = await put(`submissions/${userFolder}/${Date.now()}-${safeFileName}`, item.file, {
-            access: "private",
-          });
-        } else {
-          throw blobErr;
-        }
+    for (const item of fileEntries) {
+      const arrayBuffer = await item.file.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        return NextResponse.json(
+          { error: `File '${item.file.name}' tidak memiliki sheet yang valid.` },
+          { status: 400 }
+        );
       }
 
-      return {
-        indicatorId: item.indicatorId,
-        indicatorTitle: item.indicatorTitle || `Indikator ${item.indicatorId}`,
-        fileBuktiName: item.file.name,
-        fileBuktiSize: item.file.size,
-        fileBuktiHash: blob.url,
-      };
-    });
+      const worksheet = workbook.Sheets[sheetName];
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-    const uploadedAnswers = await Promise.all(uploadPromises);
+      if (!rawRows || rawRows.length < 2) {
+        return NextResponse.json(
+          { error: `File '${item.file.name}' kosong atau tidak memiliki data.` },
+          { status: 400 }
+        );
+      }
 
-    // Transaksi Prisma dengan Rollback Blob jika DB gagal
-    try {
-      const submission = await prisma.submission.create({
+      const headerRow = rawRows[0].map((h: any) => String(h || "").trim().toLowerCase());
+      const dataRows = rawRows.slice(1);
+
+      if (item.step === 0) {
+        const idxNama = headerRow.findIndex((h) => h.includes("nama"));
+        const idxJenisKelamin = headerRow.findIndex((h) => h.includes("jenis kelamin") || h.includes("kelamin"));
+        const idxTanggalLahir = headerRow.findIndex((h) => h.includes("tanggal lahir") || h.includes("lahir"));
+        const idxUmur = headerRow.findIndex((h) => h.includes("umur") || h.includes("usia"));
+        const idxKabKota = headerRow.findIndex((h) => h.includes("kabupaten") || h.includes("kota"));
+        const idxKecamatan = headerRow.findIndex((h) => h.includes("kecamatan"));
+        const idxPekerjaan = headerRow.findIndex((h) => h.includes("pekerjaan") || h.includes("jabatan"));
+        const idxTelepon = headerRow.findIndex((h) => h.includes("telepon") || h.includes("whatsapp") || h.includes("hp"));
+
+        const firstDataRow = dataRows.find(
+          (r) => r && r.some((c: any) => c !== null && c !== undefined && String(c).trim() !== "")
+        );
+
+        if (!firstDataRow) {
+          return NextResponse.json(
+            { error: `File Identitas Responden (${item.file.name}) tidak memiliki data baris yang terisi.` },
+            { status: 400 }
+          );
+        }
+
+        const namaLengkap = getCellValue(firstDataRow, idxNama);
+        const jenisKelamin = getCellValue(firstDataRow, idxJenisKelamin);
+        const tanggalLahir = getCellValue(firstDataRow, idxTanggalLahir);
+        const umur = getCellValue(firstDataRow, idxUmur);
+        const kabupatenKotaAsal = getCellValue(firstDataRow, idxKabKota);
+        const kecamatan = getCellValue(firstDataRow, idxKecamatan);
+        const pekerjaanJabatan = getCellValue(firstDataRow, idxPekerjaan);
+        const nomorTelepon = getCellValue(firstDataRow, idxTelepon);
+
+        if (!namaLengkap || !jenisKelamin || !tanggalLahir || !umur || !kabupatenKotaAsal || !kecamatan || !pekerjaanJabatan || !nomorTelepon) {
+          return NextResponse.json(
+            { error: `Validasi Identitas Gagal: Terdapat data wajib yang belum terisi di file '${item.file.name}'.` },
+            { status: 400 }
+          );
+        }
+
+        parsedIdentity = {
+          namaLengkap,
+          jenisKelamin,
+          tanggalLahir,
+          umur,
+          kabupatenKotaAsal,
+          kecamatan,
+          pekerjaanJabatan,
+          nomorTelepon,
+        };
+      } else {
+        const idxKegiatan = headerRow.findIndex((h) => h.includes("nama kegiatan") || h.includes("kejuaraan"));
+        const idxCabor = headerRow.findIndex((h) => h.includes("cabang") || h.includes("cabor"));
+        const idxTingkat = headerRow.findIndex((h) => h.includes("tingkat"));
+        const idxSumber = headerRow.findIndex((h) => h.includes("sumber") || h.includes("pendanaan"));
+        const idxMedali = headerRow.findIndex((h) => h.includes("medali")); // Optional!
+        const idxUraian = headerRow.findIndex((h) => h.includes("uraian") || h.includes("capaian"));
+
+        for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
+          const row = dataRows[rIdx];
+          if (!row || !row.some((c: any) => c !== null && c !== undefined && String(c).trim() !== "")) {
+            continue;
+          }
+
+          const namaKegiatan = getCellValue(row, idxKegiatan);
+          const cabangOlahraga = getCellValue(row, idxCabor);
+          const tingkatPenyelenggaraan = getCellValue(row, idxTingkat);
+          const sumberPendanaan = getCellValue(row, idxSumber);
+          const medali = idxMedali !== -1 ? getCellValue(row, idxMedali) : null;
+          const uraianCapaian = getCellValue(row, idxUraian);
+
+          const displayRow = rIdx + 2;
+
+          if (!namaKegiatan || !cabangOlahraga || !tingkatPenyelenggaraan || !sumberPendanaan || !uraianCapaian) {
+            return NextResponse.json(
+              {
+                error: `Validasi Indikator ${item.step} Gagal: Baris ke-${displayRow} pada file '${item.file.name}' memiliki kolom wajib yang belum terisi.`,
+              },
+              { status: 400 }
+            );
+          }
+
+          parsedIndicatorRecords.push({
+            indicatorId: item.step,
+            namaKegiatan,
+            cabangOlahraga,
+            tingkatPenyelenggaraan,
+            sumberPendanaan,
+            medali: medali || null,
+            uraianCapaian,
+          });
+        }
+      }
+    }
+
+    if (!parsedIdentity) {
+      return NextResponse.json(
+        { error: "Form Identitas Responden wajib diikutsertakan dalam pengiriman." },
+        { status: 400 }
+      );
+    }
+
+    const submission = await prisma.$transaction(async (tx) => {
+      const sub = await tx.submission.create({
         data: {
           noRegistrasi: crypto.randomUUID(),
           userId: payload.id,
           tahunSurvei: data.tahunSurvei,
-          status: "TERKIRIM",
-          totalIndikatorTerisi: uploadedAnswers.length,
-          answers: {
-            create: uploadedAnswers as any,
+          totalIndikatorTerisi: new Set(parsedIndicatorRecords.map((r) => r.indicatorId)).size,
+          respondenIdentity: {
+            create: parsedIdentity,
+          },
+          indicatorRecords: {
+            create: parsedIndicatorRecords,
           },
         },
         include: {
-          answers: true,
+          respondenIdentity: true,
+          indicatorRecords: true,
         },
       });
 
-      // Log audit for creation
-      await prisma.auditLog.create({
+      await tx.auditLog.create({
         data: {
           userId: payload.id,
           action: "CREATE_SUBMISSION",
           entity: "Submission",
-          entityId: submission.id,
+          entityId: sub.id,
         },
       });
 
-      return NextResponse.json(
-        { success: true, submissionId: submission.id, submission },
-        { status: 201 }
-      );
-    } catch (dbError) {
-      console.error("Prisma submission create error, rolling back blob uploads:", dbError);
-      // Rollback: Hapus file Vercel Blob yang baru saja di-upload
-      const urlsToDelete = uploadedAnswers.map((ans) => ans.fileBuktiHash);
-      if (urlsToDelete.length > 0) {
-        await del(urlsToDelete).catch((delErr) => {
-          console.error("Gagal melakukan rollback pembersihan Vercel Blob:", delErr);
-        });
-      }
-      throw dbError;
-    }
+      return sub;
+    });
+
+    return NextResponse.json(
+      { success: true, submissionId: submission.id, submission },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Create submission error:", error);
     return NextResponse.json(
@@ -267,4 +333,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

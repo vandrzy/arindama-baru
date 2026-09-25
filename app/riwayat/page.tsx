@@ -52,9 +52,8 @@ export default function RiwayatPage() {
           if (data.success && Array.isArray(data.submissions) && data.submissions.length > 0) {
             const mapped = data.submissions.map((sub: any) => ({
               id: sub.id,
-              status: sub.status,
+              noRegistrasi: sub.noRegistrasi,
               createdAt: sub.createdAt,
-              catatanVerifikator: sub.catatanVerifikator || null,
               user: sub.user,
               responden: {
                 namaLengkap: sub.user?.nama || currentUser?.nama || "Responden",
@@ -177,21 +176,6 @@ export default function RiwayatPage() {
                       {sub.noRegistrasi || sub.id}
                     </h3>
                   </div>
-
-                  <Badge
-                    variant={
-                      sub.status === "TERVERIFIKASI"
-                        ? "success"
-                        : sub.status === "TERKIRIM"
-                          ? "info"
-                          : "warning"
-                    }
-                    className="shrink-0"
-                  >
-                    {sub.status === "TERVERIFIKASI" && "✓ Terverifikasi"}
-                    {sub.status === "TERKIRIM" && "⏳ Menunggu Review"}
-                    {sub.status === "PERLU_REVISI" && "⚠️ Perlu Revisi"}
-                  </Badge>
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400">
@@ -228,19 +212,6 @@ export default function RiwayatPage() {
                 </h3>
               </div>
               <div className="flex items-center gap-3">
-                <Badge
-                  variant={
-                    activeDetail.status === "TERVERIFIKASI"
-                      ? "success"
-                      : activeDetail.status === "TERKIRIM"
-                        ? "info"
-                        : "warning"
-                  }
-                >
-                  {activeDetail.status === "TERVERIFIKASI" && "✓ Terverifikasi"}
-                  {activeDetail.status === "TERKIRIM" && "⏳ Menunggu Review"}
-                  {activeDetail.status === "PERLU_REVISI" && "⚠️ Perlu Revisi"}
-                </Badge>
                 <button
                   onClick={() => setSelectedId(null)}
                   className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
@@ -252,18 +223,6 @@ export default function RiwayatPage() {
 
             {/* Body Modal (Scroll Container) */}
             <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-              {/* Catatan Verifikator Dispora */}
-              {activeDetail.catatanVerifikator && (
-                <div className="bg-amber-50/80 rounded-2xl p-4 border border-amber-200 text-xs space-y-1">
-                  <span className="font-bold text-amber-900 flex items-center gap-1.5 mb-1">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    Catatan Verifikator Dispora:
-                  </span>
-                  <p className="text-amber-800 leading-relaxed pl-5">
-                    {activeDetail.catatanVerifikator}
-                  </p>
-                </div>
-              )}
 
               {/* Informasi Responden (Quick Summary) */}
               <div className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-3 text-xs">

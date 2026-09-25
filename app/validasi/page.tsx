@@ -116,7 +116,7 @@ export default function ValidasiPage() {
     }
   };
 
-  // Otomatis muat dan parse file Excel dari database saat Dropdown Kuesioner & Form dipilih
+  // Otomatis muat data record dari database saat Dropdown Kuesioner & Form dipilih
   useEffect(() => {
     setTableData([]);
     setTableHeaders([]);
@@ -130,63 +130,37 @@ export default function ValidasiPage() {
     // Fetch existing validation evidences for this submission & form
     fetchEvidences(selectedSubmissionId, selectedFormId);
 
-    const selectedSub = submissionsList.find((s) => s.id === selectedSubmissionId);
-    if (!selectedSub) return;
-
-    const targetIndicatorId = parseInt(selectedFormId);
-
-    // Cari answer di database yang memiliki indicatorId yang sesuai
-    const targetAnswer = Array.isArray(selectedSub.answers)
-      ? selectedSub.answers.find((a: any) => Number(a.indicatorId) === targetIndicatorId)
-      : null;
-
-    const fileUrl = targetAnswer?.fileBuktiHash || targetAnswer?.fileBuktiUrl;
-    const fileName = targetAnswer?.fileBuktiName || `Indikator_${selectedFormId}.xlsx`;
-
-    if (fileUrl) {
-      setIsLoadingExcel(true);
-      const proxyDownloadUrl = `/api/files/download?url=${encodeURIComponent(fileUrl)}`;
-      fetch(proxyDownloadUrl)
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: Gagal mengunduh berkas dari server storage`);
-          }
-          return res.arrayBuffer();
-        })
-        .then((buffer) => {
-          const workbook = XLSX.read(buffer, { type: "array" });
-          const firstSheetName = workbook.SheetNames[0];
-
-          if (!firstSheetName) {
-            setParseError("File Excel di database tidak memiliki sheet yang valid.");
-            return;
-          }
-
-          const worksheet = workbook.Sheets[firstSheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
-
-          if (!jsonData || jsonData.length === 0) {
-            setParseError(`File Excel '${fileName}' di database kosong atau tidak memiliki data record.`);
-            return;
-          }
-
-          const headers = Object.keys(jsonData[0]);
+    setIsLoadingExcel(true);
+    fetch(
+      `/api/records?submissionId=${encodeURIComponent(selectedSubmissionId)}&formType=${encodeURIComponent(selectedFormId)}`
+    )
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: Gagal mengunduh data dari database`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data.success && Array.isArray(data.records) && data.records.length > 0) {
+          const headers = Object.keys(data.records[0]);
           setTableHeaders(headers);
-          setTableData(jsonData);
-          setActiveFileName(fileName);
+          setTableData(data.records);
+          setActiveFileName(`Database Record (${selectedFormId})`);
           setIsFromDatabase(true);
-        })
-        .catch((err) => {
-          console.error("Gagal mengambil file Excel dari database:", err);
+        } else {
           setParseError(
-            `Tidak dapat mengunduh file Excel di database ('${fileName}'). ${err.message || ""}. Anda dapat memuat file Excel secara manual di bawah.`
+            `Belum ada data record yang tersimpan di database untuk ${selectedForm?.label || "form ini"}.`
           );
-        })
-        .finally(() => {
-          setIsLoadingExcel(false);
-        });
-    }
-  }, [selectedSubmissionId, selectedFormId, submissionsList]);
+        }
+      })
+      .catch((err) => {
+        console.error("Gagal mengambil data dari database:", err);
+        setParseError(`Tidak dapat memuat data dari database. ${err.message || ""}.`);
+      })
+      .finally(() => {
+        setIsLoadingExcel(false);
+      });
+  }, [selectedSubmissionId, selectedFormId]);
 
   // Handler saat user mengunggah file Excel manual di halaman validasi jika file belum ada di DB
   const handleExcelUpload = async (file: File) => {
