@@ -17,7 +17,13 @@ async function main() {
   // Create admin account
   const admin = await prisma.user.upsert({
     where: { username: "admin" },
-    update: {},
+    update: {
+      email: "admin@arindama.id",
+      nama: "Drs. H. Hendra Wijaya, M.Si.",
+      role: "ADMIN",
+      jabatan: "Koordinator Tim Verifikasi Data Olahraga",
+      instansi: "Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur",
+    },
     create: {
       username: "admin",
       email: "admin@arindama.id",

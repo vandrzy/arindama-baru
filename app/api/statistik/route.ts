@@ -49,10 +49,10 @@ export async function GET(request: NextRequest) {
       } else {
         const userWhere: any = {};
         if (paramKota) {
-          userWhere.kabupatenKota = { equals: paramKota, mode: "insensitive" };
+          userWhere.kabupatenKota = paramKota;
         }
         if (paramInstansi) {
-          userWhere.instansi = { equals: paramInstansi, mode: "insensitive" };
+          userWhere.instansi = paramInstansi;
         }
 
         if (Object.keys(userWhere).length > 0) {
