@@ -16,7 +16,6 @@ import {
   UploadCloud,
   FileSpreadsheet,
   X,
-  Save,
 } from "lucide-react";
 
 const FULL_TEMPLATE_NAMES: Record<number, string> = {
@@ -394,10 +393,6 @@ export default function KuesionerPage() {
               Lengkapi data identitas dan unggah berkas bukti fisik Excel untuk 8 indikator keolahragaan.
             </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100 text-xs text-brand-text-secondary">
-          <Save className="w-4 h-4 text-emerald-600" />
-          <span>Autosave aktif • Harap unggah berkas Excel (.xlsx / .xls) untuk setiap indikator.</span>
         </div>
       </div>
 
