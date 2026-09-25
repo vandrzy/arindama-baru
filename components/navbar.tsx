@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   FileCheck,
+  BarChart3,
 } from "lucide-react";
 
 export function Navbar() {
@@ -76,6 +77,12 @@ export function Navbar() {
       label: "Validasi",
       icon: FileCheck,
       match: (p: string) => p.startsWith("/validasi"),
+    });
+    navLinks.push({
+      href: "/statistik",
+      label: "Statistik",
+      icon: BarChart3,
+      match: (p: string) => p.startsWith("/statistik"),
     });
   }
 
