@@ -30,15 +30,15 @@ interface FormOption {
 }
 
 const FORM_OPTIONS: FormOption[] = [
-  { id: "0", label: "Form Identitas Responden", filename: "IdentitasResponden.xlsx" },
-  { id: "1", label: "Indikator 1: Kejuaraan Pelajar Tingkat Nasional dan Internasional", filename: "Indikator 1.xlsx" },
-  { id: "2", label: "Indikator 2: Peningkatan Mutu SDM Olahraga", filename: "Indikator 2.xlsx" },
-  { id: "3", label: "Indikator 3: Pelatih Cabor Membawa Tim Tingkat Nasional/Internasional", filename: "Indikator 3.xlsx" },
-  { id: "4", label: "Indikator 4: Wasit Cabang Olahraga Masuk Wasit Nasional/Internasional", filename: "Indikator 4.xlsx" },
-  { id: "5", label: "Indikator 5: Wasit/Juri Bertugas Kegiatan Nasional/Internasional", filename: "Indikator 5.xlsx" },
-  { id: "6", label: "Indikator 6: Atlet Cabang Olahraga Mewakili Tim Nasional/Internasional", filename: "Indikator 6.xlsx" },
-  { id: "7", label: "Indikator 7: Penyelenggaraan Event Olahraga Nasional/Internasional", filename: "Indikator 7.xlsx" },
-  { id: "8", label: "Indikator 8: Prestasi Event Olahraga Masyarakat Tingkat Nasional", filename: "Indikator 8.xlsx" },
+  { id: "0", label: "Form Identitas Responden", filename: "IdentitasResponden_Fixed.xlsx" },
+  { id: "1", label: "Indikator 1: Kejuaraan Pelajar Tingkat Nasional dan Internasional", filename: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx" },
+  { id: "2", label: "Indikator 2: Peningkatan Mutu SDM Olahraga", filename: "Indikator 2_Peningkatan Mutu SDM Olahraga.xlsx" },
+  { id: "3", label: "Indikator 3: Pelatih Cabor Membawa Tim Tingkat Nasional/Internasional", filename: "Indikator 3_Pelatih Cabor Membawa Tim Tingkat Nasional Internasional.xlsx" },
+  { id: "4", label: "Indikator 4: Wasit Cabang Olahraga Masuk Wasit Nasional/Internasional", filename: "Indikator 4_ Wasit Cabang Olahraga Masuk dalam Wasit Nasional Internasional.xlsx" },
+  { id: "5", label: "Indikator 5: Wasit/Juri Bertugas Kegiatan Nasional/Internasional", filename: "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional.xlsx" },
+  { id: "6", label: "Indikator 6: Atlet Cabang Olahraga Mewakili Tim Nasional/Internasional", filename: "Indikator 6_Atlet Cabang Olahraga Mewakili Tim Nasional Internasional.xlsx" },
+  { id: "7", label: "Indikator 7: Penyelenggaraan Event Olahraga Nasional/Internasional", filename: "Indikator 7_Penyelenggaraan Event Olahraga Nasional Internasional.xlsx" },
+  { id: "8", label: "Indikator 8: Prestasi Event Olahraga Masyarakat Tingkat Nasional", filename: "Indikator 8_Prestasi Event Olahraga Masyarakat Tingkat Nasional.xlsx" },
 ];
 
 export default function ValidasiPage() {
