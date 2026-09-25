@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJwtToken } from "@/lib/auth";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,40 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Ambil token Vercel Blob jika ada dari environment
+    // Jika fileUrl merujuk ke file lokal (/uploads/... atau uploads/...)
+    if (fileUrl.startsWith("/uploads/") || fileUrl.startsWith("uploads/")) {
+      const sanitizedRelativePath = fileUrl.startsWith("/") ? fileUrl.substring(1) : fileUrl;
+      const absolutePath = path.join(process.cwd(), sanitizedRelativePath);
+
+      if (!fs.existsSync(absolutePath)) {
+        return NextResponse.json(
+          { error: "File validasi tidak ditemukan pada penyimpanan lokal server." },
+          { status: 404 }
+        );
+      }
+
+      const fileBuffer = fs.readFileSync(absolutePath);
+      const ext = path.extname(absolutePath).toLowerCase();
+      let contentType = "application/pdf";
+      if (ext === ".xlsx" || ext === ".xls") {
+        contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      } else if (ext === ".png") {
+        contentType = "image/png";
+      } else if (ext === ".jpg" || ext === ".jpeg") {
+        contentType = "image/jpeg";
+      }
+
+      return new NextResponse(fileBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Content-Disposition": "inline",
+          "Cache-Control": "public, max-age=3600",
+        },
+      });
+    }
+
+    // --- FALLBACK KE VERCEL BLOB / URL REMOTE LAMA ---
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
     const headers: Record<string, string> = {};

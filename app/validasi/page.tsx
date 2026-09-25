@@ -206,9 +206,17 @@ export default function ValidasiPage() {
   const handleRowFileUpload = async (rowIndex: number, file: File | null) => {
     if (!file || !selectedSubmissionId || !selectedFormId) return;
 
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB Limit
+
     const fileNameLower = file.name.toLowerCase();
     if (!fileNameLower.endsWith(".pdf") && file.type !== "application/pdf") {
       alert("Hanya berkas berekstensi .pdf yang diperbolehkan untuk bukti validasi.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      alert(`Ukuran file '${file.name}' (${fileSizeMB} MB) melebihi batas maksimum 2 MB.`);
       return;
     }
 

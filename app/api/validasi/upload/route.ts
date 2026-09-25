@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwtToken } from "@/lib/auth";
-import { put } from "@vercel/blob";
+import fs from "fs";
+import path from "path";
+// import { put } from "@vercel/blob";
 
 export const dynamic = "force-dynamic";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB limit
 
 function sanitizePart(part: string): string {
   return part
@@ -79,9 +81,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validasi maksimal ukuran file (MAX_FILE_SIZE = 10 MB)
     if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      const maxMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0);
       return NextResponse.json(
-        { error: `Ukuran file '${file.name}' melebihi batas maksimum 10 MB.` },
+        { error: `Ukuran file '${file.name}' (${fileSizeMB} MB) melebihi batas maksimum ${maxMB} MB.` },
         { status: 400 }
       );
     }
@@ -98,6 +103,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Cek record bukti validasi lama di DB jika ada
+    const existingEvidence = await prisma.validationEvidence.findUnique({
+      where: {
+        submissionId_formType_recordId: {
+          submissionId,
+          formType,
+          recordId,
+        },
+      },
+    });
+
     // Penamaan file terstruktur: {noRegistrasi}_{namaForm}_{identifierBaris}_{timestamp}.ekstensi
     const noRegistrasi = submission.noRegistrasi || submission.id;
     const timestamp = Date.now();
@@ -111,6 +127,8 @@ export async function POST(request: NextRequest) {
       ext: fileExt,
     });
 
+    /*
+    // --- KODE LAMA VERCEL BLOB (DI-COMMENT) ---
     const blobPath = `validation/${submissionId}/${formattedFileName}`;
 
     let blob;
@@ -123,7 +141,43 @@ export async function POST(request: NextRequest) {
         throw blobErr;
       }
     }
+    // ------------------------------------------
+    */
 
+    // Simpan file BARU ke local storage: uploads/<submissionId>/<formattedFileName>
+    const uploadDir = path.join(process.cwd(), "uploads", submissionId);
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const filePath = path.join(uploadDir, formattedFileName);
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    fs.writeFileSync(filePath, fileBuffer);
+
+    // Hapus file LAMA setelah file baru berhasil disimpan
+    if (existingEvidence) {
+      let oldFilePath: string | null = null;
+
+      if (existingEvidence.fileName) {
+        oldFilePath = path.join(uploadDir, existingEvidence.fileName);
+      } else if (existingEvidence.fileUrl && existingEvidence.fileUrl.startsWith("/uploads/")) {
+        const sanitizedPath = existingEvidence.fileUrl.startsWith("/")
+          ? existingEvidence.fileUrl.substring(1)
+          : existingEvidence.fileUrl;
+        oldFilePath = path.join(process.cwd(), sanitizedPath);
+      }
+
+      if (oldFilePath && oldFilePath !== filePath && fs.existsSync(oldFilePath)) {
+        try {
+          fs.unlinkSync(oldFilePath);
+          console.log(`[ValidationUpload] File lama berhasil dihapus: ${oldFilePath}`);
+        } catch (unlinkErr) {
+          console.error("[ValidationUpload] Gagal menghapus file lama:", unlinkErr);
+        }
+      }
+    }
+
+    const localFileUrl = `/uploads/${submissionId}/${formattedFileName}`;
     const sizeInMB = (file.size / (1024 * 1024)).toFixed(2) + " MB";
 
     // Upsert database record
@@ -137,7 +191,7 @@ export async function POST(request: NextRequest) {
       },
       update: {
         fileName: formattedFileName,
-        fileUrl: blob.url,
+        fileUrl: localFileUrl,
         fileSize: sizeInMB,
       },
       create: {
@@ -145,7 +199,7 @@ export async function POST(request: NextRequest) {
         formType,
         recordId,
         fileName: formattedFileName,
-        fileUrl: blob.url,
+        fileUrl: localFileUrl,
         fileSize: sizeInMB,
       },
     });
