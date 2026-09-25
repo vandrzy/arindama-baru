@@ -122,6 +122,7 @@ export default function StatistikPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("demografi");
   const [selectedKinerjaIndicator, setSelectedKinerjaIndicator] = useState<string>("all");
+  const [selectedAtletIndicator, setSelectedAtletIndicator] = useState<string>("all");
 
   // State untuk Pagination & Search Tabel
   const [currentPage, setCurrentPage] = useState(1);
@@ -132,7 +133,7 @@ export default function StatistikPage() {
   useEffect(() => {
     setCurrentPage(1);
     setTableSearchQuery("");
-  }, [selectedCategory, selectedKinerjaIndicator]);
+  }, [selectedCategory, selectedKinerjaIndicator, selectedAtletIndicator]);
 
   // Auth & API data state
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -252,12 +253,107 @@ export default function StatistikPage() {
     return Object.entries(sdmPendanaanMap).map(([name, value]) => ({ name, value }));
   }, [filteredKinerjaList]);
 
+  // Prestasi Atlet (Indikator 1 & 6) Logic
+  const rawAtletList: any[] = atletData.rawList || [];
+
+  const filteredAtletList = useMemo(() => {
+    if (selectedAtletIndicator === "all") return rawAtletList;
+    const targetId = parseInt(selectedAtletIndicator);
+    return rawAtletList.filter((r) => r.indicatorId === targetId);
+  }, [rawAtletList, selectedAtletIndicator]);
+
+  const activeAtletCalculatedStats = useMemo(() => {
+    const medalStats = {
+      Internasional: { Emas: 0, Perak: 0, Perunggu: 0, Partisipasi: 0 },
+      Nasional: { Emas: 0, Perak: 0, Perunggu: 0, Partisipasi: 0 },
+      Provinsi: { Emas: 0, Perak: 0, Perunggu: 0, Partisipasi: 0 },
+    };
+    let totalBobotScore = 0;
+
+    let totalPelajarCount = 0;
+    let totalAtletCount = 0;
+
+    rawAtletList.forEach((r) => {
+      if (r.indicatorId === 1) totalPelajarCount += 1;
+      if (r.indicatorId === 6) totalAtletCount += 1;
+    });
+
+    filteredAtletList.forEach((r) => {
+      const valLevel = (r.tingkatPenyelenggaraan || "").toLowerCase();
+      let keyLevel: "Internasional" | "Nasional" | "Provinsi" = "Provinsi";
+      if (valLevel.includes("internasional")) keyLevel = "Internasional";
+      else if (valLevel.includes("nasional")) keyLevel = "Nasional";
+
+      const valMedal = (r.medali || r.uraianCapaian || "").toLowerCase();
+      let medal = "";
+      if (valMedal.includes("emas")) medal = "Emas";
+      else if (valMedal.includes("perak")) medal = "Perak";
+      else if (valMedal.includes("perunggu")) medal = "Perunggu";
+
+      if (medal === "Emas") {
+        medalStats[keyLevel].Emas += 1;
+        if (keyLevel === "Internasional") totalBobotScore += 10;
+        else if (keyLevel === "Nasional") totalBobotScore += 5;
+        else totalBobotScore += 3;
+      } else if (medal === "Perak") {
+        medalStats[keyLevel].Perak += 1;
+        if (keyLevel === "Internasional") totalBobotScore += 8;
+        else if (keyLevel === "Nasional") totalBobotScore += 4;
+        else totalBobotScore += 2;
+      } else if (medal === "Perunggu") {
+        medalStats[keyLevel].Perunggu += 1;
+        if (keyLevel === "Internasional") totalBobotScore += 5;
+        else if (keyLevel === "Nasional") totalBobotScore += 3;
+        else totalBobotScore += 1;
+      } else {
+        medalStats[keyLevel].Partisipasi += 1;
+      }
+    });
+
+    const atletChartData = [
+      {
+        jenjang: "Internasional",
+        Emas: medalStats.Internasional.Emas,
+        Perak: medalStats.Internasional.Perak,
+        Perunggu: medalStats.Internasional.Perunggu,
+        Partisipasi: medalStats.Internasional.Partisipasi,
+      },
+      {
+        jenjang: "Nasional",
+        Emas: medalStats.Nasional.Emas,
+        Perak: medalStats.Nasional.Perak,
+        Perunggu: medalStats.Nasional.Perunggu,
+        Partisipasi: medalStats.Nasional.Partisipasi,
+      },
+      {
+        jenjang: "Provinsi",
+        Emas: medalStats.Provinsi.Emas,
+        Perak: medalStats.Provinsi.Perak,
+        Perunggu: medalStats.Provinsi.Perunggu,
+        Partisipasi: medalStats.Provinsi.Partisipasi,
+      },
+    ];
+
+    const perbandinganPelajarAtletStats = [
+      { name: "Pelajar (Indikator 1)", value: totalPelajarCount },
+      { name: "Atlet (Indikator 6)", value: totalAtletCount },
+    ];
+
+    return {
+      totalBobotScore,
+      atletChartData,
+      perbandinganPelajarAtletStats,
+      totalPelajarCount,
+      totalAtletCount,
+    };
+  }, [rawAtletList, filteredAtletList]);
+
   // Ambil raw data untuk tabel berdasarkan kategori
   let categoryRawData: any[] = [];
   if (selectedCategory === "demografi") categoryRawData = demografiData.identitiesList || demografiData.rawList || [];
   else if (selectedCategory === "mutuSDM") categoryRawData = mutuData.rawList || [];
   else if (selectedCategory === "kinerjaSDM") categoryRawData = filteredKinerjaList;
-  else if (selectedCategory === "prestasiAtlet") categoryRawData = atletData.rawList || [];
+  else if (selectedCategory === "prestasiAtlet") categoryRawData = filteredAtletList;
   else if (selectedCategory === "eventOlahraga") categoryRawData = eventData.rawList || [];
   else if (selectedCategory === "prestasiKejuaraan") categoryRawData = kejuaraanData.rawList || [];
 
@@ -306,7 +402,7 @@ export default function StatistikPage() {
     if (catKey === "demografi") return (demografiData.totalResponden || 0) > 0;
     if (catKey === "mutuSDM") return (mutuData.totalRecords || 0) > 0;
     if (catKey === "kinerjaSDM") return filteredKinerjaList.length > 0;
-    if (catKey === "prestasiAtlet") return (atletData.totalRecords || 0) > 0;
+    if (catKey === "prestasiAtlet") return filteredAtletList.length > 0;
     if (catKey === "eventOlahraga") return (eventData.totalRecords || 0) > 0;
     if (catKey === "prestasiKejuaraan") return (kejuaraanData.totalRecords || 0) > 0;
     return false;
@@ -827,6 +923,42 @@ export default function StatistikPage() {
         {/* CATEGORY C: PRESTASI ATLET */}
         {selectedCategory === "prestasiAtlet" && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Top Indicator Filter Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
+                <span className="text-xs font-semibold text-brand-text-secondary">Form Terkait</span>
+                <div className="text-sm font-bold text-brand-primary">
+                  {selectedAtletIndicator === "all"
+                    ? "Indikator 1 & 6"
+                    : selectedAtletIndicator === "1"
+                    ? "Indikator 1 (Pelajar)"
+                    : "Indikator 6 (Atlet)"}
+                </div>
+                <p className="text-xs text-gray-400">Prestasi Atlet & Pelajar Keolahragaan</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
+                <span className="text-xs font-semibold text-brand-text-secondary">Total Rekam Prestasi</span>
+                <div className="text-2xl font-extrabold text-brand-primary">
+                  {filteredAtletList.length} <span className="text-xs font-normal text-gray-500">Kegiatan</span>
+                </div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
+                <label className="text-xs font-semibold text-brand-text-secondary flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Pilih Indikator Prestasi</span>
+                </label>
+                <select
+                  value={selectedAtletIndicator}
+                  onChange={(e) => setSelectedAtletIndicator(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-brand-text bg-gray-50/80 focus:bg-white focus:ring-2 focus:ring-brand-primary outline-none cursor-pointer transition-all"
+                >
+                  <option value="all">semua (indikator 1, indikator 6)</option>
+                  <option value="1">pelajar (indikator 1)</option>
+                  <option value="6">atlet (indikator 6)</option>
+                </select>
+              </div>
+            </div>
+
             {/* Top Score & Medal Weight Formula Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Total Calculated Medal Weight Score Card */}
@@ -840,14 +972,19 @@ export default function StatistikPage() {
                     Skor Capaian Prestasi
                   </h3>
                   <div className="text-4xl font-extrabold tracking-tight">
-                    {atletData.totalBobotScore || 0}{" "}
+                    {activeAtletCalculatedStats.totalBobotScore}{" "}
                     <span className="text-sm font-normal text-amber-200">Poin</span>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-white/20 text-xs text-amber-100/90 leading-relaxed space-y-1">
                   <p>
-                    <strong>Form Sumber:</strong> Indikator 1 & 6
+                    <strong>Form Sumber:</strong>{" "}
+                    {selectedAtletIndicator === "all"
+                      ? "Indikator 1 & 6"
+                      : selectedAtletIndicator === "1"
+                      ? "Indikator 1 (Pelajar)"
+                      : "Indikator 6 (Atlet)"}
                   </p>
                   <p>
                     Skor dikalkulasikan secara otomatis berdasarkan pembobotan resmi tingkat kejuaraan & jenis medali.
@@ -923,32 +1060,77 @@ export default function StatistikPage() {
               </div>
             </div>
 
-            {/* Main Bar Chart: Perolehan Medali & Partisipasi per Jenjang */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-brand-primary" />
-                <span>Diagram Perbandingan Perolehan Medali &amp; Partisipan di Setiap Jenjang</span>
-              </h3>
+            {/* Charts Grid: Pie Chart Comparison & Bar Chart Medals */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Diagram 1: Pie Chart Perbandingan Pelajar vs Atlet */}
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
+                  <PieChartIcon className="w-4 h-4 text-brand-primary" />
+                  <span>Diagram Lingkaran 1: Perbandingan Rekam Prestasi Pelajar vs Atlet</span>
+                </h3>
+                <p className="text-xs text-brand-text-secondary">
+                  Distribusi dan rasio perbandingan rekam data prestasi antara Pelajar (Indikator 1) dan Atlet (Indikator 6).
+                </p>
 
-              {hasCategoryData("prestasiAtlet") ? (
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={atletData.atletChartData || []}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="jenjang" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="Emas" name="Medali Emas" fill={MEDAL_COLORS.Emas} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Perak" name="Medali Perak" fill={MEDAL_COLORS.Perak} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Perunggu" name="Medali Perunggu" fill={MEDAL_COLORS.Perunggu} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Partisipasi" name="Partisipan / Non-Medali" fill="#0284C7" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <EmptyDataChartHint title="Belum Ada Data Prestasi Atlet (Indikator 1 & 6)" />
-              )}
+                {rawAtletList.length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={activeAtletCalculatedStats.perbandinganPelajarAtletStats}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          dataKey="value"
+                          label={({ name, percent }: { name?: string; percent?: number }) =>
+                            `${name || ""}: ${((percent || 0) * 100).toFixed(0)}%`
+                          }
+                        >
+                          <Cell key="cell-pelajar" fill="#0F766E" />
+                          <Cell key="cell-atlet" fill="#0284C7" />
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyDataChartHint title="Belum Ada Data Rekam Pelajar & Atlet (Indikator 1 & 6)" />
+                )}
+              </div>
+
+              {/* Diagram 2: Bar Chart Perolehan Medali & Partisipasi per Jenjang */}
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-brand-primary" />
+                  <span>Diagram Batang 2: Perbandingan Medali &amp; Partisipan per Jenjang</span>
+                </h3>
+                <p className="text-xs text-brand-text-secondary">
+                  Sebaran hasil perolehan medali (Emas, Perak, Perunggu) dan partisipan berdasarkan indikator terpilih.
+                </p>
+
+                {hasCategoryData("prestasiAtlet") ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={activeAtletCalculatedStats.atletChartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="jenjang" />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="Emas" name="Medali Emas" fill={MEDAL_COLORS.Emas} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Perak" name="Medali Perak" fill={MEDAL_COLORS.Perak} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Perunggu" name="Medali Perunggu" fill={MEDAL_COLORS.Perunggu} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Partisipasi" name="Partisipan / Non-Medali" fill="#0284C7" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyDataChartHint title="Belum Ada Data Prestasi untuk Filter Terpilih" />
+                )}
+              </div>
             </div>
           </div>
         )}
