@@ -19,6 +19,8 @@ import {
   Check,
   Loader2,
   Database,
+  Eye,
+  FileUp,
 } from "lucide-react";
 
 interface FormOption {
@@ -58,10 +60,11 @@ export default function ValidasiPage() {
   const [isLoadingExcel, setIsLoadingExcel] = useState<boolean>(false);
   const [isFromDatabase, setIsFromDatabase] = useState<boolean>(false);
 
-  // Row Upload States: recordIndex -> { fileName, fileSize, uploadedAt }
+  // Validation Evidences database state: recordId ("row_0", "row_1") -> evidence item
   const [rowValidationFiles, setRowValidationFiles] = useState<
-    Record<number, { fileName: string; fileSize?: string; uploadedAt?: string }>
+    Record<string, { id?: string; fileName: string; fileUrl: string; fileSize?: string; updatedAt?: string }>
   >({});
+  const [uploadingRows, setUploadingRows] = useState<Record<string, boolean>>({});
   const [notification, setNotification] = useState<string | null>(null);
 
   // Protected route & fetch submissions list
@@ -92,6 +95,27 @@ export default function ValidasiPage() {
     loadSubmissions();
   }, [isSessionLoading, currentUser, router]);
 
+  // Fetch uploaded evidences from DB when submission & form are selected
+  const fetchEvidences = async (subId: string, formId: string) => {
+    try {
+      const res = await fetch(
+        `/api/validasi/evidences?submissionId=${encodeURIComponent(subId)}&formType=${encodeURIComponent(formId)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.evidences)) {
+          const map: Record<string, any> = {};
+          data.evidences.forEach((ev: any) => {
+            map[ev.recordId] = ev;
+          });
+          setRowValidationFiles(map);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal memuat bukti validasi dari database:", err);
+    }
+  };
+
   // Otomatis muat dan parse file Excel dari database saat Dropdown Kuesioner & Form dipilih
   useEffect(() => {
     setTableData([]);
@@ -102,6 +126,9 @@ export default function ValidasiPage() {
     setIsFromDatabase(false);
 
     if (!selectedSubmissionId || !selectedFormId) return;
+
+    // Fetch existing validation evidences for this submission & form
+    fetchEvidences(selectedSubmissionId, selectedFormId);
 
     const selectedSub = submissionsList.find((s) => s.id === selectedSubmissionId);
     if (!selectedSub) return;
@@ -201,29 +228,62 @@ export default function ValidasiPage() {
     }
   };
 
-  // Handler upload berkas bukti per-row
-  const handleRowFileUpload = (rowIndex: number, file: File | null) => {
-    if (!file) return;
+  // Handler upload berkas bukti per-row ke Vercel Blob & DB
+  const handleRowFileUpload = async (rowIndex: number, file: File | null) => {
+    if (!file || !selectedSubmissionId || !selectedFormId) return;
 
-    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2) + " MB";
-    const uploadedAt = new Date().toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const fileNameLower = file.name.toLowerCase();
+    if (!fileNameLower.endsWith(".pdf") && file.type !== "application/pdf") {
+      alert("Hanya berkas berekstensi .pdf yang diperbolehkan untuk bukti validasi.");
+      return;
+    }
 
-    setRowValidationFiles((prev) => ({
-      ...prev,
-      [rowIndex]: {
-        fileName: file.name,
-        fileSize: sizeInMB,
-        uploadedAt,
-      },
-    }));
+    const recordId = `row_${rowIndex}`;
+    setUploadingRows((prev) => ({ ...prev, [recordId]: true }));
 
-    setNotification(`Berhasil mengunggah berkas '${file.name}' untuk record Baris #${rowIndex + 1}`);
-    setTimeout(() => {
-      setNotification(null);
-    }, 4000);
+    try {
+      const selectedFormObj = FORM_OPTIONS.find((f) => f.id === selectedFormId);
+      const namaFormLabel = selectedFormObj?.label || `Indikator-${selectedFormId}`;
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("submissionId", selectedSubmissionId);
+      formData.append("formType", selectedFormId);
+      formData.append("recordId", recordId);
+      formData.append("namaForm", namaFormLabel);
+
+      const res = await fetch("/api/validasi/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Gagal mengunggah berkas validasi.");
+      }
+
+      // Update state local
+      setRowValidationFiles((prev) => ({
+        ...prev,
+        [recordId]: data.evidence,
+      }));
+
+      setNotification(`Berhasil mengunggah PDF '${file.name}' untuk record Baris #${rowIndex + 1}`);
+      setTimeout(() => {
+        setNotification(null);
+      }, 4000);
+    } catch (err: any) {
+      console.error("Gagal mengunggah berkas validasi:", err);
+      alert(`Gagal unggah: ${err.message || "Terjadi kesalahan"}`);
+    } finally {
+      setUploadingRows((prev) => ({ ...prev, [recordId]: false }));
+    }
+  };
+
+  // Handler untuk membuka/melihat file PDF via download proxy
+  const handleViewPdf = (fileUrl: string) => {
+    const proxyUrl = `/api/files/download?url=${encodeURIComponent(fileUrl)}`;
+    window.open(proxyUrl, "_blank");
   };
 
   if (isSessionLoading || !currentUser) {
@@ -254,7 +314,7 @@ export default function ValidasiPage() {
               Validasi Kelengkapan Data
             </h1>
             <p className="text-xs sm:text-sm text-brand-text-secondary mt-0.5">
-              Verifikasi dan unggah berkas bukti pendukung untuk tiap baris record data kuesioner
+              Verifikasi dan unggah berkas bukti pendukung per baris record data kuesioner (format .pdf)
             </p>
           </div>
         </div>
@@ -371,7 +431,7 @@ export default function ValidasiPage() {
                 <span>Isi Record Data ({selectedForm?.label})</span>
               </h3>
               <p className="text-xs text-brand-text-secondary mt-0.5">
-                Data di bawah ini ditarik otomatis dari file Excel yang tersimpan di database.
+                Data ditarik dari file Excel database. Unggah berkas validasi (.pdf) untuk tiap baris record data.
               </p>
             </div>
 
@@ -472,14 +532,17 @@ export default function ValidasiPage() {
                           {header}
                         </th>
                       ))}
-                      <th className="p-3.5 min-w-[200px] text-center bg-brand-primary-light/50 text-brand-primary">
-                        Aksi / Upload Berkas Validasi
+                      <th className="p-3.5 min-w-[220px] text-center bg-brand-primary-light/50 text-brand-primary">
+                        Aksi / Berkas Validasi (.pdf)
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-brand-text">
                     {tableData.map((row, rowIndex) => {
-                      const rowFile = rowValidationFiles[rowIndex];
+                      const recordId = `row_${rowIndex}`;
+                      const rowFile = rowValidationFiles[recordId];
+                      const isUploading = uploadingRows[recordId];
+
                       return (
                         <tr
                           key={rowIndex}
@@ -496,44 +559,67 @@ export default function ValidasiPage() {
                             </td>
                           ))}
 
-                          {/* Kolom Tombol Upload per-baris */}
-                          <td className="p-3.5 text-center bg-brand-primary-light/10">
-                            {rowFile ? (
-                              <div className="flex flex-col items-center gap-1">
-                                <Badge variant="success" className="gap-1 text-[11px] py-1 px-2.5">
-                                  <Check className="w-3 h-3" />
-                                  <span className="truncate max-w-[150px]">{rowFile.fileName}</span>
+                          {/* Kolom Tombol Upload / Lihat / Ganti per-baris */}
+                          <td className="p-3.5 text-center bg-brand-primary-light/10 min-w-[220px]">
+                            {isUploading ? (
+                              <div className="flex items-center justify-center gap-1.5 text-xs text-brand-primary font-semibold py-2">
+                                <Loader2 className="w-4 h-4 animate-spin text-brand-primary shrink-0" />
+                                <span>Mengunggah...</span>
+                              </div>
+                            ) : rowFile ? (
+                              <div className="flex flex-col items-center gap-1.5 py-1">
+                                <Badge variant="success" className="gap-1 text-[11px] py-1 px-2.5 max-w-[200px]">
+                                  <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span className="truncate" title={rowFile.fileName}>{rowFile.fileName}</span>
                                 </Badge>
-                                <span className="text-[10px] text-gray-400">
-                                  Diunggah {rowFile.uploadedAt} ({rowFile.fileSize})
-                                </span>
-                                <label className="cursor-pointer mt-1">
-                                  <input
-                                    type="file"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleRowFileUpload(rowIndex, file);
-                                    }}
-                                    className="hidden"
-                                  />
-                                  <span className="text-[10px] font-bold text-brand-primary hover:underline">
-                                    Ganti Berkas
+                                {rowFile.fileSize && (
+                                  <span className="text-[10px] text-gray-500 font-medium">
+                                    PDF ({rowFile.fileSize})
                                   </span>
-                                </label>
+                                )}
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleViewPdf(rowFile.fileUrl)}
+                                    className="h-7 text-[11px] px-2.5 gap-1 border-brand-primary/30 text-brand-primary hover:bg-brand-primary-light"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    <span>Lihat</span>
+                                  </Button>
+                                  <label className="cursor-pointer">
+                                    <input
+                                      type="file"
+                                      accept=".pdf, application/pdf"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleRowFileUpload(rowIndex, file);
+                                        e.target.value = "";
+                                      }}
+                                      className="hidden"
+                                    />
+                                    <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors border border-gray-200">
+                                      <FileUp className="w-3 h-3 text-gray-600" />
+                                      <span>Ganti</span>
+                                    </span>
+                                  </label>
+                                </div>
                               </div>
                             ) : (
-                              <label className="cursor-pointer inline-block">
+                              <label className="cursor-pointer inline-block py-1">
                                 <input
                                   type="file"
+                                  accept=".pdf, application/pdf"
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) handleRowFileUpload(rowIndex, file);
+                                    e.target.value = "";
                                   }}
                                   className="hidden"
                                 />
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors shadow-subtle">
                                   <Upload className="w-3.5 h-3.5" />
-                                  <span>Upload</span>
+                                  <span>Upload PDF</span>
                                 </span>
                               </label>
                             )}

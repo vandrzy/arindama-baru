@@ -61,6 +61,7 @@ model Submission {
   // Relations
   user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers             SurveyAnswer[]
+  validationEvidences ValidationEvidence[]
   
   // Timestamps
   createdAt           DateTime         @default(now())
@@ -107,6 +108,29 @@ model SurveyAnswer {
   @@index([submissionId])
   @@index([indicatorId])
   @@map("survey_answers")
+}
+
+// ============================================
+// VALIDATION EVIDENCES (Row-level uploaded PDF evidence)
+// ============================================
+
+model ValidationEvidence {
+  id              String     @id @default(cuid())
+  submissionId    String
+  formType        String
+  recordId        String
+  fileName        String
+  fileUrl         String
+  fileSize        String?
+  
+  submission      Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([submissionId, formType, recordId])
+  @@index([submissionId])
+  @@index([submissionId, formType])
+  @@map("validation_evidences")
 }
 
 // ============================================
