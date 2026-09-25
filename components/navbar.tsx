@@ -141,7 +141,7 @@ export function Navbar() {
                     {currentUser.nama}
                   </span>
                   <span className="text-xs text-brand-text-secondary">
-                    {currentUser.role === "ADMIN" ? "Administrator" : "Responden"}
+                    {currentUser.role === "ADMIN" ? "Administrator" : [currentUser.instansi, currentUser.kabupatenKota].filter(Boolean).join(", ") || "Responden"}
                   </span>
                 </div>
                 <button
@@ -221,7 +221,7 @@ export function Navbar() {
                         {currentUser.nama}
                       </span>
                       <span className="text-xs text-brand-text-secondary">
-                        {currentUser.role === "ADMIN" ? "Administrator" : "Responden"}
+                        {currentUser.role === "ADMIN" ? "Administrator" : [currentUser.instansi, currentUser.kabupatenKota].filter(Boolean).join(", ") || "Responden"}
                       </span>
                     </div>
                   </div>

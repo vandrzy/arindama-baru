@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/context/app-context";
 import { SURVEY_INDICATORS } from "@/lib/constants/survey-data";
 import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
 import {
   CheckCircle2,
   User,
@@ -80,6 +81,7 @@ export default function KuesionerPage() {
   const [stepErrors, setStepErrors] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [submittedNoReg, setSubmittedNoReg] = useState<string | null>(null);
 
   const setStepError = (step: number, msg: string | null) => {
     setStepErrors((prev) => {
@@ -325,9 +327,13 @@ export default function KuesionerPage() {
       }
 
       const newSubmissionId = result.submissionId || result.id;
+      const noRegistrasi = result.submission?.noRegistrasi;
       if (newSubmissionId) {
         saveToGuestHistory(newSubmissionId);
         setSubmittedId(newSubmissionId);
+        if (noRegistrasi) {
+          setSubmittedNoReg(noRegistrasi);
+        }
       }
 
       clearDraft();
@@ -357,19 +363,13 @@ export default function KuesionerPage() {
             Terima Kasih!
           </h2>
           <p className="text-sm text-brand-text-secondary leading-relaxed mb-6">
-            Jawaban kuesioner dan dokumen bukti sah Anda telah{" "}
-            <strong className="text-emerald-700">berhasil dikirim</strong> ke pangkalan data
-            ARINDAMA SPORT SURVEY.
+            Data anda telah berhasil disimpan, mohon simpan nomor registrasi untuk melakukan validasi data
           </p>
 
           <div className="bg-brand-surface border border-gray-100 rounded-xl p-4 mb-8 text-left text-xs space-y-1.5">
             <div className="flex justify-between">
               <span className="text-gray-400">Nomor Registrasi:</span>
-              <span className="font-bold text-brand-text tabular-nums">{submittedId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Status Awal:</span>
-              <span className="font-bold text-blue-700">TERKIRIM (Menunggu Verifikasi)</span>
+              <span className="font-bold text-brand-text tabular-nums">{submittedNoReg || submittedId}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Nama Pengisi:</span>
@@ -378,14 +378,37 @@ export default function KuesionerPage() {
           </div>
 
           <div className="space-y-3">
-            <Link href="/" className="block w-full">
+            <Button 
+              variant="outline" 
+              size="md" 
+              className="w-full"
+              onClick={() => {
+                const doc = new jsPDF();
+                
+                doc.setFontSize(14);
+                doc.text("BUKTI KIRIM KUESIONER ARINDAMA SPORT SURVEY", 105, 20, { align: "center" });
+                
+                doc.setFontSize(12);
+                doc.text("Data anda telah berhasil disimpan, mohon simpan nomor registrasi untuk", 20, 40);
+                doc.text("melakukan validasi data.", 20, 47);
+                
+                doc.text(`Nomor Registrasi : ${submittedNoReg || submittedId}`, 20, 65);
+                doc.text(`Nama Pengisi     : ${currentUser.nama || draftIdentity.namaLengkap}`, 20, 75);
+                doc.text(`Tanggal          : ${new Date().toLocaleString('id-ID')}`, 20, 85);
+                
+                doc.save(`Bukti_Kirim_${submittedNoReg || submittedId}.pdf`);
+              }}
+            >
+              Download Bukti Kirim
+            </Button>
+            <Link href="/validasi" className="block w-full">
               <Button variant="primary" size="md" className="w-full">
-                Kembali ke Beranda
+                Lakukan Validasi Data
               </Button>
             </Link>
-            <Link href="/riwayat" className="block w-full">
+            <Link href="/" className="block w-full">
               <Button variant="outline" size="md" className="w-full">
-                Lihat Status di Riwayat Pengisian
+                Kembali ke Beranda
               </Button>
             </Link>
           </div>
