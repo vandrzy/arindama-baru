@@ -65,12 +65,6 @@ export function Navbar() {
         icon: FileText,
         match: (p: string) => p.startsWith("/kuesioner"),
       });
-      navLinks.push({
-        href: "/riwayat",
-        label: "Riwayat",
-        icon: History,
-        match: (p: string) => p.startsWith("/riwayat"),
-      });
     }
     navLinks.push({
       href: "/validasi",

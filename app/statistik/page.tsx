@@ -21,6 +21,8 @@ import {
   RotateCcw,
   Medal,
   GraduationCap,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import {
   PieChart,
@@ -118,6 +120,15 @@ export default function StatistikPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("demografi");
 
+  // State untuk Pagination Tabel
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset pagination ke halaman pertama jika kategori berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
+
   // Auth & API data state
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [statistikData, setStatistikData] = useState<any>(null);
@@ -192,6 +203,7 @@ export default function StatistikPage() {
   const kejuaraanData = statistikData?.prestasiKejuaraan || {};
 
   // Check if current responden has data in selected category
+  // Check if current responden has data in selected category
   const hasCategoryData = (catKey: CategoryKey): boolean => {
     if (catKey === "demografi") return (demografiData.totalResponden || 0) > 0;
     if (catKey === "mutuSDM") return (mutuData.totalRecords || 0) > 0;
@@ -201,6 +213,20 @@ export default function StatistikPage() {
     if (catKey === "prestasiKejuaraan") return (kejuaraanData.totalRecords || 0) > 0;
     return false;
   };
+
+  // Ambil raw data untuk tabel
+  let currentRawData: any[] = [];
+  if (selectedCategory === "demografi") currentRawData = demografiData.identitiesList || demografiData.rawList || [];
+  else if (selectedCategory === "mutuSDM") currentRawData = mutuData.rawList || [];
+  else if (selectedCategory === "kinerjaSDM") currentRawData = kinerjaData.rawList || [];
+  else if (selectedCategory === "prestasiAtlet") currentRawData = atletData.rawList || [];
+  else if (selectedCategory === "eventOlahraga") currentRawData = eventData.rawList || [];
+  else if (selectedCategory === "prestasiKejuaraan") currentRawData = kejuaraanData.rawList || [];
+
+  // Hitung batas pagination
+  const totalPages = Math.max(1, Math.ceil(currentRawData.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentTableData = currentRawData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -970,6 +996,180 @@ export default function StatistikPage() {
                   <EmptyDataChartHint title="Belum Ada Data Tingkat Kejuaraan" />
                 )}
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 5. Tabel Data Mentah (Raw Data) dengan Pagination & Berkas Validasi */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-8 space-y-4 animate-in fade-in duration-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-3">
+          <h3 className="text-base font-bold text-brand-text flex items-center gap-2">
+            <span>Tabel Detail Data - {activeCategoryObj.shortLabel}</span>
+          </h3>
+          <span className="text-xs font-semibold text-brand-primary bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-100">
+            Total: {currentRawData.length} Entri Data
+          </span>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-gray-100">
+          <table className="w-full text-left border-collapse min-w-[900px]">
+            <thead>
+              <tr className="bg-gray-50/80 border-b border-gray-200">
+                <th className="py-3.5 px-4 text-xs font-bold text-brand-text">No</th>
+                
+                {/* Header Kolom Berdasarkan Kategori */}
+                {selectedCategory === "demografi" ? (
+                  <>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Nama Lengkap</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Jenis Kelamin</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Umur</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Asal Wilayah</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Pekerjaan/Jabatan</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Telepon</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Indikator</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Nama Kegiatan</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Cabang Olahraga</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Tingkat</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Pendanaan</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Medali / Capaian</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {currentTableData.length > 0 ? (
+                currentTableData.map((row, idx) => {
+                  const fileUrl = row.validationEvidence?.fileUrl;
+                  const fileName = row.validationEvidence?.fileName || "Berkas Validasi.pdf";
+
+                  return (
+                    <tr key={row.id || idx} className="hover:bg-teal-50/30 transition-colors">
+                      <td className="py-3 px-4 text-sm text-gray-500 font-medium">
+                        {startIndex + idx + 1}
+                      </td>
+                      
+                      {selectedCategory === "demografi" ? (
+                        <>
+                          <td className="py-3 px-4 text-sm font-bold text-brand-text">{row.namaLengkap}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            <span className="px-2 py-0.5 rounded text-xs bg-gray-100">{row.jenisKelamin}</span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{row.umur} Thn</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {row.kabupatenKotaAsal}<br/>
+                            <span className="text-xs text-gray-400">Kec. {row.kecamatan}</span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{row.pekerjaanJabatan}</td>
+                          <td className="py-3 px-4 text-sm text-gray-500">{row.nomorTelepon}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-brand-primary/10 text-brand-primary font-bold text-xs">
+                              {row.indicatorId}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm font-semibold text-brand-text">{row.namaKegiatan}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{row.cabangOlahraga}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            <span className="px-2 py-1 rounded-md text-xs font-medium bg-sky-50 text-sky-700 border border-sky-100">
+                              {row.tingkatPenyelenggaraan}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{row.sumberPendanaan}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">
+                            {row.medali ? (
+                              <span className="inline-block px-2 py-0.5 mb-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                🥇 {row.medali}
+                              </span>
+                            ) : null}
+                            <p className="text-xs text-gray-500 line-clamp-2" title={row.uraianCapaian}>
+                              {row.uraianCapaian}
+                            </p>
+                          </td>
+                        </>
+                      )}
+
+                      {/* Kolom Berkas Validasi (Tombol) */}
+                      <td className="py-3 px-4 text-center">
+                        {fileUrl ? (
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-primary text-white hover:bg-brand-primary-hover shadow-sm transition-all"
+                            title={`Buka ${fileName}`}
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Lihat Berkas</span>
+                            <ExternalLink className="w-3 h-3 opacity-70" />
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200">
+                            Tidak Ada
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-sm text-gray-400">
+                    Tidak ada rekaman data untuk ditampilkan di kategori ini.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Kontrol Pagination */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+            <span className="text-xs font-medium text-brand-text-secondary">
+              Menampilkan <span className="font-bold text-brand-text">{startIndex + 1}</span> sampai{" "}
+              <span className="font-bold text-brand-text">{Math.min(startIndex + itemsPerPage, currentRawData.length)}</span>{" "}
+              dari total <span className="font-bold text-brand-text">{currentRawData.length}</span> data
+            </span>
+            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-200">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white hover:shadow-sm text-brand-text transition-all"
+              >
+                Prev
+              </button>
+              
+              <div className="flex items-center gap-0.5 px-2 overflow-x-auto max-w-[150px] sm:max-w-xs hide-scrollbar">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`min-w-[28px] h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                      currentPage === i + 1 
+                        ? 'bg-brand-primary text-white shadow-md' 
+                        : 'text-gray-500 hover:bg-white hover:text-brand-text'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white hover:shadow-sm text-brand-text transition-all"
+              >
+                Next
+              </button>
             </div>
           </div>
         )}

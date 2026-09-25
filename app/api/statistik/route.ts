@@ -38,8 +38,22 @@ export async function GET(request: NextRequest) {
       include: {
         respondenIdentity: true,
         indicatorRecords: true,
+        validationEvidences: true,
       },
     });
+
+    // Extract all validation evidences for matching
+    const allEvidences = userSubmissions.flatMap((s) => s.validationEvidences);
+
+    // Helper to attach validation evidence to indicator records
+    const attachEvidence = (records: any[]) => {
+      return records.map((r) => {
+        const ev = allEvidences.find(
+          (e) => e.recordId === r.id || (e.formType === `indikator_${r.indicatorId}` && e.submissionId === r.submissionId)
+        );
+        return { ...r, validationEvidence: ev || null };
+      });
+    };
 
     // 2. Prepare Admin UI Filter Options (Mock & real user lists)
     let adminFiltersData = {
@@ -90,9 +104,16 @@ export async function GET(request: NextRequest) {
 
     // Process user's submissions data
     // A. Demografi
-    const identities = userSubmissions
+    const identitiesRaw = userSubmissions
       .map((s) => s.respondenIdentity)
       .filter((identity): identity is NonNullable<typeof identity> => Boolean(identity));
+
+    const identities = identitiesRaw.map((id) => {
+      const ev = allEvidences.find(
+        (e) => e.recordId === id.id || (e.formType === "identitas" && e.submissionId === id.submissionId)
+      );
+      return { ...id, validationEvidence: ev || null };
+    });
 
     const totalResponden = identities.length;
 
@@ -264,6 +285,7 @@ export async function GET(request: NextRequest) {
         demografi: {
           totalResponden,
           identitiesList: identities,
+          rawList: identities,
           jenisKelaminStats,
           umurStats: Object.entries(umurStats).map(([name, value]) => ({ name, value })),
           pekerjaanStats: Object.entries(pekerjaanMap).map(([name, value]) => ({ name, value })),
@@ -271,16 +293,19 @@ export async function GET(request: NextRequest) {
         },
         mutuSDM: {
           totalRecords: mutuRecords.length,
+          rawList: attachEvidence(mutuRecords),
           jenjangPenugasanStats: Object.entries(mutuJenjangMap).map(([name, value]) => ({ name, value })),
           sumberPendanaanStats: Object.entries(mutuPendanaanMap).map(([name, value]) => ({ name, value })),
         },
         kinerjaSDM: {
           totalRecords: sdmRecords.length,
+          rawList: attachEvidence(sdmRecords),
           jenjangPenugasanStats: Object.entries(sdmJenjangMap).map(([name, value]) => ({ name, value })),
           sumberPendanaanStats: Object.entries(sdmPendanaanMap).map(([name, value]) => ({ name, value })),
         },
         prestasiAtlet: {
           totalRecords: atletRecords.length,
+          rawList: attachEvidence(atletRecords),
           medalStats,
           totalBobotScore,
           atletChartData: [
@@ -309,11 +334,13 @@ export async function GET(request: NextRequest) {
         },
         eventOlahraga: {
           totalRecords: eventRecords.length,
+          rawList: attachEvidence(eventRecords),
           sumberPendanaanStats: Object.entries(eventPendanaanMap).map(([name, value]) => ({ name, value })),
           tingkatKejuaraanStats: Object.entries(eventTingkatMap).map(([name, value]) => ({ name, value })),
         },
         prestasiKejuaraan: {
           totalRecords: kejuaraanRecords.length,
+          rawList: attachEvidence(kejuaraanRecords),
           sumberPendanaanStats: Object.entries(kejuaraanPendanaanMap).map(([name, value]) => ({ name, value })),
           tingkatKejuaraanStats: Object.entries(kejuaraanTingkatMap).map(([name, value]) => ({ name, value })),
         },
