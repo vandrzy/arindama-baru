@@ -51,14 +51,15 @@ enum UserRole {
 
 model Submission {
   id                  String           @id @default(cuid())
-  userId              String?
+  noRegistrasi        String           @unique @default(dbgenerated("gen_random_uuid()"))
+  userId              String
   tahunSurvei         Int              @default(2024)
   status              SubmissionStatus @default(DRAFT)
   catatanVerifikator  String?
   totalIndikatorTerisi Int             @default(0)
   
   // Relations
-  user                User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers             SurveyAnswer[]
   
   // Timestamps

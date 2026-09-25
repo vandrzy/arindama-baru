@@ -18,7 +18,6 @@ import {
   Clock,
   ArrowRight,
   X,
-  Edit3,
   AlertTriangle,
   Download,
 } from "lucide-react";
@@ -171,16 +170,12 @@ export default function RiwayatPage() {
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div>
-                    <span className="text-xs font-bold text-gray-400 block tabular-nums">
-                      {sub.id}
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-primary block mb-0.5">
+                      No. Registrasi
                     </span>
-                    <h3 className="text-base font-bold text-brand-text">
-                      {sub.responden.namaLengkap}
+                    <h3 className="text-base font-bold text-brand-text font-mono tracking-tight tabular-nums break-all">
+                      {sub.noRegistrasi || sub.id}
                     </h3>
-                    <p className="text-xs text-brand-text-secondary mt-0.5">
-                      {userInstansi && userInstansi !== "-" ? `${userInstansi} • ` : ""}
-                      {userJabatan} • {sub.responden.kabupatenKota}
-                    </p>
                   </div>
 
                   <Badge
@@ -225,11 +220,11 @@ export default function RiwayatPage() {
             {/* Header Modal */}
             <div className="p-6 pb-4 border-b border-gray-100 flex items-center justify-between shrink-0">
               <div>
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider block">
-                  Detail Submisi
+                <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block mb-0.5">
+                  No. Registrasi Submisi
                 </span>
-                <h3 className="text-lg font-extrabold text-brand-text tabular-nums">
-                  {activeDetail.id}
+                <h3 className="text-base font-extrabold text-brand-text font-mono tabular-nums tracking-tight">
+                  {activeDetail.noRegistrasi || activeDetail.id}
                 </h3>
               </div>
               <div className="flex items-center gap-3">
@@ -368,26 +363,6 @@ export default function RiwayatPage() {
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Footer Modal (Action Buttons) */}
-            <div className="p-4 sm:px-8 sm:py-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between gap-3 shrink-0">
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setSelectedId(null)}
-              >
-                Tutup
-              </Button>
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => alert("Fitur edit submisi akan segera hadir")}
-                className="bg-brand-primary hover:bg-brand-primary/90 flex items-center gap-2"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Edit Submisi</span>
-              </Button>
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/context/app-context";
 import { SURVEY_INDICATORS } from "@/lib/constants/survey-data";
+import * as XLSX from "xlsx";
 import {
   CheckCircle2,
   User,
@@ -17,6 +18,40 @@ import {
   X,
   Save,
 } from "lucide-react";
+
+const FULL_TEMPLATE_NAMES: Record<number, string> = {
+  0: "IdentitasResponden_Fixed.xlsx",
+  1: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx",
+  2: "Indikator 2_Peningkatan Mutu SDM Olahraga.xlsx",
+  3: "Indikator 3_Pelatih Cabor Membawa Tim Tingkat Nasional Internasional.xlsx",
+  4: "Indikator 4_ Wasit Cabang Olahraga Masuk dalam Wasit Nasional Internasional.xlsx",
+  5: "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional.xlsx",
+  6: "Indikator 6_Atlet Cabang Olahraga Mewakili Tim Nasional Internasional.xlsx",
+  7: "Indikator 7_Penyelenggaraan Event Olahraga Nasional Internasional.xlsx",
+  8: "Indikator 8_Prestasi Event Olahraga Masyarakat Tingkat Nasional.xlsx",
+};
+
+const EXPECTED_FILE_NAMES: Record<number, string[]> = {
+  0: ["IdentitasResponden"],
+  1: ["Indikator 1"],
+  2: ["Indikator 2"],
+  3: ["Indikator 3"],
+  4: ["Indikator 4"],
+  5: [
+    "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional",
+    "Indikator 5_WasitJuri yang Bertugas pada Kegiatan Nasional Internasional",
+    "Indikator 5",
+  ],
+  6: ["Indikator 6"],
+  7: ["Indikator 7"],
+  8: ["Indikator 8"],
+};
+
+function isValidFileName(step: number, fileName: string): boolean {
+  const keywords = EXPECTED_FILE_NAMES[step];
+  if (!keywords) return true;
+  return keywords.some((keyword) => fileName.includes(keyword));
+}
 
 export default function KuesionerPage() {
   const router = useRouter();
@@ -41,9 +76,23 @@ export default function KuesionerPage() {
   const [uploadedExcelFiles, setUploadedExcelFiles] = useState<
     Record<number, { name: string; size: string }>
   >({});
+  const [previewData, setPreviewData] = useState<Record<number, any[]>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [stepErrors, setStepErrors] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+
+  const setStepError = (step: number, msg: string | null) => {
+    setStepErrors((prev) => {
+      const copy = { ...prev };
+      if (!msg) {
+        delete copy[step];
+      } else {
+        copy[step] = msg;
+      }
+      return copy;
+    });
+  };
 
   const saveToGuestHistory = (submissionId: string) => {
     try {
@@ -62,65 +111,116 @@ export default function KuesionerPage() {
     }
   };
 
-  const handleExcelFileSelected = (step: number, file: File | null) => {
+  const handleExcelFileSelected = async (step: number, file: File | null) => {
     setFormError(null);
-    if (!file) return;
+    setStepError(step, null);
+
+    if (!file) {
+      setPreviewData((prev) => {
+        const copy = { ...prev };
+        delete copy[step];
+        return copy;
+      });
+      return;
+    }
 
     const fileName = file.name;
     const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
 
     if (!isExcel) {
-      setFormError("Gagal: Hanya file berekstensi .xlsx atau .xls yang diperbolehkan!");
+      setStepError(step, "Gagal: Hanya file berekstensi .xlsx atau .xls yang diperbolehkan!");
       return;
     }
 
-    const fileSize = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+    if (!isValidFileName(step, fileName)) {
+      setStepError(step, "Gagal: Nama file tidak sesuai untuk form ini.");
+      return;
+    }
 
-    setUploadedExcelFiles((prev) => ({
-      ...prev,
-      [step]: { name: fileName, size: fileSize },
-    }));
-
-    setRawFiles((prev) => ({
-      ...prev,
-      [step]: file,
-    }));
-
-    if (step === 0) {
-      setDraftIdentity((prev) => ({
-        ...prev,
-        namaLengkap: prev.namaLengkap || currentUser?.nama || "Responden (File Excel)",
-        fileBuktiName: fileName,
-      }));
-    } else {
-      const indicator = SURVEY_INDICATORS[step - 1];
-      if (indicator) {
-        setDraftAnswers((prev) => ({
-          ...prev,
-          [indicator.id]: {
-            indicatorId: indicator.id,
-            indicatorTitle: indicator.title,
-            namaKegiatan: `Upload Excel Indikator ${indicator.id}`,
-            cabangOlahraga: "Sesuai Excel",
-            tingkatPenyelenggaraan: "Nasional",
-            sumberPendanaan: "APBD",
-            capaianPrestasi: "",
-            medaliEmas: 0,
-            medaliPerak: 0,
-            medaliPerunggu: 0,
-            jumlahPeserta: 0,
-            uraianKegiatan: `Dokumen Excel ${fileName} telah diunggah.`,
-            fileBuktiName: fileName,
-            fileBuktiSize: fileSize,
-            fileBuktiHash: "",
-          },
-        }));
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) {
+        setStepError(step, "Gagal: File Excel tidak memiliki sheet yang valid.");
+        return;
       }
+      const worksheet = workbook.Sheets[firstSheetName];
+
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const nonEmptyRows = rawData.filter(
+        (row) => row.length > 0 && row.some((cell) => cell !== null && cell !== undefined && cell !== "")
+      );
+
+      const HEADER_ROW_COUNT = 1;
+      if (nonEmptyRows.length <= HEADER_ROW_COUNT) {
+        setStepError(step, "Gagal: File Excel yang diunggah kosong atau hanya berisi template/header! Pastikan data telah diisi.");
+        return;
+      }
+
+      const previewJsonData = XLSX.utils.sheet_to_json(worksheet);
+      setPreviewData((prev) => ({
+        ...prev,
+        [step]: previewJsonData.slice(0, 5),
+      }));
+
+      const fileSize = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+
+      setUploadedExcelFiles((prev) => ({
+        ...prev,
+        [step]: { name: fileName, size: fileSize },
+      }));
+
+      setRawFiles((prev) => ({
+        ...prev,
+        [step]: file,
+      }));
+
+      if (step === 0) {
+        setDraftIdentity((prev) => ({
+          ...prev,
+          namaLengkap: prev.namaLengkap || currentUser?.nama || "Responden (File Excel)",
+          fileBuktiName: fileName,
+        }));
+      } else {
+        const indicator = SURVEY_INDICATORS[step - 1];
+        if (indicator) {
+          setDraftAnswers((prev) => ({
+            ...prev,
+            [indicator.id]: {
+              indicatorId: indicator.id,
+              indicatorTitle: indicator.title,
+              namaKegiatan: `Upload Excel Indikator ${indicator.id}`,
+              cabangOlahraga: "Sesuai Excel",
+              tingkatPenyelenggaraan: "Nasional",
+              sumberPendanaan: "APBD",
+              capaianPrestasi: "",
+              medaliEmas: 0,
+              medaliPerak: 0,
+              medaliPerunggu: 0,
+              jumlahPeserta: 0,
+              uraianKegiatan: `Dokumen Excel ${fileName} telah diunggah.`,
+              fileBuktiName: fileName,
+              fileBuktiSize: fileSize,
+              fileBuktiHash: "",
+            },
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Gagal membaca file Excel:", err);
+      setStepError(step, "Gagal membaca file Excel. Pastikan format file tidak rusak.");
     }
   };
 
   const handleRemoveFile = (step: number) => {
     setFormError(null);
+    setStepError(step, null);
+    setPreviewData((prev) => {
+      const copy = { ...prev };
+      delete copy[step];
+      return copy;
+    });
     setUploadedExcelFiles((prev) => {
       const copy = { ...prev };
       delete copy[step];
@@ -330,6 +430,23 @@ export default function KuesionerPage() {
             Unggah Dokumen Excel Identitas Responden <span className="text-red-500">*</span>
           </h3>
 
+          <div className="text-xs text-amber-800 bg-amber-50/80 border border-amber-200 p-3 rounded-xl flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+            <p className="leading-relaxed">
+              <strong>Perhatian:</strong> Harap unggah file template resmi dengan nama{" "}
+              <span className="font-mono bg-white px-1.5 py-0.5 text-amber-900 border border-amber-300 rounded font-semibold break-all">
+                {FULL_TEMPLATE_NAMES[0]}
+              </span>.
+            </p>
+          </div>
+
+          {stepErrors[0] && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center gap-2.5 animate-in fade-in shadow-subtle">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              <span className="font-medium">{stepErrors[0]}</span>
+            </div>
+          )}
+
           <label className="relative flex flex-col items-center justify-center w-full p-8 sm:p-10 border-2 border-dashed border-gray-300 rounded-2xl bg-white hover:bg-emerald-50/20 hover:border-brand-primary cursor-pointer transition-all group">
             <input
               type="file"
@@ -445,6 +562,23 @@ export default function KuesionerPage() {
                 <h4 className="text-xs font-bold text-brand-text uppercase tracking-wider">
                   Unggah Dokumen Excel {indicator.title} <span className="text-red-500">*</span>
                 </h4>
+
+                <div className="text-xs text-amber-800 bg-amber-50/80 border border-amber-200 p-3 rounded-xl flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                  <p className="leading-relaxed">
+                    <strong>Perhatian:</strong> Harap unggah file template resmi dengan nama{" "}
+                    <span className="font-mono bg-white px-1.5 py-0.5 text-amber-900 border border-amber-300 rounded font-semibold break-all">
+                      {FULL_TEMPLATE_NAMES[indicator.id]}
+                    </span>.
+                  </p>
+                </div>
+
+                {stepErrors[stepNum] && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center gap-2.5 animate-in fade-in shadow-subtle">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span className="font-medium">{stepErrors[stepNum]}</span>
+                  </div>
+                )}
 
                 <label className="relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed border-gray-300 rounded-2xl bg-white hover:bg-emerald-50/20 hover:border-brand-primary cursor-pointer transition-all group">
                   <input

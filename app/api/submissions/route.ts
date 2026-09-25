@@ -220,6 +220,7 @@ export async function POST(request: NextRequest) {
     try {
       const submission = await prisma.submission.create({
         data: {
+          noRegistrasi: crypto.randomUUID(),
           userId: payload.id,
           tahunSurvei: data.tahunSurvei,
           status: "TERKIRIM",

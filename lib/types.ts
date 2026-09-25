@@ -47,6 +47,7 @@ export interface SurveyAnswer {
 
 export interface SurveySubmission {
   id: string;
+  noRegistrasi: string;
   createdAt: string;
   tahunSurvei: number;
   responden: RespondentIdentity;
