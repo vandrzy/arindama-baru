@@ -121,6 +121,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           role: data.user.role,
           jabatan: data.user.jabatan,
           instansi: data.user.instansi,
+          kabupatenKota: data.user.kabupatenKota,
         };
 
         setCurrentUser(user);

@@ -7,6 +7,7 @@ export interface AuthUser {
   role: UserRole;
   jabatan?: string;
   instansi?: string;
+  kabupatenKota?: string;
 }
 
 export interface RespondentIdentity {
@@ -16,6 +17,8 @@ export interface RespondentIdentity {
   kabupatenKota: string;
   kecamatan: string;
   pekerjaan: string;
+  instansi?: string;
+  jabatan?: string;
   nomorTelepon: string;
   fileBuktiName?: string;
 }
@@ -50,6 +53,7 @@ export interface SurveySubmission {
   user?: {
     nama?: string;
     instansi?: string;
+    jabatan?: string;
     kabupatenKota?: string;
   };
   answers: Record<number, SurveyAnswer>;

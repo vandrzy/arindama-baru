@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         role: true,
         jabatan: true,
         instansi: true,
+        kabupatenKota: true,
       },
     });
 

@@ -240,30 +240,8 @@ export default function AdminDashboardPage() {
             Admin Command Center &amp; Verifikasi
           </h1>
           <p className="text-xs sm:text-sm text-brand-text-secondary mt-1">
-            Validasi dokumen bukti sah, audit jawaban responden daerah, dan cetak rekapitulasi data.
+            Validasi dokumen bukti sah dan audit jawaban responden daerah.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => alert("Mengunduh Rekapitulasi Data Keolahragaan Format Excel (.xlsx)...")}
-            className="text-xs gap-1.5"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
-            <span>Ekspor Excel</span>
-          </Button>
-
-          <Button
-            variant="gold"
-            size="sm"
-            onClick={() => alert("Menyiapkan Berita Acara Rekapitulasi Evaluasi Keolahragaan Format PDF...")}
-            className="text-xs gap-1.5 shadow-subtle"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Cetak Berita Acara</span>
-          </Button>
         </div>
       </div>
 
@@ -532,9 +510,15 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block">Instansi / Jabatan:</span>
+                  <span className="text-gray-400 block">Instansi:</span>
                   <span className="font-semibold text-brand-text">
-                    {verifyingSubmission.responden.pekerjaan}
+                    {verifyingSubmission.user?.instansi || verifyingSubmission.responden.instansi || "-"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block">Jabatan:</span>
+                  <span className="font-semibold text-brand-text">
+                    {verifyingSubmission.user?.jabatan || verifyingSubmission.responden.jabatan || verifyingSubmission.responden.pekerjaan || "-"}
                   </span>
                 </div>
                 <div>
