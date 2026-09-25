@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  FileCheck,
 } from "lucide-react";
 
 export function Navbar() {
@@ -70,6 +71,12 @@ export function Navbar() {
         match: (p: string) => p.startsWith("/riwayat"),
       });
     }
+    navLinks.push({
+      href: "/validasi",
+      label: "Validasi",
+      icon: FileCheck,
+      match: (p: string) => p.startsWith("/validasi"),
+    });
   }
 
   // "Portal Admin" hanya untuk ADMIN

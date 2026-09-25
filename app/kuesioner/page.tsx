@@ -348,19 +348,6 @@ export default function KuesionerPage() {
           </div>
 
           <div className="space-y-3">
-            <Button
-              variant="gold"
-              size="lg"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.print();
-                }
-              }}
-              className="w-full gap-2 font-bold shadow-subtle"
-            >
-              <span>🖨️ Cetak / Simpan Tanda Bukti Registrasi</span>
-            </Button>
-
             <Link href="/" className="block w-full">
               <Button variant="primary" size="md" className="w-full">
                 Kembali ke Beranda
