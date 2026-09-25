@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   BarChart3,
@@ -23,6 +23,8 @@ import {
   GraduationCap,
   FileText,
   ExternalLink,
+  Search,
+  X,
 } from "lucide-react";
 import {
   PieChart,
@@ -76,7 +78,7 @@ const CATEGORIES: Array<{
     label: "1. Demografi SDM Olahraga",
     shortLabel: "Demografi SDM",
     icon: Users,
-    description: "Profil identitas responden: sebaran jenis kelamin, kelompok usia, pekerjaan, dan asal kabupaten/kota.",
+    description: "Profil identitas responden: sebaran jenis kelamin dan kelompok usia.",
   },
   {
     key: "mutuSDM",
@@ -119,15 +121,18 @@ export default function StatistikPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("demografi");
+  const [selectedKinerjaIndicator, setSelectedKinerjaIndicator] = useState<string>("all");
 
-  // State untuk Pagination Tabel
+  // State untuk Pagination & Search Tabel
   const [currentPage, setCurrentPage] = useState(1);
+  const [tableSearchQuery, setTableSearchQuery] = useState<string>("");
   const itemsPerPage = 10;
 
-  // Reset pagination ke halaman pertama jika kategori berubah
+  // Reset pagination ke halaman pertama dan clear search jika kategori atau filter indicator berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory]);
+    setTableSearchQuery("");
+  }, [selectedCategory, selectedKinerjaIndicator]);
 
   // Auth & API data state
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -145,10 +150,19 @@ export default function StatistikPage() {
     fetchStatistik();
   }, []);
 
-  const fetchStatistik = async () => {
+  const fetchStatistik = async (
+    kota = selectedKota,
+    instansi = selectedInstansi,
+    respId = selectedRespondenId
+  ) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/statistik");
+      const params = new URLSearchParams();
+      if (kota) params.append("kota", kota);
+      if (instansi) params.append("instansi", instansi);
+      if (respId) params.append("userId", respId);
+
+      const res = await fetch(`/api/statistik?${params.toString()}`);
       if (!res.ok) {
         throw new Error("Gagal mengambil data statistik");
       }
@@ -166,8 +180,9 @@ export default function StatistikPage() {
   };
 
   const handleApplyAdminFilter = () => {
+    fetchStatistik(selectedKota, selectedInstansi, selectedRespondenId);
     setAdminFilterMessage(
-      `UI Mode Admin: Filter disimulasikan untuk Kota "${selectedKota || "Semua"}", Instansi "${selectedInstansi || "Semua"}", dan Responden ID "${selectedRespondenId || "Semua"}"`
+      `Filter Admin Berhasil Diterapkan: Kota "${selectedKota || "Semua"}", Instansi "${selectedInstansi || "Semua"}", dan Responden "${selectedRespondenId ? "ID " + selectedRespondenId : "Semua"}"`
     );
     setTimeout(() => setAdminFilterMessage(null), 5000);
   };
@@ -176,9 +191,101 @@ export default function StatistikPage() {
     setSelectedKota("");
     setSelectedInstansi("");
     setSelectedRespondenId("");
-    setAdminFilterMessage("Filter Admin berhasil direset ke tampilan default.");
+    fetchStatistik("", "", "");
+    setAdminFilterMessage("Filter Admin berhasil direset ke tampilan default (Seluruh Data).");
     setTimeout(() => setAdminFilterMessage(null), 4000);
   };
+
+  // Data helpers for calculations and hooks
+  const demografiData = statistikData?.demografi || {};
+  const mutuData = statistikData?.mutuSDM || {};
+  const kinerjaData = statistikData?.kinerjaSDM || {};
+  const atletData = statistikData?.prestasiAtlet || {};
+  const eventData = statistikData?.eventOlahraga || {};
+  const kejuaraanData = statistikData?.prestasiKejuaraan || {};
+
+  const rawKinerjaList: any[] = kinerjaData.rawList || [];
+
+  const filteredKinerjaList = useMemo(() => {
+    if (selectedKinerjaIndicator === "all") return rawKinerjaList;
+    const targetId = parseInt(selectedKinerjaIndicator);
+    return rawKinerjaList.filter((r) => r.indicatorId === targetId);
+  }, [rawKinerjaList, selectedKinerjaIndicator]);
+
+  const activeKinerjaJenjangStats = useMemo(() => {
+    let sdmJenjangMap: Record<string, number> = {
+      Provinsi: 0,
+      Nasional: 0,
+      Internasional: 0,
+    };
+    filteredKinerjaList.forEach((r) => {
+      const val = r.tingkatPenyelenggaraan || "";
+      const s = val.toLowerCase();
+      let level = "Provinsi";
+      if (s.includes("internasional")) level = "Internasional";
+      else if (s.includes("nasional")) level = "Nasional";
+      else if (s.includes("provinsi")) level = "Provinsi";
+
+      if (level in sdmJenjangMap) {
+        sdmJenjangMap[level] += 1;
+      } else {
+        sdmJenjangMap["Provinsi"] += 1;
+      }
+    });
+    return Object.entries(sdmJenjangMap).map(([name, value]) => ({ name, value }));
+  }, [filteredKinerjaList]);
+
+  const activeKinerjaPendanaanStats = useMemo(() => {
+    let sdmPendanaanMap: Record<string, number> = {};
+    filteredKinerjaList.forEach((r) => {
+      const val = r.sumberPendanaan || "";
+      const s = val.toLowerCase();
+      let pendanaan = val.trim() || "Mandiri / Lainnya";
+      if (s.includes("apbd")) pendanaan = "APBD";
+      else if (s.includes("apbn")) pendanaan = "APBN";
+      else if (s.includes("sponsor")) pendanaan = "Sponsor / Swasta";
+      else if (s.includes("mandiri")) pendanaan = "Mandiri";
+      else if (s.includes("hibah")) pendanaan = "Hibah";
+
+      sdmPendanaanMap[pendanaan] = (sdmPendanaanMap[pendanaan] || 0) + 1;
+    });
+    return Object.entries(sdmPendanaanMap).map(([name, value]) => ({ name, value }));
+  }, [filteredKinerjaList]);
+
+  // Ambil raw data untuk tabel berdasarkan kategori
+  let categoryRawData: any[] = [];
+  if (selectedCategory === "demografi") categoryRawData = demografiData.identitiesList || demografiData.rawList || [];
+  else if (selectedCategory === "mutuSDM") categoryRawData = mutuData.rawList || [];
+  else if (selectedCategory === "kinerjaSDM") categoryRawData = filteredKinerjaList;
+  else if (selectedCategory === "prestasiAtlet") categoryRawData = atletData.rawList || [];
+  else if (selectedCategory === "eventOlahraga") categoryRawData = eventData.rawList || [];
+  else if (selectedCategory === "prestasiKejuaraan") categoryRawData = kejuaraanData.rawList || [];
+
+  // Filter raw data berdasarkan kata kunci pencarian di tabel
+  const currentRawData = useMemo(() => {
+    if (!tableSearchQuery.trim()) return categoryRawData;
+    const q = tableSearchQuery.toLowerCase();
+    return categoryRawData.filter((item) => {
+      const fieldsToSearch = [
+        item.namaLengkap,
+        item.jenisKelamin,
+        item.kabupatenKotaAsal,
+        item.kecamatan,
+        item.pekerjaanJabatan,
+        item.nomorTelepon,
+        item.namaKegiatan,
+        item.cabangOlahraga,
+        item.tingkatPenyelenggaraan,
+        item.sumberPendanaan,
+        item.medali,
+        item.uraianCapaian,
+        item.validationEvidence?.fileName,
+      ];
+      return fieldsToSearch.some(
+        (field) => field && String(field).toLowerCase().includes(q)
+      );
+    });
+  }, [categoryRawData, tableSearchQuery]);
 
   if (!mounted || loading) {
     return (
@@ -194,34 +301,16 @@ export default function StatistikPage() {
   const activeCategoryObj = CATEGORIES.find((c) => c.key === selectedCategory)!;
   const isAdmin = currentUser?.role === "ADMIN";
 
-  // Data helpers
-  const demografiData = statistikData?.demografi || {};
-  const mutuData = statistikData?.mutuSDM || {};
-  const kinerjaData = statistikData?.kinerjaSDM || {};
-  const atletData = statistikData?.prestasiAtlet || {};
-  const eventData = statistikData?.eventOlahraga || {};
-  const kejuaraanData = statistikData?.prestasiKejuaraan || {};
-
-  // Check if current responden has data in selected category
   // Check if current responden has data in selected category
   const hasCategoryData = (catKey: CategoryKey): boolean => {
     if (catKey === "demografi") return (demografiData.totalResponden || 0) > 0;
     if (catKey === "mutuSDM") return (mutuData.totalRecords || 0) > 0;
-    if (catKey === "kinerjaSDM") return (kinerjaData.totalRecords || 0) > 0;
+    if (catKey === "kinerjaSDM") return filteredKinerjaList.length > 0;
     if (catKey === "prestasiAtlet") return (atletData.totalRecords || 0) > 0;
     if (catKey === "eventOlahraga") return (eventData.totalRecords || 0) > 0;
     if (catKey === "prestasiKejuaraan") return (kejuaraanData.totalRecords || 0) > 0;
     return false;
   };
-
-  // Ambil raw data untuk tabel
-  let currentRawData: any[] = [];
-  if (selectedCategory === "demografi") currentRawData = demografiData.identitiesList || demografiData.rawList || [];
-  else if (selectedCategory === "mutuSDM") currentRawData = mutuData.rawList || [];
-  else if (selectedCategory === "kinerjaSDM") currentRawData = kinerjaData.rawList || [];
-  else if (selectedCategory === "prestasiAtlet") currentRawData = atletData.rawList || [];
-  else if (selectedCategory === "eventOlahraga") currentRawData = eventData.rawList || [];
-  else if (selectedCategory === "prestasiKejuaraan") currentRawData = kejuaraanData.rawList || [];
 
   // Hitung batas pagination
   const totalPages = Math.max(1, Math.ceil(currentRawData.length / itemsPerPage));
@@ -270,9 +359,9 @@ export default function StatistikPage() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-brand-text flex items-center gap-2">
-                  Filter Data Agregasi Admin (UI Control)
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-semibold">
-                    Simulasi Antarmuka UI
+                  Filter Data Agregasi Admin
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 font-semibold">
+                    Fungsional Real-time
                   </span>
                 </h2>
                 <p className="text-xs text-brand-text-secondary">
@@ -438,7 +527,7 @@ export default function StatistikPage() {
         {selectedCategory === "demografi" && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Metric Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
                 <span className="text-xs font-semibold text-brand-text-secondary">Total Entri Identitas</span>
                 <div className="text-2xl font-extrabold text-brand-primary">
@@ -451,18 +540,6 @@ export default function StatistikPage() {
                   <span className="text-teal-700">L: {demografiData.jenisKelaminStats?.[0]?.value || 0}</span>
                   <span className="text-gray-300">|</span>
                   <span className="text-sky-700">P: {demografiData.jenisKelaminStats?.[1]?.value || 0}</span>
-                </div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <span className="text-xs font-semibold text-brand-text-secondary">Asal Kabupaten/Kota</span>
-                <div className="text-lg font-bold text-brand-text truncate">
-                  {currentUser?.kabupatenKota || demografiData.identitiesList?.[0]?.kabupatenKotaAsal || "Kota Surabaya"}
-                </div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <span className="text-xs font-semibold text-brand-text-secondary">Jabatan / Olahraga</span>
-                <div className="text-xs font-bold text-brand-text truncate">
-                  {demografiData.identitiesList?.[0]?.pekerjaanJabatan || currentUser?.jabatan || "Tenaga Keolahragaan"}
                 </div>
               </div>
             </div>
@@ -638,20 +715,34 @@ export default function StatistikPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
                 <span className="text-xs font-semibold text-brand-text-secondary">Form Terkait</span>
-                <div className="text-sm font-bold text-brand-primary">Indikator 3, 4, &amp; 5</div>
+                <div className="text-sm font-bold text-brand-primary">
+                  {selectedKinerjaIndicator === "all"
+                    ? "Indikator 3, 4, & 5"
+                    : `Indikator ${selectedKinerjaIndicator}`}
+                </div>
                 <p className="text-xs text-gray-400">Wasit, Pelatih, Juri (Penugasan Kejuaraan)</p>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
                 <span className="text-xs font-semibold text-brand-text-secondary">Total Rekam Penugasan</span>
                 <div className="text-2xl font-extrabold text-brand-primary">
-                  {kinerjaData.totalRecords || 0} <span className="text-xs font-normal text-gray-500">Kegiatan</span>
+                  {filteredKinerjaList.length} <span className="text-xs font-normal text-gray-500">Kegiatan</span>
                 </div>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <span className="text-xs font-semibold text-brand-text-secondary">Tingkat Penugasan Utama</span>
-                <div className="text-sm font-bold text-brand-text">
-                  {kinerjaData.jenjangPenugasanStats?.find((j: any) => j.value > 0)?.name || "Provinsi / Nasional"}
-                </div>
+                <label className="text-xs font-semibold text-brand-text-secondary flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Pilih Indikator SDM</span>
+                </label>
+                <select
+                  value={selectedKinerjaIndicator}
+                  onChange={(e) => setSelectedKinerjaIndicator(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-brand-text bg-gray-50/80 focus:bg-white focus:ring-2 focus:ring-brand-primary outline-none cursor-pointer transition-all"
+                >
+                  <option value="all">semua (ambil dari 3 indikator)</option>
+                  <option value="3">Indikator 3 (Pelatih)</option>
+                  <option value="4">Indikator 4 (Wasit)</option>
+                  <option value="5">indikator 5 (Juri)</option>
+                </select>
               </div>
             </div>
 
@@ -671,14 +762,14 @@ export default function StatistikPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={kinerjaData.jenjangPenugasanStats}
+                          data={activeKinerjaJenjangStats}
                           cx="50%"
                           cy="50%"
                           outerRadius={80}
                           dataKey="value"
                           label={({ name, percent }: { name?: string; percent?: number }) => `${name || ""}: ${((percent || 0) * 100).toFixed(0)}%`}
                         >
-                          {kinerjaData.jenjangPenugasanStats?.map((_: any, index: number) => (
+                          {activeKinerjaJenjangStats.map((_: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLOR_PALETTE[index % COLOR_PALETTE.length]} />
                           ))}
                         </Pie>
@@ -707,7 +798,7 @@ export default function StatistikPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={kinerjaData.sumberPendanaanStats}
+                          data={activeKinerjaPendanaanStats}
                           cx="50%"
                           cy="50%"
                           innerRadius={40}
@@ -716,7 +807,7 @@ export default function StatistikPage() {
                           dataKey="value"
                           label={({ name, percent }: { name?: string; percent?: number }) => `${name || ""}: ${((percent || 0) * 100).toFixed(0)}%`}
                         >
-                          {kinerjaData.sumberPendanaanStats?.map((_: any, index: number) => (
+                          {activeKinerjaPendanaanStats.map((_: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLOR_PALETTE[(index + 3) % COLOR_PALETTE.length]} />
                           ))}
                         </Pie>
@@ -1001,15 +1092,44 @@ export default function StatistikPage() {
         )}
       </div>
 
-      {/* 5. Tabel Data Mentah (Raw Data) dengan Pagination & Berkas Validasi */}
+      {/* 5. Tabel Data Mentah (Raw Data) dengan Search, Pagination, & Berkas Validasi */}
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-8 space-y-4 animate-in fade-in duration-300">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-3">
-          <h3 className="text-base font-bold text-brand-text flex items-center gap-2">
-            <span>Tabel Detail Data - {activeCategoryObj.shortLabel}</span>
-          </h3>
-          <span className="text-xs font-semibold text-brand-primary bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-100">
-            Total: {currentRawData.length} Entri Data
-          </span>
+          <div>
+            <h3 className="text-base font-bold text-brand-text flex items-center gap-2">
+              <span>Tabel Detail Data - {activeCategoryObj.shortLabel}</span>
+            </h3>
+            <span className="text-xs font-semibold text-brand-primary bg-teal-50 px-2.5 py-0.5 rounded-lg border border-teal-100 inline-block mt-1">
+              Total: {currentRawData.length} Entri Data
+            </span>
+          </div>
+
+          {/* Search Box Input */}
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Cari di tabel data..."
+              value={tableSearchQuery}
+              onChange={(e) => {
+                setTableSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-xs font-medium text-brand-text bg-gray-50/80 focus:bg-white focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
+            />
+            {tableSearchQuery && (
+              <button
+                onClick={() => {
+                  setTableSearchQuery("");
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 p-0.5 rounded-md hover:bg-gray-100 transition-colors"
+                title="Hapus pencarian"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -1029,6 +1149,17 @@ export default function StatistikPage() {
                     <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Telepon</th>
                     <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
                   </>
+                ) : selectedCategory === "prestasiAtlet" ? (
+                  <>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Indikator</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Nama Kegiatan</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Cabang Olahraga</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Tingkat</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Pendanaan</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Medali</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Uraian Capaian</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
+                  </>
                 ) : (
                   <>
                     <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Indikator</th>
@@ -1036,7 +1167,7 @@ export default function StatistikPage() {
                     <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Cabang Olahraga</th>
                     <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Tingkat</th>
                     <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Pendanaan</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Medali / Capaian</th>
+                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Uraian Capaian</th>
                     <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
                   </>
                 )}
@@ -1068,6 +1199,30 @@ export default function StatistikPage() {
                           <td className="py-3 px-4 text-sm text-gray-600">{row.pekerjaanJabatan}</td>
                           <td className="py-3 px-4 text-sm text-gray-500">{row.nomorTelepon}</td>
                         </>
+                      ) : selectedCategory === "prestasiAtlet" || row.indicatorId === 1 || row.indicatorId === 6 ? (
+                        <>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-brand-primary/10 text-brand-primary font-bold text-xs">
+                              {row.indicatorId}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm font-semibold text-brand-text">{row.namaKegiatan}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{row.cabangOlahraga}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            <span className="px-2 py-1 rounded-md text-xs font-medium bg-sky-50 text-sky-700 border border-sky-100">
+                              {row.tingkatPenyelenggaraan}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{row.sumberPendanaan}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600 font-medium">
+                            {row.medali || "-"}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">
+                            <p className="text-xs text-gray-500 line-clamp-2" title={row.uraianCapaian}>
+                              {row.uraianCapaian || "-"}
+                            </p>
+                          </td>
+                        </>
                       ) : (
                         <>
                           <td className="py-3 px-4 text-sm text-gray-500">
@@ -1084,13 +1239,8 @@ export default function StatistikPage() {
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-600">{row.sumberPendanaan}</td>
                           <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">
-                            {row.medali ? (
-                              <span className="inline-block px-2 py-0.5 mb-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                🥇 {row.medali}
-                              </span>
-                            ) : null}
                             <p className="text-xs text-gray-500 line-clamp-2" title={row.uraianCapaian}>
-                              {row.uraianCapaian}
+                              {row.uraianCapaian || "-"}
                             </p>
                           </td>
                         </>
@@ -1121,8 +1271,12 @@ export default function StatistikPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-gray-400">
-                    Tidak ada rekaman data untuk ditampilkan di kategori ini.
+                  <td colSpan={selectedCategory === "prestasiAtlet" ? 9 : 8} className="py-12 text-center text-sm text-gray-400">
+                    {tableSearchQuery ? (
+                      <span>Tidak ada rekaman data yang cocok dengan pencarian &quot;{tableSearchQuery}&quot;.</span>
+                    ) : (
+                      <span>Tidak ada rekaman data untuk ditampilkan di kategori ini.</span>
+                    )}
                   </td>
                 </tr>
               )}

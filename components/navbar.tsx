@@ -58,14 +58,12 @@ export function Navbar() {
       icon: Home,
       match: (p: string) => p === "/",
     });
-    if (!isAdmin) {
-      navLinks.push({
-        href: "/kuesioner",
-        label: "Isi Kuesioner",
-        icon: FileText,
-        match: (p: string) => p.startsWith("/kuesioner"),
-      });
-    }
+    navLinks.push({
+      href: "/kuesioner",
+      label: "Isi Kuesioner",
+      icon: FileText,
+      match: (p: string) => p.startsWith("/kuesioner"),
+    });
     navLinks.push({
       href: "/validasi",
       label: "Validasi",

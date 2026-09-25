@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   Eye,
   Users,
   BarChart3,
+  FileText,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -134,6 +136,15 @@ export default function AdminDashboardPage() {
           <p className="text-xs sm:text-sm text-brand-text-secondary mt-1">
             Pantau dan audit pengajuan kuesioner keolahragaan dari seluruh responden daerah.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link href="/kuesioner">
+            <Button className="bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-subtle flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              <span>Isi Kuesioner Baru</span>
+            </Button>
+          </Link>
         </div>
       </div>
 

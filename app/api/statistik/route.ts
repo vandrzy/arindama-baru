@@ -32,9 +32,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User tidak ditemukan." }, { status: 404 });
     }
 
-    // 1. Fetch user's submissions (or all submissions for admin preview)
+    // Read query parameters for Admin filtering
+    const { searchParams } = new URL(request.url);
+    const paramKota = searchParams.get("kota")?.trim() || "";
+    const paramInstansi = searchParams.get("instansi")?.trim() || "";
+    const paramUserId = searchParams.get("userId")?.trim() || "";
+
+    // 1. Build Submission filter condition
+    const submissionWhere: any = {};
+
+    if (currentUser.role === "RESPONDEN") {
+      submissionWhere.userId = currentUser.id;
+    } else if (currentUser.role === "ADMIN") {
+      if (paramUserId) {
+        submissionWhere.userId = paramUserId;
+      } else {
+        const userWhere: any = {};
+        if (paramKota) {
+          userWhere.kabupatenKota = { equals: paramKota, mode: "insensitive" };
+        }
+        if (paramInstansi) {
+          userWhere.instansi = { equals: paramInstansi, mode: "insensitive" };
+        }
+
+        if (Object.keys(userWhere).length > 0) {
+          submissionWhere.user = userWhere;
+        }
+      }
+    }
+
+    // Fetch submissions matching filter
     const userSubmissions = await prisma.submission.findMany({
-      where: { userId: currentUser.id },
+      where: submissionWhere,
       include: {
         respondenIdentity: true,
         indicatorRecords: true,
@@ -55,7 +84,7 @@ export async function GET(request: NextRequest) {
       });
     };
 
-    // 2. Prepare Admin UI Filter Options (Mock & real user lists)
+    // 2. Prepare Admin UI Filter Options dynamically
     let adminFiltersData = {
       listKota: [] as string[],
       listInstansi: [] as string[],
@@ -64,35 +93,52 @@ export async function GET(request: NextRequest) {
 
     if (currentUser.role === "ADMIN") {
       const allUsers = await prisma.user.findMany({
-        select: { id: true, nama: true, email: true, kabupatenKota: true, instansi: true },
+        select: { id: true, nama: true, email: true, kabupatenKota: true, instansi: true, role: true },
+        orderBy: { nama: "asc" },
       });
 
-      const uniqueKota = Array.from(
-        new Set(
-          allUsers
-            .map((u) => u.kabupatenKota)
-            .filter((k) => k && k.trim() !== "")
-        )
-      );
-      if (uniqueKota.length === 0) {
-        uniqueKota.push("Kota Surabaya", "Kab. Sidoarjo", "Kota Malang", "Kab. Gresik", "Kota Kediri");
-      }
+      const allIdentities = await prisma.respondenIdentity.findMany({
+        select: { kabupatenKotaAsal: true },
+      });
 
-      const uniqueInstansi = Array.from(
-        new Set(
-          allUsers
-            .map((u) => u.instansi)
-            .filter((i) => i && i.trim() !== "")
-        )
+      const uniqueKotaSet = new Set<string>();
+      allUsers.forEach((u) => {
+        if (u.kabupatenKota && u.kabupatenKota.trim() !== "") uniqueKotaSet.add(u.kabupatenKota.trim());
+      });
+      allIdentities.forEach((i) => {
+        if (i.kabupatenKotaAsal && i.kabupatenKotaAsal.trim() !== "") uniqueKotaSet.add(i.kabupatenKotaAsal.trim());
+      });
+
+      const listKota = Array.from(uniqueKotaSet);
+
+      // Filter instansi options based on selected kota if present
+      let instansiUsers = allUsers;
+      if (paramKota) {
+        instansiUsers = allUsers.filter(
+          (u) => (u.kabupatenKota || "").toLowerCase() === paramKota.toLowerCase()
+        );
+      }
+      const listInstansi = Array.from(
+        new Set(instansiUsers.map((u) => u.instansi).filter((i) => i && i.trim() !== ""))
       );
-      if (uniqueInstansi.length === 0) {
-        uniqueInstansi.push("Dispora Provinsi", "KONI Daerah", "Pengprov Cabor", "Dinas Pendidikan");
+
+      // Filter responden list based on active kota and instansi filters
+      let filterRespondenList = allUsers;
+      if (paramKota) {
+        filterRespondenList = filterRespondenList.filter(
+          (u) => (u.kabupatenKota || "").toLowerCase() === paramKota.toLowerCase()
+        );
+      }
+      if (paramInstansi) {
+        filterRespondenList = filterRespondenList.filter(
+          (u) => (u.instansi || "").toLowerCase() === paramInstansi.toLowerCase()
+        );
       }
 
       adminFiltersData = {
-        listKota: uniqueKota,
-        listInstansi: uniqueInstansi,
-        listResponden: allUsers.map((u) => ({
+        listKota,
+        listInstansi,
+        listResponden: filterRespondenList.map((u) => ({
           id: u.id,
           nama: u.nama,
           email: u.email,
