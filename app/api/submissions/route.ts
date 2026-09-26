@@ -92,8 +92,6 @@ export async function GET(request: NextRequest) {
 
 // POST: Create new submission by streaming files to disk and validating sequentially
 export async function POST(request: NextRequest) {
-  let tempDir: string | null = null;
-
   try {
     const token = request.cookies.get("auth_token")?.value;
     if (!token) {
@@ -164,24 +162,18 @@ export async function POST(request: NextRequest) {
     // Sort entries so step 0 (Identitas) is processed first
     rawFileEntries.sort((a, b) => a.step - b.step);
 
-    // Create temporary directory on disk to avoid keeping full buffers in RAM
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "arindama-sub-"));
-
     const aggregatedErrors: ValidationErrorDetail[] = [];
     let parsedIdentity: ParsedIdentityData | null = null;
     const allIndicatorRecords: ParsedIndicatorRecordData[] = [];
 
     // Process each uploaded file sequentially
     for (const entry of rawFileEntries) {
-      const sanitizedName = entry.file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const tempFilePath = path.join(tempDir, `step_${entry.step}_${sanitizedName}`);
-
-      // Save file buffer to disk
+      // Get file buffer
       const arrayBuffer = await entry.file.arrayBuffer();
-      await fs.writeFile(tempFilePath, Buffer.from(arrayBuffer));
+      const buffer = Buffer.from(arrayBuffer);
 
-      // Parse and validate from disk file
-      const parseResult = parseAndValidateExcelFile(tempFilePath, entry.step, entry.file.name);
+      // Parse and validate from memory
+      const parseResult = parseAndValidateExcelFile(buffer, entry.step, entry.file.name);
 
       if (parseResult.errors.length > 0) {
         aggregatedErrors.push(...parseResult.errors);
@@ -262,11 +254,6 @@ export async function POST(request: NextRequest) {
       { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
-  } finally {
-    // Cleanup temporary files from disk
-    if (tempDir) {
-      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
-    }
   }
 }
 

@@ -145,7 +145,7 @@ function checkTemplateHeaders(
  * Parses and validates a single Excel file on disk.
  */
 export function parseAndValidateExcelFile(
-  filePath: string,
+  fileBuffer: Buffer | ArrayBuffer,
   step: number,
   fileName: string
 ): ExcelParseResult {
@@ -154,7 +154,7 @@ export function parseAndValidateExcelFile(
   const indicatorRecords: ParsedIndicatorRecordData[] = [];
 
   try {
-    const workbook = XLSX.readFile(filePath, { cellDates: true, raw: false });
+    const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true, raw: false });
     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
       errors.push({
         file: fileName,
