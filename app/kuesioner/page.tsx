@@ -579,21 +579,69 @@ export default function KuesionerPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 py-6 animate-in fade-in duration-300">
-      {/* Page Header */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-card">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-brand-primary-light text-brand-primary flex items-center justify-center font-bold text-lg">
-            📋
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-brand-text">
-              Formulir Kuesioner Indeks Pembangunan Olahraga
-            </h1>
-            <p className="text-xs sm:text-sm text-brand-text-secondary">
-              Lengkapi data identitas dan unggah berkas bukti fisik Excel untuk 8 indikator keolahragaan.
-            </p>
-          </div>
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* Page Header Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#04331d] via-[#07482b] to-[#042917] text-white p-6 sm:p-10 shadow-elevated border border-emerald-800/40">
+        {/* Decorative Clipboard & Survey Icon Graphic on Right Side */}
+        <div className="absolute top-1/2 -translate-y-1/2 right-6 sm:right-10 pointer-events-none hidden md:block opacity-20">
+          <svg
+            className="w-44 h-52 text-emerald-200"
+            viewBox="0 0 160 190"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Clipboard Base Frame */}
+            <rect
+              x="15"
+              y="25"
+              width="130"
+              height="155"
+              rx="16"
+              stroke="currentColor"
+              strokeWidth="7"
+              strokeLinejoin="round"
+            />
+            {/* Top Clip Header */}
+            <path
+              d="M50 25V18C50 13.5817 53.5817 10 58 10H102C106.418 10 110 13.5817 110 18V25"
+              stroke="currentColor"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <rect
+              x="62"
+              y="18"
+              width="36"
+              height="12"
+              rx="4"
+              stroke="currentColor"
+              strokeWidth="5"
+            />
+            {/* Checkbox 1 + Line */}
+            <rect x="35" y="60" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="6" />
+            <path d="M39 69L43 73L51 63" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M65 69H125" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+
+            {/* Checkbox 2 + Line */}
+            <rect x="35" y="100" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="6" />
+            <path d="M39 109L43 113L51 103" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M65 109H125" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+
+            {/* Checkbox 3 + Line */}
+            <rect x="35" y="140" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="6" />
+            <path d="M39 149L43 153L51 143" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M65 149H110" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+          </svg>
+        </div>
+
+        <div className="relative z-10 max-w-2xl">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white mb-3 leading-tight">
+            Formulir Kuesioner Indeks Pembangunan Olahraga
+          </h1>
+          <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed">
+            Lengkapi data identitas dan unggah berkas bukti fisik Excel untuk 8 indikator keolahragaan daerah secara bertahap.
+          </p>
         </div>
       </div>
 
@@ -682,7 +730,7 @@ export default function KuesionerPage() {
           className="shadow-elevated font-bold gap-2 px-8 py-4 text-base"
         >
           <CheckCircle2 className="w-5 h-5" />
-          <span>Kirimkan Kuesioner Resmi</span>
+          <span>Kirimkan Data</span>
         </Button>
       </div>
     </div>

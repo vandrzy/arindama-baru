@@ -276,7 +276,7 @@ export default function ValidasiPage() {
   const selectedForm = FORM_OPTIONS.find((f) => f.id === selectedFormId);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 pb-12">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-700 text-white text-xs sm:text-sm font-semibold px-4 py-3 rounded-2xl shadow-elevated flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -285,20 +285,57 @@ export default function ValidasiPage() {
         </div>
       )}
 
-      {/* Header Halaman (Card Header) */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-card">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-primary-light text-brand-primary flex items-center justify-center font-bold text-lg shrink-0">
-            <FileCheck className="w-6 h-6 text-brand-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-brand-text">
-              Validasi Kelengkapan Data
-            </h1>
-            <p className="text-xs sm:text-sm text-brand-text-secondary mt-0.5">
-              Verifikasi dan unggah berkas bukti pendukung per baris record data kuesioner (format .pdf)
-            </p>
-          </div>
+      {/* Hero Banner Validasi Sesuai Referensi Gambar */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#04331d] via-[#07482b] to-[#042917] text-white p-6 sm:p-10 shadow-elevated border border-emerald-800/40">
+        {/* Decorative Document Icon Graphic on Right Side */}
+        <div className="absolute top-1/2 -translate-y-1/2 right-6 sm:right-10 pointer-events-none hidden md:block opacity-20">
+          <svg
+            className="w-44 h-52 text-emerald-200"
+            viewBox="0 0 160 190"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Document Shape */}
+            <path
+              d="M25 10H105L145 50V170C145 178.284 138.284 185 130 185H25C16.7157 185 10 178.284 10 170V25C10 16.7157 16.7157 10 25 10Z"
+              stroke="currentColor"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Folded Corner Line */}
+            <path
+              d="M105 10V50H145"
+              stroke="currentColor"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Checkmark inside Document */}
+            <path
+              d="M45 110L70 135L125 75"
+              stroke="currentColor"
+              strokeWidth="9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Horizontal Line under Checkmark */}
+            <path
+              d="M45 158H115"
+              stroke="currentColor"
+              strokeWidth="7"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+
+        <div className="relative z-10 max-w-2xl">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white mb-3 leading-tight">
+            Validasi Kelengkapan Data
+          </h1>
+          <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed">
+            Verifikasi dan unggah berkas bukti pendukung per baris record data kuesioner (format .pdf) yang telah tersinkronisasi dengan database.
+          </p>
         </div>
       </div>
 

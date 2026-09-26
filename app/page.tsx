@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useApp } from "@/lib/context/app-context";
 import {
   FileText,
   UserCheck,
@@ -121,6 +122,8 @@ const FLOW_STEPS = [
 ];
 
 export default function HomePage() {
+  const { currentUser } = useApp();
+
   return (
     <div className="space-y-10 sm:space-y-12">
       {/* 1. Hero Section */}
@@ -145,16 +148,29 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-8">
-            <Link href="/login">
-              <Button
-                variant="gold"
-                size="lg"
-                className="shadow-elevated hover:scale-[1.02] transition-transform gap-2 font-bold px-7"
-              >
-                <span>Masuk Sekarang</span>
-                <ArrowRight className="w-5 h-5" />
-              </Button>
-            </Link>
+            {currentUser ? (
+              <Link href="/kuesioner">
+                <Button
+                  variant="gold"
+                  size="lg"
+                  className="shadow-elevated hover:scale-[1.02] transition-transform gap-2 font-bold px-7"
+                >
+                  <span>Isi Kuesioner</span>
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/login">
+                <Button
+                  variant="gold"
+                  size="lg"
+                  className="shadow-elevated hover:scale-[1.02] transition-transform gap-2 font-bold px-7"
+                >
+                  <span>Masuk Sekarang</span>
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+            )}
 
             <a href="#templates">
               <Button
