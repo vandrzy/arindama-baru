@@ -123,28 +123,56 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Admin Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-100">
-        <div>
-          <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-900 px-3 py-1 rounded-full text-xs font-bold mb-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-700" />
-            <span>PORTAL VERIFIKATOR RESMI KEOLAHRAGAAN</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-text">
-            Admin Command Center &amp; Verifikasi Data
-          </h1>
-          <p className="text-xs sm:text-sm text-brand-text-secondary mt-1">
-            Pantau dan audit pengajuan kuesioner keolahragaan dari seluruh responden daerah.
-          </p>
+      {/* Admin Command Center Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#04331d] via-[#07482b] to-[#042917] text-white p-6 sm:p-10 shadow-elevated border border-emerald-800/40">
+        {/* Decorative Shield & Audit Icon Graphic on Right Side */}
+        <div className="absolute top-1/2 -translate-y-1/2 right-6 sm:right-10 pointer-events-none hidden md:block opacity-20">
+          <svg
+            className="w-44 h-52 text-emerald-200"
+            viewBox="0 0 160 190"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Shield Outline */}
+            <path
+              d="M80 15L25 40V95C25 135 80 175 80 175C80 175 135 135 135 95V40L80 15Z"
+              stroke="currentColor"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Checkmark inside Shield */}
+            <path
+              d="M55 90L72 108L108 68"
+              stroke="currentColor"
+              strokeWidth="9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href="/kuesioner">
-            <Button className="bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-subtle flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              <span>Isi Kuesioner Baru</span>
-            </Button>
-          </Link>
+        <div className="relative z-10 max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 text-xs font-semibold text-emerald-100 shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-emerald-300" />
+            <span>PORTAL VERIFIKATOR RESMI KEOLAHRAGAAN</span>
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
+            Admin Command Center &amp; Verifikasi Data
+          </h1>
+          <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed">
+            Pantau dan audit pengajuan kuesioner keolahragaan dari seluruh responden daerah.
+          </p>
+
+          <div className="pt-2">
+            <Link href="/kuesioner">
+              <Button className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-subtle inline-flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                <span>Isi Kuesioner Baru</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

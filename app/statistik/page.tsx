@@ -415,33 +415,34 @@ export default function StatistikPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* 1. Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-900 via-brand-primary to-sky-900 p-6 sm:p-10 text-white shadow-xl">
-        <div className="absolute right-0 top-0 -mr-12 -mt-12 w-64 h-64 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+      {/* 1. Header Banner Visualisasi & Evaluasi Data Keolahragaan */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#04331d] via-[#07482b] to-[#042917] text-white p-6 sm:p-10 shadow-elevated border border-emerald-800/40">
+        {/* Decorative Bar Chart Icon Graphic on Right Side */}
+        <div className="absolute top-1/2 -translate-y-1/2 right-6 sm:right-10 pointer-events-none hidden md:block opacity-20">
+          <svg
+            className="w-44 h-52 text-emerald-200"
+            viewBox="0 0 160 190"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Bar 1 (Short) */}
+            <rect x="20" y="90" width="30" height="80" rx="6" fill="currentColor" />
+            {/* Bar 2 (Tall) */}
+            <rect x="65" y="40" width="30" height="130" rx="6" fill="currentColor" />
+            {/* Bar 3 (Medium) */}
+            <rect x="110" y="70" width="30" height="100" rx="6" fill="currentColor" />
+          </svg>
+        </div>
+
         <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-teal-200 border border-white/10">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Pusat Analytics & Dashboard Statistik ARINDAMA</span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-            Visualisasi & Evaluasi Data Keolahragaan
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
+            Visualisasi &amp; Evaluasi Data Keolahragaan
           </h1>
-          <p className="text-xs sm:text-sm text-teal-100/90 leading-relaxed">
+          <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed">
             {isAdmin
               ? "Dashboard Admin untuk memantau sebaran demografi, mutu SDM, capaian prestasi atlet, serta statistik event keolahragaan daerah."
               : `Selamat datang, ${currentUser?.nama || "Responden"}. Halaman ini menampilkan visualisasi grafik dan kalkulasi bobot prestasi dari kuesioner yang telah Anda masukkan.`}
           </p>
-
-          <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-medium">
-            <span className="px-3 py-1 rounded-lg bg-black/20 border border-white/10 backdrop-blur-sm">
-              Role: <strong className="text-brand-accent">{isAdmin ? "ADMINISTRATOR" : "RESPONDEN"}</strong>
-            </span>
-            {currentUser?.kabupatenKota && (
-              <span className="px-3 py-1 rounded-lg bg-black/20 border border-white/10 backdrop-blur-sm">
-                Daerah: <strong>{currentUser.kabupatenKota}</strong>
-              </span>
-            )}
-          </div>
         </div>
       </div>
 
@@ -620,89 +621,188 @@ export default function StatistikPage() {
       {/* 4. Display Selected Category Visualizations */}
       <div className="space-y-6">
         {/* CATEGORY A: DEMOGRAFI SDM OLAHRAGA */}
-        {selectedCategory === "demografi" && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Metric Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <span className="text-xs font-semibold text-brand-text-secondary">Total Entri Identitas</span>
-                <div className="text-2xl font-extrabold text-brand-primary">
-                  {demografiData.totalResponden || 0} <span className="text-xs font-normal text-gray-500">Responden</span>
+        {selectedCategory === "demografi" && (() => {
+          const totalJk = (demografiData.jenisKelaminStats?.[0]?.value || 0) + (demografiData.jenisKelaminStats?.[1]?.value || 0);
+          const maleCount = demografiData.jenisKelaminStats?.[0]?.value || 0;
+          const femaleCount = demografiData.jenisKelaminStats?.[1]?.value || 0;
+          const malePercent = totalJk > 0 ? Math.round((maleCount / totalJk) * 100) : 0;
+          const femalePercent = totalJk > 0 ? Math.round((femaleCount / totalJk) * 100) : 0;
+
+          const dominantAgeObj = (demografiData.umurStats || []).reduce((max: any, item: any) => (item.value > (max?.value || -1) ? item : max), null);
+          const dominantAgeLabel = dominantAgeObj?.value > 0 ? dominantAgeObj.name : "20 – 30 Tahun";
+
+          return (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Metric Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Card 1: Total Entri Identitas */}
+                <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/80 shadow-card flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-gray-500">Total Entri Identitas</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-none">
+                        {demografiData.totalResponden || 0}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-700">Responden</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
+                    <Users className="w-6 h-6 text-emerald-700" />
+                  </div>
+                </div>
+
+                {/* Card 2: Rasio Jenis Kelamin */}
+                <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/80 shadow-card flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-gray-500">Rasio Jenis Kelamin</span>
+                    <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-none flex items-center gap-2">
+                      <span>L: {maleCount}</span>
+                      <span className="text-gray-300 font-light mx-1">|</span>
+                      <span>P: {femaleCount}</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-800 flex items-center justify-center shrink-0 border border-blue-100 shadow-sm">
+                    <PieChartIcon className="w-6 h-6 text-blue-600" />
+                  </div>
                 </div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <span className="text-xs font-semibold text-brand-text-secondary">Rasio Jenis Kelamin</span>
-                <div className="text-lg font-bold text-brand-text flex items-center gap-2">
-                  <span className="text-teal-700">L: {demografiData.jenisKelaminStats?.[0]?.value || 0}</span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-sky-700">P: {demografiData.jenisKelaminStats?.[1]?.value || 0}</span>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Chart 1: Donut Chart Proporsi Jenis Kelamin */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-200/80 shadow-card space-y-4">
+                  <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                    <TrendingUp className="w-5 h-5 text-emerald-800" />
+                    <h3 className="text-base font-bold text-gray-900">
+                      Proporsi Jenis Kelamin Responden
+                    </h3>
+                  </div>
+
+                  {hasCategoryData("demografi") ? (
+                    <div className="space-y-4">
+                      <div className="h-64 relative flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: "Laki-laki", value: maleCount > 0 ? maleCount : (femaleCount === 0 ? 1 : 0) },
+                                { name: "Perempuan", value: femaleCount },
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={68}
+                              outerRadius={92}
+                              startAngle={90}
+                              endAngle={-270}
+                              dataKey="value"
+                              stroke="none"
+                            >
+                              <Cell fill="#003820" />
+                              <Cell fill="#E2E8F0" />
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        
+                        {/* Hole Center Label */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">
+                            {malePercent >= femalePercent ? `${malePercent}%` : `${femalePercent}%`}
+                          </span>
+                          <span className="text-xs font-semibold text-gray-500">
+                            {malePercent >= femalePercent ? "Laki-laki" : "Perempuan"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Legend Details */}
+                      <div className="space-y-2 pt-2 text-center text-xs">
+                        <div className="flex items-center justify-center gap-6 text-gray-700 font-semibold">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#003820]" />
+                            Laki-laki: {malePercent}%
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-slate-300" />
+                            Perempuan: {femalePercent}%
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-center gap-4 text-gray-600 font-medium pt-1">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-sm bg-[#003820]" /> Laki-laki
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-sm bg-slate-200" /> Perempuan
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyDataChartHint title="Belum Ada Data Demografi" />
+                  )}
+                </div>
+
+                {/* Chart 2: Bar Chart Sebaran Kelompok Usia */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-200/80 shadow-card space-y-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 border-b border-gray-100 pb-3 mb-4">
+                      <BarChart3 className="w-5 h-5 text-emerald-800" />
+                      <h3 className="text-base font-bold text-gray-900">
+                        Sebaran Kelompok Usia Responden
+                      </h3>
+                    </div>
+
+                    {hasCategoryData("demografi") ? (
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={demografiData.umurStats || []}
+                            margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                            <XAxis
+                              dataKey="name"
+                              tick={{ fontSize: 11, fill: "#475569", fontWeight: 500 }}
+                              axisLine={{ stroke: "#CBD5E1" }}
+                              tickLine={false}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              tick={{ fontSize: 11, fill: "#64748B" }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip />
+                            <Bar
+                              dataKey="value"
+                              name="Jumlah Responden"
+                              fill="#003820"
+                              radius={[6, 6, 0, 0]}
+                              barSize={44}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <EmptyDataChartHint title="Belum Ada Data Usia Responden" />
+                    )}
+                  </div>
+
+                  {/* Footer Details */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100 text-xs">
+                    <span className="text-gray-600 font-medium">
+                      Rentang Usia Dominan: <strong className="text-emerald-950 font-bold">{dominantAgeLabel}</strong>
+                    </span>
+                    <span className="bg-blue-100/80 text-blue-800 font-bold px-3 py-1 rounded-full text-xs border border-blue-200/60 shrink-0 self-start sm:self-auto">
+                      Akumulasi: {demografiData.totalResponden || 0} Data
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Chart 1: Diagram Lingkaran Jenis Kelamin */}
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
-                  <PieChartIcon className="w-4 h-4 text-brand-primary" />
-                  <span>Proporsi Jenis Kelamin Responden</span>
-                </h3>
-
-                {hasCategoryData("demografi") ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={demografiData.jenisKelaminStats}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                          label={({ name, percent }: { name?: string; percent?: number }) => `${name || ""}: ${((percent || 0) * 100).toFixed(0)}%`}
-                        >
-                          {demografiData.jenisKelaminStats.map((_: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={COLOR_PALETTE[index % COLOR_PALETTE.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <EmptyDataChartHint title="Belum Ada Data Demografi" />
-                )}
-              </div>
-
-              {/* Chart 2: Distribusi Kelompok Umur */}
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-brand-primary" />
-                  <span>Sebaran Kelompok Usia Responden</span>
-                </h3>
-
-                {hasCategoryData("demografi") ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={demografiData.umurStats || []}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip />
-                        <Bar dataKey="value" name="Jumlah Responden" fill="#0284C7" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <EmptyDataChartHint title="Belum Ada Data Usia Responden" />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* CATEGORY B: PENINGKATAN MUTU SDM */}
         {selectedCategory === "mutuSDM" && (
@@ -921,219 +1021,308 @@ export default function StatistikPage() {
         )}
 
         {/* CATEGORY C: PRESTASI ATLET */}
-        {selectedCategory === "prestasiAtlet" && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Top Indicator Filter Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <span className="text-xs font-semibold text-brand-text-secondary">Form Terkait</span>
-                <div className="text-sm font-bold text-brand-primary">
-                  {selectedAtletIndicator === "all"
-                    ? "Indikator 1 & 6"
-                    : selectedAtletIndicator === "1"
-                    ? "Indikator 1 (Pelajar)"
-                    : "Indikator 6 (Atlet)"}
-                </div>
-                <p className="text-xs text-gray-400">Prestasi Atlet & Pelajar Keolahragaan</p>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <span className="text-xs font-semibold text-brand-text-secondary">Total Rekam Prestasi</span>
-                <div className="text-2xl font-extrabold text-brand-primary">
-                  {filteredAtletList.length} <span className="text-xs font-normal text-gray-500">Kegiatan</span>
-                </div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                <label className="text-xs font-semibold text-brand-text-secondary flex items-center gap-1.5">
-                  <Filter className="w-3.5 h-3.5 text-brand-primary" />
-                  <span>Pilih Indikator Prestasi</span>
-                </label>
-                <select
-                  value={selectedAtletIndicator}
-                  onChange={(e) => setSelectedAtletIndicator(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-brand-text bg-gray-50/80 focus:bg-white focus:ring-2 focus:ring-brand-primary outline-none cursor-pointer transition-all"
-                >
-                  <option value="all">semua (indikator 1, indikator 6)</option>
-                  <option value="1">pelajar (indikator 1)</option>
-                  <option value="6">atlet (indikator 6)</option>
-                </select>
-              </div>
-            </div>
+        {selectedCategory === "prestasiAtlet" && (() => {
+          const totalPelajar = activeAtletCalculatedStats.totalPelajarCount || 0;
+          const totalAtlet = activeAtletCalculatedStats.totalAtletCount || 0;
+          const totalPelajarAtlet = totalPelajar + totalAtlet;
+          const pelajarPercent = totalPelajarAtlet > 0 ? Math.round((totalPelajar / totalPelajarAtlet) * 100) : 50;
+          const atletPercent = totalPelajarAtlet > 0 ? Math.round((totalAtlet / totalPelajarAtlet) * 100) : 50;
 
-            {/* Top Score & Medal Weight Formula Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Total Calculated Medal Weight Score Card */}
-              <div className="lg:col-span-1 bg-gradient-to-br from-amber-500 via-amber-600 to-teal-800 text-white rounded-2xl p-6 shadow-md space-y-4 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/20 text-xs font-semibold text-amber-200">
-                    <Trophy className="w-3.5 h-3.5" />
-                    <span>Total Poin Bobot Medali</span>
-                  </div>
-                  <h3 className="text-xs uppercase tracking-wider text-amber-100 font-semibold">
-                    Skor Capaian Prestasi
-                  </h3>
-                  <div className="text-4xl font-extrabold tracking-tight">
-                    {activeAtletCalculatedStats.totalBobotScore}{" "}
-                    <span className="text-sm font-normal text-amber-200">Poin</span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-white/20 text-xs text-amber-100/90 leading-relaxed space-y-1">
-                  <p>
-                    <strong>Form Sumber:</strong>{" "}
+          return (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Top Indicator Filter Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-card space-y-1">
+                  <span className="text-xs font-semibold text-gray-500">Form Terkait</span>
+                  <div className="text-base font-bold text-gray-900">
                     {selectedAtletIndicator === "all"
                       ? "Indikator 1 & 6"
                       : selectedAtletIndicator === "1"
                       ? "Indikator 1 (Pelajar)"
                       : "Indikator 6 (Atlet)"}
-                  </p>
-                  <p>
-                    Skor dikalkulasikan secara otomatis berdasarkan pembobotan resmi tingkat kejuaraan & jenis medali.
-                  </p>
+                  </div>
+                  <p className="text-xs text-gray-500">Prestasi Atlet &amp; Pelajar Keolahragaan</p>
+                </div>
+
+                <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-card flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-gray-500">Total Rekam Prestasi</span>
+                    <div className="text-2xl font-extrabold text-gray-900 leading-none">
+                      {filteredAtletList.length} <span className="text-sm font-semibold text-gray-700">Kegiatan</span>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-100">
+                    <Trophy className="w-5 h-5 text-emerald-700" />
+                  </div>
+                </div>
+
+                <div className="bg-white p-5 rounded-3xl border border-gray-200/80 shadow-card space-y-1">
+                  <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Pilih Indikator Prestasi</span>
+                  </label>
+                  <select
+                    value={selectedAtletIndicator}
+                    onChange={(e) => setSelectedAtletIndicator(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-600 outline-none cursor-pointer transition-all"
+                  >
+                    <option value="all">semua (Indikator 1, Indikator 6)</option>
+                    <option value="1">pelajar (Indikator 1)</option>
+                    <option value="6">atlet (Indikator 6)</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Weight Score Formula Reference Card */}
-              <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
-                  <Award className="w-4 h-4 text-brand-primary" />
-                  <span>Matriks Perhitungan Bobot Poin Medali</span>
-                </h3>
+              {/* Top Score & Medal Weight Formula Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Total Calculated Medal Weight Score Card */}
+                <div className="lg:col-span-1 relative overflow-hidden bg-gradient-to-br from-[#D97706] to-[#B45309] text-white rounded-3xl p-6 sm:p-7 shadow-card flex flex-col justify-between">
+                  {/* Background Watermark Trophy Icon */}
+                  <Trophy className="w-40 h-40 text-black/10 absolute -right-6 -bottom-6 pointer-events-none" />
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  {/* Internasional */}
-                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">
-                    <span className="font-bold text-amber-900 block border-b border-amber-200 pb-1">
-                      Tingkat Internasional
-                    </span>
-                    <div className="flex justify-between">
-                      <span>Emas</span> <strong className="text-amber-800">10 Poin</strong>
+                  <div className="relative z-10 space-y-3">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-bold text-white backdrop-blur-sm shadow-sm">
+                      <Trophy className="w-3.5 h-3.5" />
+                      <span>Total Poin Bobot Medali</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Perak</span> <strong className="text-amber-800">8 Poin</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Perunggu</span> <strong className="text-amber-800">5 Poin</strong>
-                    </div>
-                    <div className="flex justify-between border-t border-amber-200/60 pt-1">
-                      <span>Partisipan</span> <strong className="text-gray-600">0 Poin</strong>
+
+                    <div className="pt-2">
+                      <h3 className="text-xs uppercase tracking-wider text-amber-100 font-bold">
+                        SKOR CAPAIAN PRESTASI
+                      </h3>
+                      <div className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1">
+                        {activeAtletCalculatedStats.totalBobotScore}{" "}
+                        <span className="text-lg font-semibold text-amber-200">Poin</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Nasional */}
-                  <div className="p-3 rounded-xl bg-sky-50/70 border border-sky-200 space-y-1.5">
-                    <span className="font-bold text-sky-900 block border-b border-sky-200 pb-1">
-                      Tingkat Nasional
-                    </span>
-                    <div className="flex justify-between">
-                      <span>Emas</span> <strong className="text-sky-800">5 Poin</strong>
+                  <div className="relative z-10 pt-6 border-t border-white/20 text-xs text-amber-100/90 leading-relaxed space-y-1">
+                    <p className="font-bold">
+                      Form Sumber:{" "}
+                      {selectedAtletIndicator === "all"
+                        ? "Indikator 1 & 6"
+                        : selectedAtletIndicator === "1"
+                        ? "Indikator 1 (Pelajar)"
+                        : "Indikator 6 (Atlet)"}
+                    </p>
+                    <p className="text-[11px] opacity-90">
+                      Skor dikalkulasikan secara otomatis berdasarkan pembobotan resmi tingkat kejuaraan &amp; jenis medali.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Weight Score Formula Reference Card */}
+                <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-gray-200/80 shadow-card space-y-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                      <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <Award className="w-5 h-5 text-emerald-800" />
+                        <span>Matriks Perhitungan Bobot Poin Medali</span>
+                      </h3>
+                      <span className="bg-purple-50 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-md border border-purple-100">
+                        SK Standar Kemenpora
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Perak</span> <strong className="text-sky-800">4 Poin</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Perunggu</span> <strong className="text-sky-800">3 Poin</strong>
-                    </div>
-                    <div className="flex justify-between border-t border-sky-200/60 pt-1">
-                      <span>Partisipan</span> <strong className="text-gray-600">0 Poin</strong>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      {/* Internasional */}
+                      <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/70 space-y-2">
+                        <div className="flex items-center justify-between border-b border-amber-200/60 pb-1.5 font-bold text-amber-950">
+                          <span>Tingkat Internasional</span>
+                          <span>🌐</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-amber-800 font-semibold">● Emas</span> <strong className="text-gray-900">10 Poin</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-amber-800 font-semibold">● Perak</span> <strong className="text-gray-900">8 Poin</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-amber-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">5 Poin</strong>
+                        </div>
+                        <div className="flex justify-between border-t border-amber-200/50 pt-1.5 text-gray-500">
+                          <span>Partisipan</span> <strong>0 Poin</strong>
+                        </div>
+                      </div>
+
+                      {/* Nasional */}
+                      <div className="p-3.5 rounded-2xl bg-sky-50/60 border border-sky-200/70 space-y-2">
+                        <div className="flex items-center justify-between border-b border-sky-200/60 pb-1.5 font-bold text-sky-950">
+                          <span>Tingkat Nasional</span>
+                          <span>🚩</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sky-800 font-semibold">● Emas</span> <strong className="text-gray-900">5 Poin</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sky-800 font-semibold">● Perak</span> <strong className="text-gray-900">4 Poin</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sky-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">3 Poin</strong>
+                        </div>
+                        <div className="flex justify-between border-t border-sky-200/50 pt-1.5 text-gray-500">
+                          <span>Partisipan</span> <strong>0 Poin</strong>
+                        </div>
+                      </div>
+
+                      {/* Provinsi */}
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-2">
+                        <div className="flex items-center justify-between border-b border-emerald-200/60 pb-1.5 font-bold text-emerald-950">
+                          <span>Tingkat Provinsi</span>
+                          <span>🏛️</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-800 font-semibold">● Emas</span> <strong className="text-gray-900">3 Poin</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-800 font-semibold">● Perak</span> <strong className="text-gray-900">2 Poin</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">1 Poin</strong>
+                        </div>
+                        <div className="flex justify-between border-t border-emerald-200/50 pt-1.5 text-gray-500">
+                          <span>Partisipan</span> <strong>0 Poin</strong>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Provinsi */}
-                  <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
-                    <span className="font-bold text-emerald-900 block border-b border-emerald-200 pb-1">
-                      Tingkat Provinsi
-                    </span>
-                    <div className="flex justify-between">
-                      <span>Emas</span> <strong className="text-emerald-800">3 Poin</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Perak</span> <strong className="text-emerald-800">2 Poin</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Perunggu</span> <strong className="text-emerald-800">1 Poin</strong>
-                    </div>
-                    <div className="flex justify-between border-t border-emerald-200/60 pt-1">
-                      <span>Partisipan</span> <strong className="text-gray-600">0 Poin</strong>
-                    </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+                    <p className="italic">
+                      * Total perolehan skor daerah dihitung otomatis berdasarkan pembobotan resmi SK Kemenpora: Total {activeAtletCalculatedStats.totalBobotScore} Poin.
+                    </p>
+                    <span className="font-semibold text-emerald-700 shrink-0">⚙ Sinkron</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Charts Grid: Pie Chart Comparison & Bar Chart Medals */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Diagram 1: Pie Chart Perbandingan Pelajar vs Atlet */}
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
-                  <PieChartIcon className="w-4 h-4 text-brand-primary" />
-                  <span>Diagram Lingkaran 1: Perbandingan Rekam Prestasi Pelajar vs Atlet</span>
-                </h3>
-                <p className="text-xs text-brand-text-secondary">
-                  Distribusi dan rasio perbandingan rekam data prestasi antara Pelajar (Indikator 1) dan Atlet (Indikator 6).
-                </p>
-
-                {rawAtletList.length > 0 ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={activeAtletCalculatedStats.perbandinganPelajarAtletStats}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={80}
-                          paddingAngle={3}
-                          dataKey="value"
-                          label={({ name, percent }: { name?: string; percent?: number }) =>
-                            `${name || ""}: ${((percent || 0) * 100).toFixed(0)}%`
-                          }
-                        >
-                          <Cell key="cell-pelajar" fill="#0F766E" />
-                          <Cell key="cell-atlet" fill="#0284C7" />
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+              {/* Charts Grid: Pie Chart Comparison & Bar Chart Medals */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Diagram 1: Pie Chart Perbandingan Pelajar vs Atlet */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-200/80 shadow-card space-y-4">
+                  <div className="border-b border-gray-100 pb-3 space-y-1">
+                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <PieChartIcon className="w-5 h-5 text-emerald-800" />
+                      <span>Diagram Lingkaran 1: Perbandingan Rekam Prestasi Pelajar vs Atlet</span>
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Distribusi dan rasio perbandingan rekam data prestasi antara Pelajar (Indikator 1) dan Atlet (Indikator 6).
+                    </p>
                   </div>
-                ) : (
-                  <EmptyDataChartHint title="Belum Ada Data Rekam Pelajar & Atlet (Indikator 1 & 6)" />
-                )}
-              </div>
 
-              {/* Diagram 2: Bar Chart Perolehan Medali & Partisipasi per Jenjang */}
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-brand-text flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-brand-primary" />
-                  <span>Diagram Batang 2: Perbandingan Medali &amp; Partisipan per Jenjang</span>
-                </h3>
-                <p className="text-xs text-brand-text-secondary">
-                  Sebaran hasil perolehan medali (Emas, Perak, Perunggu) dan partisipan berdasarkan indikator terpilih.
-                </p>
+                  {rawAtletList.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="h-64 relative flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={activeAtletCalculatedStats.perbandinganPelajarAtletStats}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={68}
+                              outerRadius={92}
+                              startAngle={90}
+                              endAngle={-270}
+                              dataKey="value"
+                              stroke="none"
+                            >
+                              <Cell key="cell-atlet" fill="#0284C7" />
+                              <Cell key="cell-pelajar" fill="#003820" />
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
 
-                {hasCategoryData("prestasiAtlet") ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={activeAtletCalculatedStats.atletChartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="jenjang" />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="Emas" name="Medali Emas" fill={MEDAL_COLORS.Emas} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Perak" name="Medali Perak" fill={MEDAL_COLORS.Perak} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Perunggu" name="Medali Perunggu" fill={MEDAL_COLORS.Perunggu} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Partisipasi" name="Partisipan / Non-Medali" fill="#0284C7" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                        {/* Hole Center Label */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-none">
+                            {rawAtletList.length}
+                          </span>
+                          <span className="text-[10px] font-bold tracking-wider text-gray-500 uppercase mt-1">
+                            TOTAL REKAM
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Sub-labels Chips */}
+                      <div className="flex items-center justify-center gap-3 text-xs">
+                        <span className="bg-sky-50 text-sky-800 font-bold px-3 py-1 rounded-lg border border-sky-100">
+                          Atlet (Indikator 6): {atletPercent}%
+                        </span>
+                        <span className="bg-emerald-50 text-emerald-800 font-bold px-3 py-1 rounded-lg border border-emerald-100">
+                          Pelajar (Indikator 1): {pelajarPercent}%
+                        </span>
+                      </div>
+
+                      {/* Legend Details */}
+                      <div className="flex items-center justify-center gap-6 pt-1 text-xs font-semibold text-gray-600">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-sm bg-[#0284C7]" /> Atlet (Indikator 6) ({totalAtlet})
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-sm bg-[#003820]" /> Pelajar (Indikator 1) ({totalPelajar})
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyDataChartHint title="Belum Ada Data Rekam Pelajar & Atlet (Indikator 1 & 6)" />
+                  )}
+                </div>
+
+                {/* Diagram 2: Bar Chart Perolehan Medali & Partisipasi per Jenjang */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-200/80 shadow-card space-y-4">
+                  <div className="border-b border-gray-100 pb-3 space-y-1">
+                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-emerald-800" />
+                      <span>Diagram Batang 2: Perbandingan Medali &amp; Partisipan per Jenjang</span>
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Sebaran hasil perolehan medali (Emas, Perak, Perunggu) dan partisipan berdasarkan indikator terpilih.
+                    </p>
                   </div>
-                ) : (
-                  <EmptyDataChartHint title="Belum Ada Data Prestasi untuk Filter Terpilih" />
-                )}
+
+                  {hasCategoryData("prestasiAtlet") ? (
+                    <div className="space-y-4">
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={activeAtletCalculatedStats.atletChartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                            <XAxis dataKey="jenjang" tick={{ fontSize: 11, fill: "#475569", fontWeight: 600 }} tickLine={false} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748B" }} axisLine={false} tickLine={false} />
+                            <Tooltip />
+                            <Bar dataKey="Emas" name="Medali Emas" fill={MEDAL_COLORS.Emas} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Perak" name="Medali Perak" fill={MEDAL_COLORS.Perak} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Perunggu" name="Medali Perunggu" fill={MEDAL_COLORS.Perunggu} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Partisipasi" name="Partisipan / Non-Medali" fill="#0284C7" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Custom Legend Chips */}
+                      <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-gray-700 pt-1">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-sm bg-[#F59E0B]" /> Medali Emas
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-sm bg-[#94A3B8]" /> Medali Perak ({activeAtletCalculatedStats.atletChartData.reduce((acc, curr) => acc + curr.Perak, 0)})
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-sm bg-[#D97706]" /> Medali Perunggu
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-sm bg-[#0284C7]" /> Partisipan / Non-Medali ({activeAtletCalculatedStats.atletChartData.reduce((acc, curr) => acc + curr.Partisipasi, 0)})
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyDataChartHint title="Belum Ada Data Prestasi untuk Filter Terpilih" />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* CATEGORY D: STATISTIK PENYELENGGARA EVENT OLAHRAGA */}
         {selectedCategory === "eventOlahraga" && (
@@ -1275,20 +1464,20 @@ export default function StatistikPage() {
       </div>
 
       {/* 5. Tabel Data Mentah (Raw Data) dengan Search, Pagination, & Berkas Validasi */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-8 space-y-4 animate-in fade-in duration-300">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-3">
-          <div>
-            <h3 className="text-base font-bold text-brand-text flex items-center gap-2">
-              <span>Tabel Detail Data - {activeCategoryObj.shortLabel}</span>
+      <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-card mt-8 space-y-5 animate-in fade-in duration-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h3 className="text-lg font-bold text-gray-900 tracking-tight">
+              Tabel Detail Data – {activeCategoryObj.shortLabel}
             </h3>
-            <span className="text-xs font-semibold text-brand-primary bg-teal-50 px-2.5 py-0.5 rounded-lg border border-teal-100 inline-block mt-1">
+            <span className="bg-emerald-100 text-emerald-800 font-bold px-3 py-1 text-xs rounded-full border border-emerald-200/60">
               Total: {currentRawData.length} Entri Data
             </span>
           </div>
 
           {/* Search Box Input */}
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3 pointer-events-none" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Cari di tabel data..."
@@ -1297,7 +1486,7 @@ export default function StatistikPage() {
                 setTableSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-xs font-medium text-brand-text bg-gray-50/80 focus:bg-white focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-800 bg-slate-50/60 focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
             />
             {tableSearchQuery && (
               <button
@@ -1305,7 +1494,7 @@ export default function StatistikPage() {
                   setTableSearchQuery("");
                   setCurrentPage(1);
                 }}
-                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 p-0.5 rounded-md hover:bg-gray-100 transition-colors"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-md hover:bg-gray-100 transition-colors"
                 title="Hapus pencarian"
               >
                 <X className="w-3.5 h-3.5" />
@@ -1314,92 +1503,102 @@ export default function StatistikPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200/80">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-gray-50/80 border-b border-gray-200">
-                <th className="py-3.5 px-4 text-xs font-bold text-brand-text">No</th>
+              <tr className="bg-[#F4F6FA] border-b border-gray-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
+                <th className="py-3.5 px-4">NO</th>
                 
                 {/* Header Kolom Berdasarkan Kategori */}
                 {selectedCategory === "demografi" ? (
                   <>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Nama Lengkap</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Jenis Kelamin</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Umur</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Asal Wilayah</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Pekerjaan/Jabatan</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Telepon</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
+                    <th className="py-3.5 px-4">NAMA LENGKAP</th>
+                    <th className="py-3.5 px-4">JENIS KELAMIN</th>
+                    <th className="py-3.5 px-4">UMUR</th>
+                    <th className="py-3.5 px-4">ASAL WILAYAH</th>
+                    <th className="py-3.5 px-4">PEKERJAAN/JABATAN</th>
+                    <th className="py-3.5 px-4">TELEPON</th>
+                    <th className="py-3.5 px-4 text-center">BERKAS VALIDASI</th>
                   </>
                 ) : selectedCategory === "prestasiAtlet" ? (
                   <>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Indikator</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Nama Kegiatan</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Cabang Olahraga</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Tingkat</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Pendanaan</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Medali</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Uraian Capaian</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
+                    <th className="py-3.5 px-4">INDIKATOR</th>
+                    <th className="py-3.5 px-4">NAMA KEGIATAN</th>
+                    <th className="py-3.5 px-4">CABANG OLAHRAGA</th>
+                    <th className="py-3.5 px-4">TINGKAT</th>
+                    <th className="py-3.5 px-4">PENDANAAN</th>
+                    <th className="py-3.5 px-4">MEDALI</th>
+                    <th className="py-3.5 px-4">URAIAN CAPAIAN</th>
+                    <th className="py-3.5 px-4 text-center">BERKAS VALIDASI</th>
                   </>
                 ) : (
                   <>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Indikator</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Nama Kegiatan</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Cabang Olahraga</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Tingkat</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Pendanaan</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text">Uraian Capaian</th>
-                    <th className="py-3.5 px-4 text-xs font-bold text-brand-text text-center">Berkas Validasi</th>
+                    <th className="py-3.5 px-4">INDIKATOR</th>
+                    <th className="py-3.5 px-4">NAMA KEGIATAN</th>
+                    <th className="py-3.5 px-4">CABANG OLAHRAGA</th>
+                    <th className="py-3.5 px-4">TINGKAT</th>
+                    <th className="py-3.5 px-4">PENDANAAN</th>
+                    <th className="py-3.5 px-4">URAIAN CAPAIAN</th>
+                    <th className="py-3.5 px-4 text-center">BERKAS VALIDASI</th>
                   </>
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 text-xs text-gray-800">
               {currentTableData.length > 0 ? (
                 currentTableData.map((row, idx) => {
                   const fileUrl = row.validationEvidence?.fileUrl;
                   const fileName = row.validationEvidence?.fileName || "Berkas Validasi.pdf";
+                  const jk = String(row.jenisKelamin || "").toLowerCase();
+                  const isMale = jk.includes("laki") || jk.startsWith("l");
 
                   return (
-                    <tr key={row.id || idx} className="hover:bg-teal-50/30 transition-colors">
-                      <td className="py-3 px-4 text-sm text-gray-500 font-medium">
+                    <tr key={row.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 text-gray-500 font-medium">
                         {startIndex + idx + 1}
                       </td>
                       
                       {selectedCategory === "demografi" ? (
                         <>
-                          <td className="py-3 px-4 text-sm font-bold text-brand-text">{row.namaLengkap}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            <span className="px-2 py-0.5 rounded text-xs bg-gray-100">{row.jenisKelamin}</span>
+                          <td className="py-3.5 px-4 font-bold text-gray-900">{row.namaLengkap}</td>
+                          <td className="py-3.5 px-4">
+                            {isMale ? (
+                              <span className="inline-flex items-center gap-1 bg-emerald-100/90 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold border border-emerald-200/50">
+                                <span className="text-emerald-700">♂</span> Laki-laki
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold border border-purple-200/50">
+                                <span className="text-purple-700">♀</span> Perempuan
+                              </span>
+                            )}
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{row.umur} Thn</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {row.kabupatenKotaAsal}<br/>
-                            <span className="text-xs text-gray-400">Kec. {row.kecamatan}</span>
+                          <td className="py-3.5 px-4 font-medium text-gray-700">{row.umur} Thn</td>
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-gray-900">{row.kabupatenKotaAsal || "-"}</div>
+                            <div className="text-[11px] text-gray-500 mt-0.5">Kec. {row.kecamatan || "-"}</div>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{row.pekerjaanJabatan}</td>
-                          <td className="py-3 px-4 text-sm text-gray-500">{row.nomorTelepon}</td>
+                          <td className="py-3.5 px-4 text-gray-700">{row.pekerjaanJabatan || "-"}</td>
+                          <td className="py-3.5 px-4 text-gray-600 font-mono">{row.nomorTelepon || "-"}</td>
                         </>
                       ) : selectedCategory === "prestasiAtlet" || row.indicatorId === 1 || row.indicatorId === 6 ? (
                         <>
-                          <td className="py-3 px-4 text-sm text-gray-500">
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-brand-primary/10 text-brand-primary font-bold text-xs">
+                          <td className="py-3.5 px-4 text-gray-500">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200/60">
                               {row.indicatorId}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-sm font-semibold text-brand-text">{row.namaKegiatan}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{row.cabangOlahraga}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            <span className="px-2 py-1 rounded-md text-xs font-medium bg-sky-50 text-sky-700 border border-sky-100">
+                          <td className="py-3.5 px-4 font-bold text-gray-900">{row.namaKegiatan}</td>
+                          <td className="py-3.5 px-4 text-gray-700">{row.cabangOlahraga}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
                               {row.tingkatPenyelenggaraan}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{row.sumberPendanaan}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600 font-medium">
+                          <td className="py-3.5 px-4 text-gray-700">{row.sumberPendanaan}</td>
+                          <td className="py-3.5 px-4 font-bold text-gray-900">
                             {row.medali || "-"}
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">
+                          <td className="py-3.5 px-4 max-w-xs">
                             <p className="text-xs text-gray-500 line-clamp-2" title={row.uraianCapaian}>
                               {row.uraianCapaian || "-"}
                             </p>
@@ -1407,20 +1606,20 @@ export default function StatistikPage() {
                         </>
                       ) : (
                         <>
-                          <td className="py-3 px-4 text-sm text-gray-500">
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-brand-primary/10 text-brand-primary font-bold text-xs">
+                          <td className="py-3.5 px-4 text-gray-500">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200/60">
                               {row.indicatorId}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-sm font-semibold text-brand-text">{row.namaKegiatan}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{row.cabangOlahraga}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            <span className="px-2 py-1 rounded-md text-xs font-medium bg-sky-50 text-sky-700 border border-sky-100">
+                          <td className="py-3.5 px-4 font-bold text-gray-900">{row.namaKegiatan}</td>
+                          <td className="py-3.5 px-4 text-gray-700">{row.cabangOlahraga}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
                               {row.tingkatPenyelenggaraan}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{row.sumberPendanaan}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">
+                          <td className="py-3.5 px-4 text-gray-700">{row.sumberPendanaan}</td>
+                          <td className="py-3.5 px-4 max-w-xs">
                             <p className="text-xs text-gray-500 line-clamp-2" title={row.uraianCapaian}>
                               {row.uraianCapaian || "-"}
                             </p>
@@ -1428,14 +1627,14 @@ export default function StatistikPage() {
                         </>
                       )}
 
-                      {/* Kolom Berkas Validasi (Tombol) */}
-                      <td className="py-3 px-4 text-center">
+                      {/* Kolom Berkas Validasi */}
+                      <td className="py-3.5 px-4 text-center">
                         {fileUrl ? (
                           <a
                             href={fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-primary text-white hover:bg-brand-primary-hover shadow-sm transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shadow-none"
                             title={`Buka ${fileName}`}
                           >
                             <FileText className="w-3.5 h-3.5" />
@@ -1443,7 +1642,7 @@ export default function StatistikPage() {
                             <ExternalLink className="w-3 h-3 opacity-70" />
                           </a>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200">
                             Tidak Ada
                           </span>
                         )}
@@ -1467,48 +1666,45 @@ export default function StatistikPage() {
         </div>
 
         {/* Kontrol Pagination */}
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-            <span className="text-xs font-medium text-brand-text-secondary">
-              Menampilkan <span className="font-bold text-brand-text">{startIndex + 1}</span> sampai{" "}
-              <span className="font-bold text-brand-text">{Math.min(startIndex + itemsPerPage, currentRawData.length)}</span>{" "}
-              dari total <span className="font-bold text-brand-text">{currentRawData.length}</span> data
-            </span>
-            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-200">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white hover:shadow-sm text-brand-text transition-all"
-              >
-                Prev
-              </button>
-              
-              <div className="flex items-center gap-0.5 px-2 overflow-x-auto max-w-[150px] sm:max-w-xs hide-scrollbar">
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`min-w-[28px] h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
-                      currentPage === i + 1 
-                        ? 'bg-brand-primary text-white shadow-md' 
-                        : 'text-gray-500 hover:bg-white hover:text-brand-text'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <span className="text-xs font-medium text-gray-500">
+            Menampilkan <span className="font-bold text-gray-900">{currentRawData.length === 0 ? 0 : startIndex + 1}</span> dari <span className="font-bold text-gray-900">{currentRawData.length}</span> entri
+          </span>
 
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white hover:shadow-sm text-brand-text transition-all"
-              >
-                Next
-              </button>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              Sebelumnya
+            </button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                    currentPage === i + 1 
+                      ? 'bg-brand-primary text-white shadow-sm' 
+                      : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
             </div>
+
+            <button
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              Selanjutnya
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
