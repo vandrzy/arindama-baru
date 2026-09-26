@@ -66,6 +66,7 @@ const identitasZodSchema = z.object({
 });
 
 const indicatorZodSchema = z.object({
+  indicatorId: z.number().int(),
   namaKegiatan: z.string().min(1, "Nama Kegiatan/ Kejuaraan Olahraga wajib diisi"),
   cabangOlahraga: z.string().min(1, "Cabang Olahraga wajib diisi"),
   tingkatPenyelenggaraan: z.string().min(1, "Tingkat Penyelenggaraan wajib diisi"),
@@ -314,7 +315,10 @@ export function parseAndValidateExcelFile(
             });
           }
         } else {
-          indicatorRecords.push(valResult.data as ParsedIndicatorRecordData);
+          indicatorRecords.push({
+            ...valResult.data,
+            indicatorId: step,
+          } as ParsedIndicatorRecordData);
         }
       }
     }
