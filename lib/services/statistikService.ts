@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { KABUPATEN_KOTA_OPTIONS, INSTANSI_OPTIONS } from "@/lib/constants/survey-data";
 
 export interface UserPayload {
   id: string;
@@ -62,7 +63,7 @@ export async function getAdminFiltersData(paramKota?: string, paramInstansi?: st
     }),
   ]);
 
-  const uniqueKotaSet = new Set<string>();
+  const uniqueKotaSet = new Set<string>(KABUPATEN_KOTA_OPTIONS);
   userKota.forEach((u) => {
     if (u.kabupatenKota?.trim()) uniqueKotaSet.add(u.kabupatenKota.trim());
   });
@@ -80,7 +81,11 @@ export async function getAdminFiltersData(paramKota?: string, paramInstansi?: st
     distinct: ["instansi"],
     select: { instansi: true },
   });
-  const listInstansi = instansiUsers.map((u) => u.instansi).filter(Boolean).sort();
+  const uniqueInstansiSet = new Set<string>(INSTANSI_OPTIONS);
+  instansiUsers.forEach((u) => {
+    if (u.instansi?.trim()) uniqueInstansiSet.add(u.instansi.trim());
+  });
+  const listInstansi = Array.from(uniqueInstansiSet).sort();
 
   // Filtered Responden list
   const respondenUsers = await prisma.user.findMany({
@@ -103,8 +108,8 @@ export async function getAdminFiltersData(paramKota?: string, paramInstansi?: st
     id: u.id,
     nama: u.nama,
     email: u.email,
-    kabupatenKota: u.kabupatenKota || "Kota Surabaya",
-    instansi: u.instansi || "Dispora Daerah",
+    kabupatenKota: u.kabupatenKota || "Samarinda",
+    instansi: u.instansi || "DISPORA",
   }));
 
   return {

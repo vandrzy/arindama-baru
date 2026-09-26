@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/context/app-context";
+import { KABUPATEN_KOTA_OPTIONS, INSTANSI_OPTIONS } from "@/lib/constants/survey-data";
 import {
   Lock,
   Mail,
@@ -270,16 +271,11 @@ export default function RegisterPage() {
                     className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all appearance-none bg-white text-brand-text"
                   >
                     <option value="" disabled>Pilih Kabupaten/Kota</option>
-                    <option value="Berau">Berau</option>
-                    <option value="Kutai Barat">Kutai Barat</option>
-                    <option value="Kutai Kartanegara">Kutai Kartanegara</option>
-                    <option value="Kutai Timur">Kutai Timur</option>
-                    <option value="Mahakam Ulu">Mahakam Ulu</option>
-                    <option value="Paser">Paser</option>
-                    <option value="Penajam Paser Utara">Penajam Paser Utara</option>
-                    <option value="Balikpapan">Balikpapan</option>
-                    <option value="Bontang">Bontang</option>
-                    <option value="Samarinda">Samarinda</option>
+                    {KABUPATEN_KOTA_OPTIONS.map((kota) => (
+                      <option key={kota} value={kota}>
+                        {kota}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -298,10 +294,11 @@ export default function RegisterPage() {
                     className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all appearance-none bg-white text-brand-text"
                   >
                     <option value="" disabled>Pilih Instansi</option>
-                    <option value="DISPORA">DISPORA</option>
-                    <option value="KONI">KONI</option>
-                    <option value="KORMI">KORMI</option>
-                    <option value="NPC Indonesia">NPC Indonesia</option>
+                    {INSTANSI_OPTIONS.map((inst) => (
+                      <option key={inst} value={inst}>
+                        {inst}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

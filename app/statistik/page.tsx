@@ -39,6 +39,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { KABUPATEN_KOTA_OPTIONS, INSTANSI_OPTIONS } from "@/lib/constants/survey-data";
 
 // Vibrant, cohesive color palettes
 const COLOR_PALETTE = [
@@ -499,7 +500,7 @@ export default function StatistikPage() {
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-brand-text bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
               >
                 <option value="">-- Semua Kota / Kabupaten --</option>
-                {adminFiltersData?.listKota?.map((kota: string, idx: number) => (
+                {(adminFiltersData?.listKota?.length ? adminFiltersData.listKota : KABUPATEN_KOTA_OPTIONS).map((kota: string, idx: number) => (
                   <option key={idx} value={kota}>
                     {kota}
                   </option>
@@ -519,7 +520,7 @@ export default function StatistikPage() {
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-brand-text bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
               >
                 <option value="">-- Semua Instansi --</option>
-                {adminFiltersData?.listInstansi?.map((inst: string, idx: number) => (
+                {(adminFiltersData?.listInstansi?.length ? adminFiltersData.listInstansi : INSTANSI_OPTIONS).map((inst: string, idx: number) => (
                   <option key={idx} value={inst}>
                     {inst}
                   </option>
@@ -541,7 +542,7 @@ export default function StatistikPage() {
                 <option value="">-- Semua Responden ({adminFiltersData?.listResponden?.length || 0}) --</option>
                 {adminFiltersData?.listResponden?.map((resp: any) => (
                   <option key={resp.id} value={resp.id}>
-                    {resp.nama} ({resp.kabupatenKota || "Surabaya"})
+                    {resp.nama} ({resp.kabupatenKota || "Samarinda"})
                   </option>
                 ))}
               </select>

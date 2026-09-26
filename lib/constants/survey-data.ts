@@ -113,3 +113,23 @@ export const SURVEY_INDICATORS: IndicatorMeta[] = [
 ];
 
 export const INITIAL_SUBMISSIONS: SurveySubmission[] = [];
+
+export const KABUPATEN_KOTA_OPTIONS = [
+  "Berau",
+  "Kutai Barat",
+  "Kutai Kartanegara",
+  "Kutai Timur",
+  "Mahakam Ulu",
+  "Paser",
+  "Penajam Paser Utara",
+  "Balikpapan",
+  "Bontang",
+  "Samarinda",
+];
+
+export const INSTANSI_OPTIONS = [
+  "DISPORA",
+  "KONI",
+  "KORMI",
+  "NPC Indonesia",
+];
