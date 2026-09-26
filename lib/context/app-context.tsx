@@ -13,7 +13,7 @@ interface AppContextType {
   setRole: (role: UserRole) => void;
   currentUser: AuthUser | null;
   isLoading: boolean;
-  login: (username: string, email: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<boolean>;
   logout: () => void;
   submissions: SurveySubmission[];
   addSubmission: (submission: SurveySubmission) => void;
@@ -92,7 +92,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRoleState(newRole);
   };
 
-  const login = async (username: string, email: string, password: string): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -100,8 +100,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: username.trim(),
-          email: email.trim(),
+          identifier: identifier.trim(),
           password,
         }),
       });

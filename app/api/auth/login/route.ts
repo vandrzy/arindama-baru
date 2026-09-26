@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 
 // Validation schema
 const loginSchema = z.object({
-  username: z.string().min(1, "Username wajib diisi"),
-  email: z.string().email("Email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter"),
+  identifier: z.string().optional(),
+  username: z.string().optional(),
+  email: z.string().optional(),
+  password: z.string().min(1, "Password wajib diisi"),
 });
 
 export async function POST(request: NextRequest) {
@@ -25,19 +26,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, email, password } = validation.data;
+    const { identifier, username, email, password } = validation.data;
+    const loginIdentifier = (identifier || email || username || "").trim();
 
-    // Find user by username AND email
+    if (!loginIdentifier) {
+      return NextResponse.json(
+        { error: "Email atau Username wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    // Find user by email OR username
     const user = await prisma.user.findFirst({
       where: {
-        username: username,
-        email: email,
+        OR: [
+          { email: loginIdentifier },
+          { username: loginIdentifier },
+        ],
       },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "Username, Email, atau Password salah" },
+        { error: "Email/Username atau Password salah" },
         { status: 401 }
       );
     }
@@ -46,7 +57,7 @@ export async function POST(request: NextRequest) {
     const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: "Username, Email, atau Password salah" },
+        { error: "Email/Username atau Password salah" },
         { status: 401 }
       );
     }

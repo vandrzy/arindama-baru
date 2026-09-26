@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/context/app-context";
 import {
   Lock,
-  Mail,
+  User,
   Eye,
   EyeOff,
   ArrowRight,
@@ -19,8 +19,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login, currentUser, isLoading } = useApp();
 
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,19 +36,19 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      setError("Username, Email, dan Password wajib diisi.");
+    if (!identifier.trim() || !password.trim()) {
+      setError("Email/Username dan Password wajib diisi.");
       return;
     }
 
     setLoading(true);
     
     try {
-      const success = await login(username, email, password);
+      const success = await login(identifier, password);
       setLoading(false);
 
       if (!success) {
-        setError("Username, Email, atau Password salah. Silakan coba lagi.");
+        setError("Email/Username atau Password salah. Silakan coba lagi.");
         return;
       }
 
@@ -89,7 +88,7 @@ export default function LoginPage() {
             <div>
               <h2 className="text-lg font-bold text-brand-text">Masuk ke Akun Anda</h2>
               <p className="text-xs text-brand-text-secondary mt-0.5">
-                Gunakan email dan password yang telah diberikan oleh administrator.
+                Masukkan Email/Username dan Password akun Anda.
               </p>
             </div>
 
@@ -101,37 +100,18 @@ export default function LoginPage() {
             )}
 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
-              {/* Username */}
+              {/* Email / Username */}
               <div>
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Username
+                  Email atau Username
                 </label>
                 <div className="relative flex items-center">
-                  <svg className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  <User className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
                   <input
                     type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Masukkan username Anda"
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
-                  Email
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Masukkan email Anda"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="Masukkan email atau username Anda"
                     className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
                   />
                 </div>
@@ -148,7 +128,7 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Masukkan password"
+                    placeholder="Masukkan password Anda"
                     className="w-full h-11 pl-10 pr-10 rounded-xl border border-gray-200 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all"
                   />
                   <button
