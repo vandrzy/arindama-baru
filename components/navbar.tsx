@@ -133,15 +133,27 @@ export function Navbar() {
           </nav>
 
           {/* Desktop User Account */}
-          <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-gray-100">
+          <div className="hidden lg:flex items-center gap-3 pl-3 border-l border-gray-100">
             {currentUser ? (
               <>
-                <div className="flex flex-col items-end mr-1">
-                  <span className="text-xs font-bold text-brand-text truncate max-w-[150px]">
+                <div className="flex flex-col items-end max-w-[220px]">
+                  <span
+                    className="text-xs font-bold text-brand-text truncate w-full text-right"
+                    title={currentUser.nama}
+                  >
                     {currentUser.nama}
                   </span>
-                  <span className="text-xs text-brand-text-secondary">
-                    {currentUser.role === "ADMIN" ? "Administrator" : [currentUser.instansi, currentUser.kabupatenKota].filter(Boolean).join(", ") || "Responden"}
+                  <span
+                    className="text-[11px] text-brand-text-secondary truncate w-full text-right"
+                    title={
+                      [currentUser.kabupatenKota, currentUser.instansi]
+                        .filter(Boolean)
+                        .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")
+                    }
+                  >
+                    {[currentUser.kabupatenKota, currentUser.instansi]
+                      .filter(Boolean)
+                      .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")}
                   </span>
                 </div>
                 <button
@@ -149,7 +161,7 @@ export function Navbar() {
                     logout();
                     router.push("/login");
                   }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold border bg-gray-50 border-gray-200 text-brand-text hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold border bg-gray-50 border-gray-200 text-brand-text hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors shrink-0"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Keluar</span>
@@ -213,15 +225,24 @@ export function Navbar() {
               {currentUser ? (
                 <>
                   <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold shrink-0">
                       {currentUser.nama.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-brand-text truncate max-w-[200px]">
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-sm font-bold text-brand-text truncate" title={currentUser.nama}>
                         {currentUser.nama}
                       </span>
-                      <span className="text-xs text-brand-text-secondary">
-                        {currentUser.role === "ADMIN" ? "Administrator" : [currentUser.instansi, currentUser.kabupatenKota].filter(Boolean).join(", ") || "Responden"}
+                      <span
+                        className="text-xs text-brand-text-secondary truncate"
+                        title={
+                          [currentUser.kabupatenKota, currentUser.instansi]
+                            .filter(Boolean)
+                            .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")
+                        }
+                      >
+                        {[currentUser.kabupatenKota, currentUser.instansi]
+                          .filter(Boolean)
+                          .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")}
                       </span>
                     </div>
                   </div>
