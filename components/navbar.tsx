@@ -8,7 +8,6 @@ import { useApp } from "@/lib/context/app-context";
 import {
   FileText,
   History,
-  LayoutDashboard,
   Home,
   Users,
   LogOut,
@@ -23,8 +22,6 @@ export function Navbar() {
   const router = useRouter();
   const { currentUser, logout } = useApp();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const isAdmin = currentUser?.role === "ADMIN";
 
   // Close mobile menu on route change (MUST be before early return)
   useEffect(() => {
@@ -60,7 +57,7 @@ export function Navbar() {
     });
     navLinks.push({
       href: "/kuesioner",
-      label: "Isi Kuesioner",
+      label: "Kuisioner",
       icon: FileText,
       match: (p: string) => p.startsWith("/kuesioner"),
     });
@@ -75,16 +72,6 @@ export function Navbar() {
       label: "Statistik",
       icon: BarChart3,
       match: (p: string) => p.startsWith("/statistik"),
-    });
-  }
-
-  // "Portal Admin" hanya untuk ADMIN
-  if (isAdmin) {
-    navLinks.push({
-      href: "/admin",
-      label: "Portal Admin",
-      icon: LayoutDashboard,
-      match: (p: string) => p.startsWith("/admin"),
     });
   }
 

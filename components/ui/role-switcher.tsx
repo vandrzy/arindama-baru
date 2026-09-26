@@ -86,10 +86,10 @@ export function RoleSwitcher() {
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
             <Link
-              href={isResponden ? "/kuesioner" : "/admin"}
+              href={isResponden ? "/kuesioner" : "/statistik"}
               className="font-bold text-brand-primary hover:underline flex items-center gap-1"
             >
-              Buka Halaman {isResponden ? "Kuesioner" : "Admin Dashboard"} →
+              Buka Halaman {isResponden ? "Kuesioner" : "Statistik"} →
             </Link>
           </div>
         </div>
