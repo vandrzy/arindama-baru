@@ -1632,7 +1632,7 @@ export default function StatistikPage() {
                       <td className="py-3.5 px-4 text-center">
                         {fileUrl ? (
                           <a
-                            href={fileUrl}
+                            href={fileUrl.startsWith("/uploads/") ? `/api/files/download?url=${encodeURIComponent(fileUrl)}` : fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shadow-none"

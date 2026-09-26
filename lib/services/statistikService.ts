@@ -157,24 +157,68 @@ export async function getStatistikData({
     },
   });
 
-  // Build O(1) Evidence Lookup Map
-  // Key format: `${submissionId}:${recordId}` or `${submissionId}:${formType}`
+  // Build O(1) Evidence Lookup Map with comprehensive alias keys
   const evidenceMap = new Map<string, any>();
   matchingSubmissions.forEach((s) => {
     s.validationEvidences.forEach((ev) => {
       if (ev.recordId) {
         evidenceMap.set(`${s.id}:${ev.recordId}`, ev);
+        if (ev.formType) {
+          evidenceMap.set(`${s.id}:${ev.formType}:${ev.recordId}`, ev);
+        }
       }
       if (ev.formType) {
         evidenceMap.set(`${s.id}:${ev.formType}`, ev);
+        
+        // Alias mappings for formType
+        if (ev.formType === "0" || ev.formType === "identitas") {
+          evidenceMap.set(`${s.id}:0`, ev);
+          evidenceMap.set(`${s.id}:identitas`, ev);
+        }
+
+        const numMatch = ev.formType.match(/^(?:indikator[_-]?)?([1-8])$/i);
+        if (numMatch) {
+          const num = numMatch[1];
+          evidenceMap.set(`${s.id}:${num}`, ev);
+          evidenceMap.set(`${s.id}:indikator_${num}`, ev);
+          if (ev.recordId) {
+            evidenceMap.set(`${s.id}:${num}:${ev.recordId}`, ev);
+            evidenceMap.set(`${s.id}:indikator_${num}:${ev.recordId}`, ev);
+          }
+        }
       }
     });
   });
 
-  const getEvidence = (submissionId: string, recordId: string, formType: string) => {
+  const getEvidenceForIdentity = (submissionId: string, id: string) => {
+    return (
+      evidenceMap.get(`${submissionId}:${id}`) ||
+      evidenceMap.get(`${submissionId}:0`) ||
+      evidenceMap.get(`${submissionId}:identitas`) ||
+      evidenceMap.get(`${submissionId}:row_0`) ||
+      null
+    );
+  };
+
+  const getEvidenceForRecord = (
+    submissionId: string,
+    recordId: string,
+    indicatorId: number,
+    rowIndex: number
+  ) => {
+    const indStr = String(indicatorId);
+    const indAlias = `indikator_${indicatorId}`;
+    const rowKey = `row_${rowIndex}`;
+
     return (
       evidenceMap.get(`${submissionId}:${recordId}`) ||
-      evidenceMap.get(`${submissionId}:${formType}`) ||
+      evidenceMap.get(`${submissionId}:${indStr}:${rowKey}`) ||
+      evidenceMap.get(`${submissionId}:${indAlias}:${rowKey}`) ||
+      evidenceMap.get(`${submissionId}:${indStr}:${recordId}`) ||
+      evidenceMap.get(`${submissionId}:${indAlias}:${recordId}`) ||
+      evidenceMap.get(`${submissionId}:${rowKey}`) ||
+      evidenceMap.get(`${submissionId}:${indStr}`) ||
+      evidenceMap.get(`${submissionId}:${indAlias}`) ||
       null
     );
   };
@@ -186,7 +230,7 @@ export async function getStatistikData({
 
   const identities = identitiesRaw.map((id) => ({
     ...id,
-    validationEvidence: getEvidence(id.submissionId, id.id, "identitas"),
+    validationEvidence: getEvidenceForIdentity(id.submissionId, id.id),
   }));
 
   const totalResponden = identities.length;
@@ -232,11 +276,25 @@ export async function getStatistikData({
   // B. Indicators Processing
   const allIndicatorRecords = matchingSubmissions.flatMap((s) => s.indicatorRecords);
 
+  // Index row positions per submission and indicatorId
+  const submissionIndicatorRowMap = new Map<string, number>();
+
   const attachEvidenceToRecords = (records: any[]) => {
-    return records.map((r) => ({
-      ...r,
-      validationEvidence: getEvidence(r.submissionId, r.id, `indikator_${r.indicatorId}`),
-    }));
+    return records.map((r) => {
+      const key = `${r.submissionId}:${r.indicatorId}`;
+      const rowIndex = submissionIndicatorRowMap.get(key) || 0;
+      submissionIndicatorRowMap.set(key, rowIndex + 1);
+
+      return {
+        ...r,
+        validationEvidence: getEvidenceForRecord(
+          r.submissionId,
+          r.id,
+          r.indicatorId,
+          rowIndex
+        ),
+      };
+    });
   };
 
   // Indikator 2: Mutu SDM
