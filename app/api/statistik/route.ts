@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwtToken } from "@/lib/auth";
+import { z } from "zod";
+import { getAdminFiltersData, getStatistikData } from "@/lib/services/statistikService";
 
 export const dynamic = "force-dynamic";
+
+const querySchema = z.object({
+  kota: z.string().optional().transform((v) => (v ? v.trim() : "")),
+  instansi: z.string().optional().transform((v) => (v ? v.trim() : "")),
+  userId: z.string().optional().transform((v) => (v ? v.trim() : "")),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,288 +40,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User tidak ditemukan." }, { status: 404 });
     }
 
-    // Read query parameters for Admin filtering
+    // Validate query parameters with Zod
     const { searchParams } = new URL(request.url);
-    const paramKota = searchParams.get("kota")?.trim() || "";
-    const paramInstansi = searchParams.get("instansi")?.trim() || "";
-    const paramUserId = searchParams.get("userId")?.trim() || "";
-
-    // 1. Build Submission filter condition
-    const submissionWhere: any = {};
-
-    if (currentUser.role === "RESPONDEN") {
-      submissionWhere.userId = currentUser.id;
-    } else if (currentUser.role === "ADMIN") {
-      if (paramUserId) {
-        submissionWhere.userId = paramUserId;
-      } else {
-        const userWhere: any = {};
-        if (paramKota) {
-          userWhere.kabupatenKota = paramKota;
-        }
-        if (paramInstansi) {
-          userWhere.instansi = paramInstansi;
-        }
-
-        if (Object.keys(userWhere).length > 0) {
-          submissionWhere.user = userWhere;
-        }
-      }
-    }
-
-    // Fetch submissions matching filter
-    const userSubmissions = await prisma.submission.findMany({
-      where: submissionWhere,
-      include: {
-        respondenIdentity: true,
-        indicatorRecords: true,
-        validationEvidences: true,
-      },
+    const parsedQuery = querySchema.safeParse({
+      kota: searchParams.get("kota") || undefined,
+      instansi: searchParams.get("instansi") || undefined,
+      userId: searchParams.get("userId") || undefined,
     });
 
-    // Extract all validation evidences for matching
-    const allEvidences = userSubmissions.flatMap((s) => s.validationEvidences);
+    const { kota: paramKota, instansi: paramInstansi, userId: paramUserId } = parsedQuery.success
+      ? parsedQuery.data
+      : { kota: "", instansi: "", userId: "" };
 
-    // Helper to attach validation evidence to indicator records
-    const attachEvidence = (records: any[]) => {
-      return records.map((r) => {
-        const ev = allEvidences.find(
-          (e) => e.recordId === r.id || (e.formType === `indikator_${r.indicatorId}` && e.submissionId === r.submissionId)
-        );
-        return { ...r, validationEvidence: ev || null };
-      });
-    };
+    // Prepare Admin UI Filter Options dynamically using SQL pushdown
+    const adminFiltersData = currentUser.role === "ADMIN"
+      ? await getAdminFiltersData(paramKota, paramInstansi)
+      : { listKota: [], listInstansi: [], listResponden: [] };
 
-    // 2. Prepare Admin UI Filter Options dynamically
-    let adminFiltersData = {
-      listKota: [] as string[],
-      listInstansi: [] as string[],
-      listResponden: [] as Array<{ id: string; nama: string; email: string; kabupatenKota: string; instansi: string }>,
-    };
-
-    if (currentUser.role === "ADMIN") {
-      const allUsers = await prisma.user.findMany({
-        select: { id: true, nama: true, email: true, kabupatenKota: true, instansi: true, role: true },
-        orderBy: { nama: "asc" },
-      });
-
-      const allIdentities = await prisma.respondenIdentity.findMany({
-        select: { kabupatenKotaAsal: true },
-      });
-
-      const uniqueKotaSet = new Set<string>();
-      allUsers.forEach((u) => {
-        if (u.kabupatenKota && u.kabupatenKota.trim() !== "") uniqueKotaSet.add(u.kabupatenKota.trim());
-      });
-      allIdentities.forEach((i) => {
-        if (i.kabupatenKotaAsal && i.kabupatenKotaAsal.trim() !== "") uniqueKotaSet.add(i.kabupatenKotaAsal.trim());
-      });
-
-      const listKota = Array.from(uniqueKotaSet);
-
-      // Filter instansi options based on selected kota if present
-      let instansiUsers = allUsers;
-      if (paramKota) {
-        instansiUsers = allUsers.filter(
-          (u) => (u.kabupatenKota || "").toLowerCase() === paramKota.toLowerCase()
-        );
-      }
-      const listInstansi = Array.from(
-        new Set(instansiUsers.map((u) => u.instansi).filter((i) => i && i.trim() !== ""))
-      );
-
-      // Filter responden list based on active kota and instansi filters
-      let filterRespondenList = allUsers;
-      if (paramKota) {
-        filterRespondenList = filterRespondenList.filter(
-          (u) => (u.kabupatenKota || "").toLowerCase() === paramKota.toLowerCase()
-        );
-      }
-      if (paramInstansi) {
-        filterRespondenList = filterRespondenList.filter(
-          (u) => (u.instansi || "").toLowerCase() === paramInstansi.toLowerCase()
-        );
-      }
-
-      adminFiltersData = {
-        listKota,
-        listInstansi,
-        listResponden: filterRespondenList.map((u) => ({
-          id: u.id,
-          nama: u.nama,
-          email: u.email,
-          kabupatenKota: u.kabupatenKota || "Kota Surabaya",
-          instansi: u.instansi || "Dispora Daerah",
-        })),
-      };
-    }
-
-    // Process user's submissions data
-    // A. Demografi
-    const identitiesRaw = userSubmissions
-      .map((s) => s.respondenIdentity)
-      .filter((identity): identity is NonNullable<typeof identity> => Boolean(identity));
-
-    const identities = identitiesRaw.map((id) => {
-      const ev = allEvidences.find(
-        (e) => e.recordId === id.id || (e.formType === "identitas" && e.submissionId === id.submissionId)
-      );
-      return { ...id, validationEvidence: ev || null };
-    });
-
-    const totalResponden = identities.length;
-
-    let jenisKelaminStats = [
-      { name: "Laki-laki", value: 0 },
-      { name: "Perempuan", value: 0 },
-    ];
-    let umurStats: Record<string, number> = {
-      "< 20 Tahun": 0,
-      "20 - 30 Tahun": 0,
-      "31 - 40 Tahun": 0,
-      "41 - 50 Tahun": 0,
-      "> 50 Tahun": 0,
-    };
-    let pekerjaanMap: Record<string, number> = {};
-    let kotaMap: Record<string, number> = {};
-
-    identities.forEach((id) => {
-      // Gender
-      const jk = (id.jenisKelamin || "").toLowerCase();
-      if (jk.includes("perempuan") || jk.includes("wanita") || jk === "p") {
-        jenisKelaminStats[1].value += 1;
-      } else {
-        jenisKelaminStats[0].value += 1;
-      }
-
-      // Age
-      const u = parseInt(id.umur) || 0;
-      if (u > 0) {
-        if (u < 20) umurStats["< 20 Tahun"] += 1;
-        else if (u <= 30) umurStats["20 - 30 Tahun"] += 1;
-        else if (u <= 40) umurStats["31 - 40 Tahun"] += 1;
-        else if (u <= 50) umurStats["41 - 50 Tahun"] += 1;
-        else umurStats["> 50 Tahun"] += 1;
-      }
-
-      // Pekerjaan
-      const pk = id.pekerjaanJabatan || "Tidak Diisi";
-      pekerjaanMap[pk] = (pekerjaanMap[pk] || 0) + 1;
-
-      // Kota
-      const kt = id.kabupatenKotaAsal || "Tidak Diisi";
-      kotaMap[kt] = (kotaMap[kt] || 0) + 1;
-    });
-
-    // B. Peningkatan Mutu SDM (Indikator 2) & C. Kinerja SDM (Indikator 3, 4, 5)
-    const indicatorRecords = userSubmissions.flatMap((s) => s.indicatorRecords);
-
-    // Indikator 2: Peningkatan Mutu SDM
-    const mutuRecords = indicatorRecords.filter((r) => r.indicatorId === 2);
-    let mutuJenjangMap: Record<string, number> = {
-      Provinsi: 0,
-      Nasional: 0,
-      Internasional: 0,
-    };
-    let mutuPendanaanMap: Record<string, number> = {};
-
-    mutuRecords.forEach((r) => {
-      const level = normalizeLevel(r.tingkatPenyelenggaraan);
-      if (level in mutuJenjangMap) {
-        mutuJenjangMap[level] = (mutuJenjangMap[level] || 0) + 1;
-      } else {
-        mutuJenjangMap["Provinsi"] = (mutuJenjangMap["Provinsi"] || 0) + 1;
-      }
-
-      const pendanaan = normalizePendanaan(r.sumberPendanaan);
-      mutuPendanaanMap[pendanaan] = (mutuPendanaanMap[pendanaan] || 0) + 1;
-    });
-
-    // Indikator 3, 4, 5: Kinerja SDM
-    const sdmRecords = indicatorRecords.filter((r) => [3, 4, 5].includes(r.indicatorId));
-    let sdmJenjangMap: Record<string, number> = {
-      Provinsi: 0,
-      Nasional: 0,
-      Internasional: 0,
-    };
-    let sdmPendanaanMap: Record<string, number> = {};
-
-    sdmRecords.forEach((r) => {
-      const level = normalizeLevel(r.tingkatPenyelenggaraan);
-      if (level in sdmJenjangMap) {
-        sdmJenjangMap[level] = (sdmJenjangMap[level] || 0) + 1;
-      } else {
-        sdmJenjangMap["Provinsi"] = (sdmJenjangMap["Provinsi"] || 0) + 1;
-      }
-
-      const pendanaan = normalizePendanaan(r.sumberPendanaan);
-      sdmPendanaanMap[pendanaan] = (sdmPendanaanMap[pendanaan] || 0) + 1;
-    });
-
-    // C. Prestasi Atlet (Indikator 1 dan 6)
-    const atletRecords = indicatorRecords.filter((r) => [1, 6].includes(r.indicatorId));
-
-    // Medal structure by level
-    const medalStats = {
-      Internasional: { Emas: 0, Perak: 0, Perunggu: 0, Partisipasi: 0 },
-      Nasional: { Emas: 0, Perak: 0, Perunggu: 0, Partisipasi: 0 },
-      Provinsi: { Emas: 0, Perak: 0, Perunggu: 0, Partisipasi: 0 },
-    };
-
-    let totalBobotScore = 0;
-
-    atletRecords.forEach((r) => {
-      const level = normalizeLevel(r.tingkatPenyelenggaraan);
-      const medal = normalizeMedal(r.medali || r.uraianCapaian);
-
-      let keyLevel: "Internasional" | "Nasional" | "Provinsi" = "Provinsi";
-      if (level === "Internasional") keyLevel = "Internasional";
-      else if (level === "Nasional") keyLevel = "Nasional";
-
-      if (medal === "Emas") {
-        medalStats[keyLevel].Emas += 1;
-        if (keyLevel === "Internasional") totalBobotScore += 10;
-        else if (keyLevel === "Nasional") totalBobotScore += 5;
-        else totalBobotScore += 3;
-      } else if (medal === "Perak") {
-        medalStats[keyLevel].Perak += 1;
-        if (keyLevel === "Internasional") totalBobotScore += 8;
-        else if (keyLevel === "Nasional") totalBobotScore += 4;
-        else totalBobotScore += 2;
-      } else if (medal === "Perunggu") {
-        medalStats[keyLevel].Perunggu += 1;
-        if (keyLevel === "Internasional") totalBobotScore += 5;
-        else if (keyLevel === "Nasional") totalBobotScore += 3;
-        else totalBobotScore += 1;
-      } else {
-        medalStats[keyLevel].Partisipasi += 1;
-      }
-    });
-
-    // D. Penyelenggara Event Olahraga (Indikator 7)
-    const eventRecords = indicatorRecords.filter((r) => r.indicatorId === 7);
-    let eventPendanaanMap: Record<string, number> = {};
-    let eventTingkatMap: Record<string, number> = {};
-
-    eventRecords.forEach((r) => {
-      const p = normalizePendanaan(r.sumberPendanaan);
-      eventPendanaanMap[p] = (eventPendanaanMap[p] || 0) + 1;
-
-      const t = normalizeLevel(r.tingkatPenyelenggaraan);
-      eventTingkatMap[t] = (eventTingkatMap[t] || 0) + 1;
-    });
-
-    // E. Prestasi Kejuaraan (Indikator 8)
-    const kejuaraanRecords = indicatorRecords.filter((r) => r.indicatorId === 8);
-    let kejuaraanPendanaanMap: Record<string, number> = {};
-    let kejuaraanTingkatMap: Record<string, number> = {};
-
-    kejuaraanRecords.forEach((r) => {
-      const p = normalizePendanaan(r.sumberPendanaan);
-      kejuaraanPendanaanMap[p] = (kejuaraanPendanaanMap[p] || 0) + 1;
-
-      const t = normalizeLevel(r.tingkatPenyelenggaraan);
-      kejuaraanTingkatMap[t] = (kejuaraanTingkatMap[t] || 0) + 1;
+    // Process user's submissions data via service
+    const data = await getStatistikData({
+      currentUser,
+      paramKota,
+      paramInstansi,
+      paramUserId,
     });
 
     return NextResponse.json({
@@ -327,70 +76,7 @@ export async function GET(request: NextRequest) {
         instansi: currentUser.instansi,
       },
       adminFiltersData,
-      data: {
-        demografi: {
-          totalResponden,
-          identitiesList: identities,
-          rawList: identities,
-          jenisKelaminStats,
-          umurStats: Object.entries(umurStats).map(([name, value]) => ({ name, value })),
-          pekerjaanStats: Object.entries(pekerjaanMap).map(([name, value]) => ({ name, value })),
-          kotaStats: Object.entries(kotaMap).map(([name, value]) => ({ name, value })),
-        },
-        mutuSDM: {
-          totalRecords: mutuRecords.length,
-          rawList: attachEvidence(mutuRecords),
-          jenjangPenugasanStats: Object.entries(mutuJenjangMap).map(([name, value]) => ({ name, value })),
-          sumberPendanaanStats: Object.entries(mutuPendanaanMap).map(([name, value]) => ({ name, value })),
-        },
-        kinerjaSDM: {
-          totalRecords: sdmRecords.length,
-          rawList: attachEvidence(sdmRecords),
-          jenjangPenugasanStats: Object.entries(sdmJenjangMap).map(([name, value]) => ({ name, value })),
-          sumberPendanaanStats: Object.entries(sdmPendanaanMap).map(([name, value]) => ({ name, value })),
-        },
-        prestasiAtlet: {
-          totalRecords: atletRecords.length,
-          rawList: attachEvidence(atletRecords),
-          medalStats,
-          totalBobotScore,
-          atletChartData: [
-            {
-              jenjang: "Internasional",
-              Emas: medalStats.Internasional.Emas,
-              Perak: medalStats.Internasional.Perak,
-              Perunggu: medalStats.Internasional.Perunggu,
-              Partisipasi: medalStats.Internasional.Partisipasi,
-            },
-            {
-              jenjang: "Nasional",
-              Emas: medalStats.Nasional.Emas,
-              Perak: medalStats.Nasional.Perak,
-              Perunggu: medalStats.Nasional.Perunggu,
-              Partisipasi: medalStats.Nasional.Partisipasi,
-            },
-            {
-              jenjang: "Provinsi",
-              Emas: medalStats.Provinsi.Emas,
-              Perak: medalStats.Provinsi.Perak,
-              Perunggu: medalStats.Provinsi.Perunggu,
-              Partisipasi: medalStats.Provinsi.Partisipasi,
-            },
-          ],
-        },
-        eventOlahraga: {
-          totalRecords: eventRecords.length,
-          rawList: attachEvidence(eventRecords),
-          sumberPendanaanStats: Object.entries(eventPendanaanMap).map(([name, value]) => ({ name, value })),
-          tingkatKejuaraanStats: Object.entries(eventTingkatMap).map(([name, value]) => ({ name, value })),
-        },
-        prestasiKejuaraan: {
-          totalRecords: kejuaraanRecords.length,
-          rawList: attachEvidence(kejuaraanRecords),
-          sumberPendanaanStats: Object.entries(kejuaraanPendanaanMap).map(([name, value]) => ({ name, value })),
-          tingkatKejuaraanStats: Object.entries(kejuaraanTingkatMap).map(([name, value]) => ({ name, value })),
-        },
-      },
+      data,
     });
   } catch (error) {
     console.error("Get statistik error:", error);
@@ -398,32 +84,3 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper normalizers
-function normalizeLevel(val?: string): string {
-  if (!val) return "Kabupaten/Kota";
-  const s = val.toLowerCase();
-  if (s.includes("internasional")) return "Internasional";
-  if (s.includes("nasional")) return "Nasional";
-  if (s.includes("provinsi")) return "Provinsi";
-  return "Kabupaten/Kota";
-}
-
-function normalizePendanaan(val?: string): string {
-  if (!val) return "Mandiri / Lainnya";
-  const s = val.toLowerCase();
-  if (s.includes("apbd")) return "APBD";
-  if (s.includes("apbn")) return "APBN";
-  if (s.includes("sponsor")) return "Sponsor / Swasta";
-  if (s.includes("mandiri")) return "Mandiri";
-  if (s.includes("hibah")) return "Hibah";
-  return val.trim() || "Mandiri / Lainnya";
-}
-
-function normalizeMedal(val?: string): string {
-  if (!val) return "Partisipasi";
-  const s = val.toLowerCase();
-  if (s.includes("emas") || s.includes("gold")) return "Emas";
-  if (s.includes("perak") || s.includes("silver")) return "Perak";
-  if (s.includes("perunggu") || s.includes("bronze")) return "Perunggu";
-  return "Partisipasi";
-}
