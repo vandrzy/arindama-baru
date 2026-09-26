@@ -216,9 +216,6 @@ export async function getStatistikData({
       evidenceMap.get(`${submissionId}:${indAlias}:${rowKey}`) ||
       evidenceMap.get(`${submissionId}:${indStr}:${recordId}`) ||
       evidenceMap.get(`${submissionId}:${indAlias}:${recordId}`) ||
-      evidenceMap.get(`${submissionId}:${rowKey}`) ||
-      evidenceMap.get(`${submissionId}:${indStr}`) ||
-      evidenceMap.get(`${submissionId}:${indAlias}`) ||
       null
     );
   };

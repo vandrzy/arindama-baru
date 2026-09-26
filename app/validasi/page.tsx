@@ -445,32 +445,18 @@ export default function ValidasiPage() {
         <Card className="p-6 bg-white border border-gray-100 shadow-card rounded-3xl space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
             <div>
-              <h3 className="text-base font-extrabold text-brand-text flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                <span>Isi Record Data ({selectedForm?.label})</span>
-              </h3>
-              <p className="text-xs text-brand-text-secondary mt-0.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-base font-extrabold text-brand-text flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                  <span>Isi Record Data ({selectedForm?.label})</span>
+                </h3>
+                {!isLoadingExcel && tableData.length > 0 && (
+                  <Badge variant="success">Menampilkan {tableData.length} Baris Record</Badge>
+                )}
+              </div>
+              <p className="text-xs text-brand-text-secondary mt-1">
                 Data ditarik dari file Excel database. Unggah berkas validasi (.pdf) untuk tiap baris record data.
               </p>
-            </div>
-
-            {/* Manual Excel File Input Trigger */}
-            <div className="flex items-center gap-2 shrink-0">
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept=".xlsx, .xls"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleExcelUpload(file);
-                  }}
-                  className="hidden"
-                />
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-brand-text transition-colors">
-                  <UploadCloud className="w-4 h-4 text-brand-primary" />
-                  <span>{activeFileName ? "Ganti File Excel Manual" : "Upload File Excel Manual"}</span>
-                </span>
-              </label>
             </div>
           </div>
 
@@ -492,7 +478,7 @@ export default function ValidasiPage() {
             </div>
           )}
 
-          {/* Prompt jika tidak ada file di database & belum diunggah manual */}
+          {/* Prompt jika tidak ada file di database */}
           {!isLoadingExcel && !activeFileName && tableData.length === 0 && !parseError && (
             <div className="bg-emerald-50/60 border border-emerald-200/80 p-8 rounded-2xl text-center space-y-3">
               <FileSpreadsheet className="w-12 h-12 text-emerald-600 mx-auto" />
@@ -501,46 +487,15 @@ export default function ValidasiPage() {
                   Tidak ada berkas Excel yang tersimpan di database untuk indikator ini
                 </h4>
                 <p className="text-xs text-emerald-800 max-w-lg mx-auto">
-                  Submisi terpilih belum melampirkan file Excel untuk <strong>{selectedForm?.label}</strong>. Silakan pilih atau unggah file Excel secara manual untuk membaca record data.
+                  Submisi terpilih belum melampirkan data kuesioner untuk <strong>{selectedForm?.label}</strong>.
                 </p>
               </div>
-              <label className="inline-block cursor-pointer pt-2">
-                <input
-                  type="file"
-                  accept=".xlsx, .xls"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleExcelUpload(file);
-                  }}
-                  className="hidden"
-                />
-                <Button variant="primary" size="md" className="gap-2">
-                  <UploadCloud className="w-4 h-4" />
-                  <span>Pilih Berkas Excel Manual ({selectedForm?.filename})</span>
-                </Button>
-              </label>
             </div>
           )}
 
           {/* Preview Tabel Excel & Button Upload Per Baris */}
           {!isLoadingExcel && tableData.length > 0 && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-brand-text-secondary">
-                <span className="flex items-center gap-1.5">
-                  Sumber Data:{" "}
-                  {isFromDatabase ? (
-                    <span className="font-bold text-emerald-700 flex items-center gap-1 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                      <Database className="w-3.5 h-3.5" /> File Database ({activeFileName})
-                    </span>
-                  ) : (
-                    <span className="font-bold text-blue-700 flex items-center gap-1 bg-blue-100/80 px-2 py-0.5 rounded-md">
-                      <UploadCloud className="w-3.5 h-3.5" /> Upload Manual ({activeFileName})
-                    </span>
-                  )}
-                </span>
-                <Badge variant="success">Menampilkan {tableData.length} Baris Record</Badge>
-              </div>
-
               <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-subtle">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
