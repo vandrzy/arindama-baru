@@ -126,7 +126,7 @@ export function PdfDropzone({
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
-          className="border-2 border-dashed border-gray-200 hover:border-brand-primary rounded-xl p-5 text-center cursor-pointer transition-colors duration-200 bg-brand-surface/60 hover:bg-brand-primary-light/40 group"
+          className="border border-gray-200 hover:border-brand-primary rounded-xl p-5 text-center cursor-pointer transition-colors duration-200 bg-brand-surface/60 hover:bg-brand-primary-light/40 group shadow-sm"
         >
           <div className="flex flex-col items-center justify-center gap-2">
             <div className="w-11 h-11 rounded-full bg-white border border-gray-200 group-hover:border-brand-primary flex items-center justify-center text-brand-primary transition-transform group-hover:scale-105">

@@ -93,7 +93,7 @@ function UploadRow({
           ? "bg-red-50/60 border-red-300 hover:border-red-400"
           : isSuccess
           ? "bg-white border-gray-200 shadow-sm hover:border-emerald-300"
-          : "bg-white border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/20"
+          : "bg-white border-gray-200 shadow-sm hover:border-emerald-500 hover:bg-emerald-50/20"
       }`}
     >
       <input
