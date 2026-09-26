@@ -30,6 +30,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Keamanan IDOR: Pastikan submission milik user yang login (kecuali ADMIN)
+    const submission = await prisma.submission.findFirst({
+      where: {
+        id: submissionId,
+        ...(payload.role !== "ADMIN" && { userId: payload.id }),
+      },
+      select: { id: true },
+    });
+
+    if (!submission) {
+      return NextResponse.json(
+        { error: "Kuesioner/submisi tidak ditemukan atau Anda tidak memiliki akses." },
+        { status: 404 }
+      );
+    }
+
     const evidences = await prisma.validationEvidence.findMany({
       where: {
         submissionId,
@@ -52,3 +68,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

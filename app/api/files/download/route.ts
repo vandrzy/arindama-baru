@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJwtToken } from "@/lib/auth";
-import fs from "fs";
+import { prisma } from "@/lib/prisma";
+import fs from "fs/promises";
 import path from "path";
 
 export const dynamic = "force-dynamic";
@@ -32,18 +33,53 @@ export async function GET(request: NextRequest) {
 
     // Jika fileUrl merujuk ke file lokal (/uploads/... atau uploads/...)
     if (fileUrl.startsWith("/uploads/") || fileUrl.startsWith("uploads/")) {
-      const sanitizedRelativePath = fileUrl.startsWith("/") ? fileUrl.substring(1) : fileUrl;
-      const absolutePath = path.join(process.cwd(), sanitizedRelativePath);
+      const sanitizedRelativePath = fileUrl.replace(/^\/+/, ""); // e.g. "uploads/subId/fileName.pdf"
+      const uploadsBaseDir = path.join(process.cwd(), "uploads");
+      const resolvedAbsolutePath = path.resolve(process.cwd(), sanitizedRelativePath);
 
-      if (!fs.existsSync(absolutePath)) {
+      // 1. Path Traversal Prevention: Pastikan path yang di-resolve tetap berada di dalam folder uploads/
+      if (!resolvedAbsolutePath.startsWith(uploadsBaseDir)) {
+        return NextResponse.json(
+          { error: "Akses file ditolak: Jalur file tidak terotorisasi." },
+          { status: 403 }
+        );
+      }
+
+      // 2. IDOR Prevention: Ekstrak submissionId dari path "uploads/<submissionId>/<fileName>"
+      const relativeFromUploads = path.relative(uploadsBaseDir, resolvedAbsolutePath);
+      const pathSegments = relativeFromUploads.split(path.sep);
+      const targetSubmissionId = pathSegments[0];
+
+      if (targetSubmissionId && payload.role !== "ADMIN") {
+        const submission = await prisma.submission.findFirst({
+          where: {
+            id: targetSubmissionId,
+            userId: payload.id,
+          },
+          select: { id: true },
+        });
+
+        if (!submission) {
+          return NextResponse.json(
+            { error: "Anda tidak memiliki akses ke berkas validasi ini." },
+            { status: 403 }
+          );
+        }
+      }
+
+      // 3. Pengecekan eksistensi file secara asinkron
+      try {
+        await fs.stat(resolvedAbsolutePath);
+      } catch {
         return NextResponse.json(
           { error: "File validasi tidak ditemukan pada penyimpanan lokal server." },
           { status: 404 }
         );
       }
 
-      const fileBuffer = fs.readFileSync(absolutePath);
-      const ext = path.extname(absolutePath).toLowerCase();
+      // 4. Pembacaan file secara asinkron (Node.js Non-blocking I/O)
+      const fileBuffer = await fs.readFile(resolvedAbsolutePath);
+      const ext = path.extname(resolvedAbsolutePath).toLowerCase();
       let contentType = "application/pdf";
       if (ext === ".xlsx" || ext === ".xls") {
         contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -63,7 +99,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // --- FALLBACK KE VERCEL BLOB / URL REMOTE LAMA ---
+    // --- FALLBACK KE VERCEL BLOB / REMOTE STORAGE LAMA ---
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
     const headers: Record<string, string> = {};
@@ -71,7 +107,7 @@ export async function GET(request: NextRequest) {
       headers["Authorization"] = `Bearer ${blobToken}`;
     }
 
-    // Server-side fetch ke storage URL (melewati batasan CORS/Forbidden browser)
+    // Server-side fetch ke storage URL
     const fileResponse = await fetch(fileUrl, { headers });
 
     if (!fileResponse.ok) {
@@ -102,3 +138,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwtToken } from "@/lib/auth";
-import fs from "fs";
+import { z } from "zod";
+import fs from "fs/promises";
 import path from "path";
-// import { put } from "@vercel/blob";
 
 export const dynamic = "force-dynamic";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB limit
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB limit per file
+
+const uploadParamsSchema = z.object({
+  submissionId: z.string().min(1, "submissionId diperlukan"),
+  formType: z.string().min(1, "formType diperlukan"),
+  recordId: z.string().min(1, "recordId diperlukan"),
+  namaForm: z.string().optional(),
+});
 
 function sanitizePart(part: string): string {
   return part
@@ -57,17 +64,35 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const submissionId = formData.get("submissionId") as string | null;
-    const formType = formData.get("formType") as string | null;
-    const recordId = formData.get("recordId") as string | null;
-    const rawNamaForm = (formData.get("namaForm") as string | null) || `Indikator ${formType}`;
+    const submissionIdRaw = formData.get("submissionId") as string | null;
+    const formTypeRaw = formData.get("formType") as string | null;
+    const recordIdRaw = formData.get("recordId") as string | null;
+    const namaFormRaw = (formData.get("namaForm") as string | null) || undefined;
 
-    if (!file || !submissionId || !formType || !recordId) {
+    if (!file) {
       return NextResponse.json(
-        { error: "Parameter tidak lengkap (file, submissionId, formType, recordId diperlukan)." },
+        { error: "File bukti validasi (PDF) wajib diikutsertakan." },
         { status: 400 }
       );
     }
+
+    // Validasi parameter request dengan Zod
+    const paramsValidation = uploadParamsSchema.safeParse({
+      submissionId: submissionIdRaw,
+      formType: formTypeRaw,
+      recordId: recordIdRaw,
+      namaForm: namaFormRaw,
+    });
+
+    if (!paramsValidation.success) {
+      return NextResponse.json(
+        { error: "Parameter request tidak valid", details: paramsValidation.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { submissionId, formType, recordId, namaForm } = paramsValidation.data;
+    const effectiveNamaForm = namaForm || `Indikator ${formType}`;
 
     // Validasi ekstensi file harus PDF
     const fileNameLower = file.name.toLowerCase();
@@ -81,7 +106,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validasi maksimal ukuran file (MAX_FILE_SIZE = 10 MB)
+    // Validasi maksimal ukuran file (2 MB)
     if (file.size > MAX_FILE_SIZE) {
       const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
       const maxMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0);
@@ -91,73 +116,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cek apakah submission ada
-    const submission = await prisma.submission.findUnique({
-      where: { id: submissionId },
-    });
-
-    if (!submission) {
-      return NextResponse.json(
-        { error: "Kuesioner/submisi tidak ditemukan." },
-        { status: 404 }
-      );
-    }
-
-    // Cek record bukti validasi lama di DB jika ada
-    const existingEvidence = await prisma.validationEvidence.findUnique({
+    // Keamanan IDOR + Optimasi DB (Gabungkan cek submission & existing evidence dalam 1 query)
+    const submission = await prisma.submission.findFirst({
       where: {
-        submissionId_formType_recordId: {
-          submissionId,
-          formType,
-          recordId,
+        id: submissionId,
+        ...(payload.role !== "ADMIN" && { userId: payload.id }),
+      },
+      include: {
+        validationEvidences: {
+          where: {
+            formType,
+            recordId,
+          },
         },
       },
     });
 
-    // Penamaan file terstruktur: {noRegistrasi}_{namaForm}_{identifierBaris}_{timestamp}.ekstensi
+    if (!submission) {
+      return NextResponse.json(
+        { error: "Kuesioner/submisi tidak ditemukan atau Anda tidak memiliki akses ke submisi ini." },
+        { status: 404 }
+      );
+    }
+
+    const existingEvidence = submission.validationEvidences[0] || null;
+
+    // Penamaan file terstruktur
     const noRegistrasi = submission.noRegistrasi || submission.id;
     const timestamp = Date.now();
     const fileExt = file.name.includes(".") ? `.${file.name.split(".").pop()}` : ".pdf";
 
     const formattedFileName = generateValidationFileName({
       noRegistrasi,
-      namaForm: rawNamaForm,
+      namaForm: effectiveNamaForm,
       identifierBaris: recordId,
       timestamp,
       ext: fileExt,
     });
 
-    /*
-    // --- KODE LAMA VERCEL BLOB (DI-COMMENT) ---
-    const blobPath = `validation/${submissionId}/${formattedFileName}`;
-
-    let blob;
-    try {
-      blob = await put(blobPath, file, { access: "public" });
-    } catch (blobErr: any) {
-      if (blobErr?.message?.includes("private store") || blobErr?.message?.includes("private access")) {
-        blob = await put(blobPath, file, { access: "private" });
-      } else {
-        throw blobErr;
-      }
-    }
-    // ------------------------------------------
-    */
-
-    // Simpan file BARU ke local storage: uploads/<submissionId>/<formattedFileName>
+    // Simpan file BARU ke local storage (asinkron): uploads/<submissionId>/<formattedFileName>
     const uploadDir = path.join(process.cwd(), "uploads", submissionId);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    await fs.mkdir(uploadDir, { recursive: true });
 
     const filePath = path.join(uploadDir, formattedFileName);
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(filePath, fileBuffer);
+    await fs.writeFile(filePath, fileBuffer);
 
-    // Hapus file LAMA setelah file baru berhasil disimpan
+    // Hapus file LAMA secara asinkron jika ada
     if (existingEvidence) {
       let oldFilePath: string | null = null;
-
       if (existingEvidence.fileName) {
         oldFilePath = path.join(uploadDir, existingEvidence.fileName);
       } else if (existingEvidence.fileUrl && existingEvidence.fileUrl.startsWith("/uploads/")) {
@@ -167,13 +174,10 @@ export async function POST(request: NextRequest) {
         oldFilePath = path.join(process.cwd(), sanitizedPath);
       }
 
-      if (oldFilePath && oldFilePath !== filePath && fs.existsSync(oldFilePath)) {
-        try {
-          fs.unlinkSync(oldFilePath);
-          console.log(`[ValidationUpload] File lama berhasil dihapus: ${oldFilePath}`);
-        } catch (unlinkErr) {
-          console.error("[ValidationUpload] Gagal menghapus file lama:", unlinkErr);
-        }
+      if (oldFilePath && oldFilePath !== filePath) {
+        await fs.unlink(oldFilePath).catch((err) => {
+          console.warn("[ValidationUpload] File lama tidak dapat dihapus:", err?.message || err);
+        });
       }
     }
 
@@ -217,3 +221,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
