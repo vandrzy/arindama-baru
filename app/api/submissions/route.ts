@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { verifyJwtToken } from "@/lib/auth";
-import * as XLSX from "xlsx";
+import { parseAndValidateExcelFile, ValidationErrorDetail, ParsedIdentityData, ParsedIndicatorRecordData } from "@/lib/services/excelService";
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +28,6 @@ function isExcelFile(file: File): boolean {
 const submissionSchema = z.object({
   tahunSurvei: z.number().int().min(2020).max(2100).default(2024),
 });
-
-function getCellValue(row: any[], index: number): string {
-  if (index === -1 || !row || index >= row.length) return "";
-  const val = row[index];
-  if (val === null || val === undefined) return "";
-  return String(val).trim();
-}
 
 // GET: List all submissions with identity & indicator records
 export async function GET(request: NextRequest) {
@@ -94,8 +90,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create new submission by parsing Excel files directly into database tables
+// POST: Create new submission by streaming files to disk and validating sequentially
 export async function POST(request: NextRequest) {
+  let tempDir: string | null = null;
+
   try {
     const token = request.cookies.get("auth_token")?.value;
     if (!token) {
@@ -127,8 +125,8 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data;
 
-    const fileEntries: { step: number; file: File }[] = [];
-
+    // Filter file entries from FormData
+    const rawFileEntries: { step: number; file: File }[] = [];
     for (const [key, value] of formData.entries()) {
       if (typeof value === "object" && value !== null && "name" in value && "size" in value) {
         const file = value as File;
@@ -148,7 +146,7 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          fileEntries.push({
+          rawFileEntries.push({
             step: parseInt(keyMatch[1]),
             file,
           });
@@ -156,151 +154,84 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (fileEntries.length === 0) {
+    if (rawFileEntries.length === 0) {
       return NextResponse.json(
         { error: "Tidak ada file Excel yang diunggah" },
         { status: 400 }
       );
     }
 
-    let parsedIdentity: any = null;
-    const parsedIndicatorRecords: any[] = [];
+    // Sort entries so step 0 (Identitas) is processed first
+    rawFileEntries.sort((a, b) => a.step - b.step);
 
-    for (const item of fileEntries) {
-      const arrayBuffer = await item.file.arrayBuffer();
-      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) {
-        return NextResponse.json(
-          { error: `File '${item.file.name}' tidak memiliki sheet yang valid.` },
-          { status: 400 }
-        );
+    // Create temporary directory on disk to avoid keeping full buffers in RAM
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "arindama-sub-"));
+
+    const aggregatedErrors: ValidationErrorDetail[] = [];
+    let parsedIdentity: ParsedIdentityData | null = null;
+    const allIndicatorRecords: ParsedIndicatorRecordData[] = [];
+
+    // Process each uploaded file sequentially
+    for (const entry of rawFileEntries) {
+      const sanitizedName = entry.file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const tempFilePath = path.join(tempDir, `step_${entry.step}_${sanitizedName}`);
+
+      // Save file buffer to disk
+      const arrayBuffer = await entry.file.arrayBuffer();
+      await fs.writeFile(tempFilePath, Buffer.from(arrayBuffer));
+
+      // Parse and validate from disk file
+      const parseResult = parseAndValidateExcelFile(tempFilePath, entry.step, entry.file.name);
+
+      if (parseResult.errors.length > 0) {
+        aggregatedErrors.push(...parseResult.errors);
       }
 
-      const worksheet = workbook.Sheets[sheetName];
-      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-
-      if (!rawRows || rawRows.length < 2) {
-        return NextResponse.json(
-          { error: `File '${item.file.name}' kosong atau tidak memiliki data.` },
-          { status: 400 }
-        );
+      if (entry.step === 0 && parseResult.identity) {
+        parsedIdentity = parseResult.identity;
       }
 
-      const headerRow = rawRows[0].map((h: any) => String(h || "").trim().toLowerCase());
-      const dataRows = rawRows.slice(1);
-
-      if (item.step === 0) {
-        const idxNama = headerRow.findIndex((h) => h.includes("nama"));
-        const idxJenisKelamin = headerRow.findIndex((h) => h.includes("jenis kelamin") || h.includes("kelamin"));
-        const idxTanggalLahir = headerRow.findIndex((h) => h.includes("tanggal lahir") || h.includes("lahir"));
-        const idxUmur = headerRow.findIndex((h) => h.includes("umur") || h.includes("usia"));
-        const idxKabKota = headerRow.findIndex((h) => h.includes("kabupaten") || h.includes("kota"));
-        const idxKecamatan = headerRow.findIndex((h) => h.includes("kecamatan"));
-        const idxPekerjaan = headerRow.findIndex((h) => h.includes("pekerjaan") || h.includes("jabatan"));
-        const idxTelepon = headerRow.findIndex((h) => h.includes("telepon") || h.includes("whatsapp") || h.includes("hp"));
-
-        const firstDataRow = dataRows.find(
-          (r) => r && r.some((c: any) => c !== null && c !== undefined && String(c).trim() !== "")
-        );
-
-        if (!firstDataRow) {
-          return NextResponse.json(
-            { error: `File Identitas Responden (${item.file.name}) tidak memiliki data baris yang terisi.` },
-            { status: 400 }
-          );
-        }
-
-        const namaLengkap = getCellValue(firstDataRow, idxNama);
-        const jenisKelamin = getCellValue(firstDataRow, idxJenisKelamin);
-        const tanggalLahir = getCellValue(firstDataRow, idxTanggalLahir);
-        const umur = getCellValue(firstDataRow, idxUmur);
-        const kabupatenKotaAsal = getCellValue(firstDataRow, idxKabKota);
-        const kecamatan = getCellValue(firstDataRow, idxKecamatan);
-        const pekerjaanJabatan = getCellValue(firstDataRow, idxPekerjaan);
-        const nomorTelepon = getCellValue(firstDataRow, idxTelepon);
-
-        if (!namaLengkap || !jenisKelamin || !tanggalLahir || !umur || !kabupatenKotaAsal || !kecamatan || !pekerjaanJabatan || !nomorTelepon) {
-          return NextResponse.json(
-            { error: `Validasi Identitas Gagal: Terdapat data wajib yang belum terisi di file '${item.file.name}'.` },
-            { status: 400 }
-          );
-        }
-
-        parsedIdentity = {
-          namaLengkap,
-          jenisKelamin,
-          tanggalLahir,
-          umur,
-          kabupatenKotaAsal,
-          kecamatan,
-          pekerjaanJabatan,
-          nomorTelepon,
-        };
-      } else {
-        const idxKegiatan = headerRow.findIndex((h) => h.includes("nama kegiatan") || h.includes("kejuaraan"));
-        const idxCabor = headerRow.findIndex((h) => h.includes("cabang") || h.includes("cabor"));
-        const idxTingkat = headerRow.findIndex((h) => h.includes("tingkat"));
-        const idxSumber = headerRow.findIndex((h) => h.includes("sumber") || h.includes("pendanaan"));
-        const idxMedali = headerRow.findIndex((h) => h.includes("medali")); // Optional!
-        const idxUraian = headerRow.findIndex((h) => h.includes("uraian") || h.includes("capaian"));
-
-        for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
-          const row = dataRows[rIdx];
-          if (!row || !row.some((c: any) => c !== null && c !== undefined && String(c).trim() !== "")) {
-            continue;
-          }
-
-          const namaKegiatan = getCellValue(row, idxKegiatan);
-          const cabangOlahraga = getCellValue(row, idxCabor);
-          const tingkatPenyelenggaraan = getCellValue(row, idxTingkat);
-          const sumberPendanaan = getCellValue(row, idxSumber);
-          const medali = idxMedali !== -1 ? getCellValue(row, idxMedali) : null;
-          const uraianCapaian = getCellValue(row, idxUraian);
-
-          const displayRow = rIdx + 2;
-
-          if (!namaKegiatan || !cabangOlahraga || !tingkatPenyelenggaraan || !sumberPendanaan || !uraianCapaian) {
-            return NextResponse.json(
-              {
-                error: `Validasi Indikator ${item.step} Gagal: Baris ke-${displayRow} pada file '${item.file.name}' memiliki kolom wajib yang belum terisi.`,
-              },
-              { status: 400 }
-            );
-          }
-
-          parsedIndicatorRecords.push({
-            indicatorId: item.step,
-            namaKegiatan,
-            cabangOlahraga,
-            tingkatPenyelenggaraan,
-            sumberPendanaan,
-            medali: medali || null,
-            uraianCapaian,
-          });
-        }
+      if (parseResult.indicatorRecords.length > 0) {
+        allIndicatorRecords.push(...parseResult.indicatorRecords);
       }
     }
 
+    // Check if step 0 (Identitas) is missing
     if (!parsedIdentity) {
+      const hasStep0 = rawFileEntries.some((e) => e.step === 0);
+      if (!hasStep0) {
+        aggregatedErrors.unshift({
+          file: "Form Identitas Responden",
+          step: 0,
+          message: "Form Identitas Responden (file 0) wajib diunggah.",
+        });
+      }
+    }
+
+    // If there are any validation errors across any files, reject request with detailed error mapping
+    if (aggregatedErrors.length > 0) {
       return NextResponse.json(
-        { error: "Form Identitas Responden wajib diikutsertakan dalam pengiriman." },
+        {
+          error: "Validasi file Excel gagal",
+          errors: aggregatedErrors,
+        },
         { status: 400 }
       );
     }
 
+    // Transactional save to DB
     const submission = await prisma.$transaction(async (tx) => {
       const sub = await tx.submission.create({
         data: {
           noRegistrasi: crypto.randomUUID(),
           userId: payload.id,
           tahunSurvei: data.tahunSurvei,
-          totalIndikatorTerisi: new Set(parsedIndicatorRecords.map((r) => r.indicatorId)).size,
+          totalIndikatorTerisi: new Set(allIndicatorRecords.map((r) => r.indicatorId)).size,
           respondenIdentity: {
-            create: parsedIdentity,
+            create: parsedIdentity!,
           },
           indicatorRecords: {
-            create: parsedIndicatorRecords,
+            create: allIndicatorRecords,
           },
         },
         include: {
@@ -331,5 +262,11 @@ export async function POST(request: NextRequest) {
       { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
+  } finally {
+    // Cleanup temporary files from disk
+    if (tempDir) {
+      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
   }
 }
+
