@@ -81,42 +81,42 @@ const FLOW_STEPS = [
     title: "Daftar / Masuk (Login)",
     desc: "Buat akun untuk instansi Anda atau masuk menggunakan kredensial yang sudah ada.",
     icon: UserCheck,
-    badgeColor: "bg-emerald-100 text-emerald-800",
+    tag: "Tahap Akun & Profil",
   },
   {
     step: 2,
     title: "Unduh Template Excel",
     desc: "Unduh template form Identitas dan ke-8 form Indikator (format .xlsx) yang tersedia di halaman beranda.",
     icon: FileSpreadsheet,
-    badgeColor: "bg-emerald-100 text-emerald-800",
+    tag: "Tersedia di Beranda",
   },
   {
     step: 3,
     title: "Isi Data Secara Offline",
     desc: "Lengkapi seluruh data capaian pada template Excel menggunakan aplikasi spreadsheet (Microsoft Excel / WPS) di komputer Anda secara offline.",
     icon: Laptop,
-    badgeColor: "bg-emerald-100 text-emerald-800",
+    tag: "Input Mandiri Tanpa Kuota",
   },
   {
     step: 4,
     title: "Unggah Kuesioner (Upload)",
     desc: "Masuk ke menu dasbor \"Isi Kuesioner\", lalu unggah ke-9 file Excel tersebut secara bersamaan.",
     icon: UploadCloud,
-    badgeColor: "bg-emerald-100 text-emerald-800",
+    tag: "Upload 9 Berkas Sekaligus",
   },
   {
     step: 5,
     title: "Unggah Bukti Validasi",
     desc: "Beralih ke menu \"Validasi\" di dasbor. Unggah berkas bukti pendukung berupa dokumen PDF (contoh: sertifikat, SK) untuk tiap-tiap capaian.",
     icon: ShieldCheck,
-    badgeColor: "bg-emerald-100 text-emerald-800",
+    tag: "Verifikasi Keabsahan Data",
   },
   {
     step: 6,
     title: "Selesai & Pantau Statistik",
     desc: "Lihat hasil akumulasi data olahraga Anda di menu \"Statistik\" secara real-time.",
     icon: BarChart3,
-    badgeColor: "bg-emerald-100 text-emerald-800",
+    tag: "Akumulasi & Peringkat Nasional",
   },
 ];
 
@@ -129,13 +129,13 @@ export default function HomePage() {
         <div className="absolute top-0 right-0 w-80 h-full border-l border-emerald-700/20 pointer-events-none hidden md:block" />
 
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 bg-emerald-900/60 px-3.5 py-1.5 rounded-full border border-emerald-700/50 text-xs font-semibold text-emerald-200 mb-4 sm:mb-6">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 text-xs font-semibold text-emerald-100 mb-4 sm:mb-6 shadow-sm">
             <BrandLogo className="w-4 h-4" />
             <span>WEBSITE RESMI BIDANG KEOLAHRAGAAN DAERAH</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight text-white mb-4">
-            ARINDAMA <span className="text-brand-accent">SPORT SURVEY</span>
+            ARINDAMA <span className="text-brand-accent drop-shadow-sm">SPORT SURVEY</span>
           </h1>
 
           <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed mb-8 max-w-2xl">
@@ -144,32 +144,76 @@ export default function HomePage() {
             kebijakan keolahragaan daerah tingkat nasional maupun internasional.
           </p>
 
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-8">
             <Link href="/login">
               <Button
                 variant="gold"
                 size="lg"
-                className="shadow-elevated hover:scale-[1.02] transition-transform gap-2 font-bold"
+                className="shadow-elevated hover:scale-[1.02] transition-transform gap-2 font-bold px-7"
               >
                 <span>Masuk Sekarang</span>
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
+
+            <a href="#templates">
+              <Button
+                variant="outline"
+                size="lg"
+                className="bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white transition-colors gap-2 font-semibold backdrop-blur-sm"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Unduh Berkas Kuesioner</span>
+              </Button>
+            </a>
+          </div>
+
+          {/* Bottom Feature Strip inside Hero */}
+          <div className="pt-6 border-t border-emerald-700/40 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex items-center gap-3 bg-emerald-950/40 backdrop-blur-sm p-3 rounded-2xl border border-emerald-700/30">
+              <div className="p-2 rounded-xl bg-emerald-800/50 text-emerald-300 shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white leading-snug">8 Indikator Evaluasi</h4>
+                <p className="text-[11px] text-emerald-200/70">Parameter standar nasional</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 bg-emerald-950/40 backdrop-blur-sm p-3 rounded-2xl border border-emerald-700/30">
+              <div className="p-2 rounded-xl bg-emerald-800/50 text-emerald-300 shrink-0">
+                <FileSpreadsheet className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white leading-snug">Format Standar .XLSX</h4>
+                <p className="text-[11px] text-emerald-200/70">Kompatibel Excel &amp; WPS</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 bg-emerald-950/40 backdrop-blur-sm p-3 rounded-2xl border border-emerald-700/30">
+              <div className="p-2 rounded-xl bg-emerald-800/50 text-emerald-300 shrink-0">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white leading-snug">Validasi Dokumen Digital</h4>
+                <p className="text-[11px] text-emerald-200/70">Verifikasi SK &amp; Sertifikat</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 3. Section Alur Pengisian Kuesioner */}
+      {/* 2. Section Alur Pengisian Kuesioner */}
       <section className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-card">
         <div className="mb-8">
-          <Badge variant="neutral" className="mb-2 text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200">
-            Panduan Responden
+          <Badge variant="neutral" className="mb-2 text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200/80 rounded-full px-3 py-1 shadow-none">
+            PANDUAN RESPONDEN
           </Badge>
           <h2 className="text-xl sm:text-2xl font-extrabold text-brand-text tracking-tight">
             Alur Pengisian Kuesioner
           </h2>
           <p className="text-xs sm:text-sm text-brand-text-secondary mt-1">
-            6 tahapan mudah untuk menyelesaikan pengumpulan data keolahragaan daerah
+            6 tahapan mudah untuk menyelesaikan pengumpulan data keolahragaan daerah secara sistematis dan terverifikasi.
           </p>
         </div>
 
@@ -179,11 +223,11 @@ export default function HomePage() {
             return (
               <div
                 key={item.step}
-                className="bg-brand-surface rounded-2xl p-5 border border-gray-100 hover:border-brand-primary/30 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between group"
+                className="bg-brand-surface/40 rounded-2xl p-5 border border-gray-200/70 hover:border-emerald-400/80 hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="w-8 h-8 rounded-xl bg-brand-primary text-white text-xs font-extrabold flex items-center justify-center shadow-subtle group-hover:scale-105 transition-transform">
+                    <span className="w-7 h-7 rounded-full bg-brand-primary text-white text-xs font-extrabold flex items-center justify-center shadow-subtle group-hover:scale-105 transition-transform">
                       {item.step}
                     </span>
                     <div className="p-2.5 rounded-xl bg-emerald-50 text-brand-primary group-hover:bg-brand-primary group-hover:text-white transition-colors duration-200">
@@ -197,24 +241,30 @@ export default function HomePage() {
                     {item.desc}
                   </p>
                 </div>
+
+                <div className="pt-3 border-t border-gray-100 mt-4">
+                  <span className="text-[11px] font-medium text-gray-400">
+                    {item.tag}
+                  </span>
+                </div>
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* 4. Section Unduh Template Kuesioner Excel */}
-      <section className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-card">
+      {/* 3. Section Unduh Template Kuesioner Excel */}
+      <section id="templates" className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-card scroll-mt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-100">
           <div>
-            <Badge variant="neutral" className="mb-2 text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200">
-              Format Offline (.xlsx)
+            <Badge variant="neutral" className="mb-2 text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200/80 rounded-full px-3 py-1 shadow-none">
+              FORMAT OFFLINE (.XLSX)
             </Badge>
             <h2 className="text-xl sm:text-2xl font-extrabold text-brand-text tracking-tight">
               Unduh Template Kuesioner Excel
             </h2>
             <p className="text-xs sm:text-sm text-brand-text-secondary mt-1">
-              Unduh format spreadsheet Excel resmi untuk pengisian data kuesioner secara offline
+              Unduh format spreadsheet Excel resmi untuk pengisian data kuesioner secara offline.
             </p>
           </div>
 
@@ -238,11 +288,11 @@ export default function HomePage() {
           {SURVEY_TEMPLATES.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-2xl border border-gray-200/90 p-5 hover:border-brand-primary/40 hover:bg-emerald-50/20 transition-all duration-200 group flex flex-col justify-between shadow-sm hover:shadow-md"
+              className="bg-white rounded-2xl border border-gray-200/80 p-5 hover:border-emerald-400/80 hover:bg-emerald-50/20 transition-all duration-200 group flex flex-col justify-between shadow-sm hover:shadow-md"
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold tracking-wide uppercase bg-emerald-100/80 text-emerald-800 px-2.5 py-1 rounded-md">
+                  <span className="text-[11px] font-bold tracking-wider uppercase bg-emerald-100/90 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
                     .xlsx
                   </span>
                   <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg group-hover:bg-emerald-100 transition-colors">
@@ -259,7 +309,7 @@ export default function HomePage() {
               </div>
 
               <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-[11px] text-gray-400 font-medium truncate max-w-[170px]" title={item.file}>
+                <span className="text-[11px] text-gray-400 font-medium truncate max-w-[150px]" title={item.file}>
                   {item.file}
                 </span>
                 <a
