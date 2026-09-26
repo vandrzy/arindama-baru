@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
+    const userRaw = await prisma.user.findUnique({
       where: { id: payload.id },
       select: {
         id: true,
@@ -34,15 +34,34 @@ export async function GET(request: NextRequest) {
         jabatan: true,
         instansi: true,
         kabupatenKota: true,
+        submissions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            respondenIdentity: {
+              select: {
+                kabupatenKotaAsal: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    if (!user) {
+    if (!userRaw) {
       return NextResponse.json(
         { error: "Pengguna tidak ditemukan" },
         { status: 401 }
       );
     }
+
+    const { submissions, ...userBase } = userRaw;
+    const dbKabupaten = userBase.kabupatenKota || submissions[0]?.respondenIdentity?.kabupatenKotaAsal || "";
+
+    const user = {
+      ...userBase,
+      kabupatenKota: dbKabupaten,
+    };
 
     return NextResponse.json({
       success: true,

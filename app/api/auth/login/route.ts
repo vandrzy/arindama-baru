@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
         jabatan: user.jabatan,
         instansi: user.instansi,
+        kabupatenKota: user.kabupatenKota,
       },
     });
 

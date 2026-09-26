@@ -15,6 +15,8 @@ import {
   X,
   FileCheck,
   BarChart3,
+  MapPin,
+  Building2,
 } from "lucide-react";
 
 export function Navbar() {
@@ -123,25 +125,24 @@ export function Navbar() {
           <div className="hidden lg:flex items-center gap-3 pl-3 border-l border-gray-100">
             {currentUser ? (
               <>
-                <div className="flex flex-col items-end max-w-[220px]">
+                <div className="flex flex-col items-end max-w-[240px]">
                   <span
-                    className="text-xs font-bold text-brand-text truncate w-full text-right"
+                    className="text-xs sm:text-sm font-bold text-brand-text truncate w-full text-right"
                     title={currentUser.nama}
                   >
                     {currentUser.nama}
                   </span>
-                  <span
-                    className="text-[11px] text-brand-text-secondary truncate w-full text-right"
-                    title={
-                      [currentUser.kabupatenKota, currentUser.instansi]
-                        .filter(Boolean)
-                        .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")
-                    }
-                  >
-                    {[currentUser.kabupatenKota, currentUser.instansi]
-                      .filter(Boolean)
-                      .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")}
-                  </span>
+                  <div className="flex items-center gap-1.5 text-[11px] text-brand-text-secondary font-medium truncate w-full justify-end">
+                    <span className="truncate flex items-center gap-1 text-emerald-800 font-semibold" title={currentUser.kabupatenKota || "Kabupaten/Kota"}>
+                      <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                      {currentUser.kabupatenKota || "Kabupaten/Kota"}
+                    </span>
+                    <span className="text-gray-300">•</span>
+                    <span className="truncate flex items-center gap-1 text-amber-800 font-semibold" title={currentUser.instansi || "Instansi"}>
+                      <Building2 className="w-3 h-3 text-amber-600 shrink-0" />
+                      {currentUser.instansi || "Instansi"}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => {
@@ -219,18 +220,16 @@ export function Navbar() {
                       <span className="text-sm font-bold text-brand-text truncate" title={currentUser.nama}>
                         {currentUser.nama}
                       </span>
-                      <span
-                        className="text-xs text-brand-text-secondary truncate"
-                        title={
-                          [currentUser.kabupatenKota, currentUser.instansi]
-                            .filter(Boolean)
-                            .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")
-                        }
-                      >
-                        {[currentUser.kabupatenKota, currentUser.instansi]
-                          .filter(Boolean)
-                          .join(" • ") || (currentUser.role === "ADMIN" ? "Administrator" : "Responden")}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md font-semibold text-[11px] border border-emerald-200/50">
+                          <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span>{currentUser.kabupatenKota || "Kabupaten/Kota"}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md font-semibold text-[11px] border border-amber-200/50">
+                          <Building2 className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>{currentUser.instansi || "Instansi"}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <button
