@@ -17,6 +17,9 @@ import {
   UploadCloud,
   FileSpreadsheet,
   X,
+  Hourglass,
+  FolderDown,
+  Download,
 } from "lucide-react";
 
 const FULL_TEMPLATE_NAMES: Record<number, string> = {
@@ -51,6 +54,164 @@ function isValidFileName(step: number, fileName: string): boolean {
   const keywords = EXPECTED_FILE_NAMES[step];
   if (!keywords) return true;
   return keywords.some((keyword) => fileName.includes(keyword));
+}
+
+interface UploadRowProps {
+  step: number;
+  title: string;
+  templateName: string;
+  rawFile?: File;
+  uploadedFile?: { name: string; size: string };
+  stepError?: string;
+  onFileSelect: (step: number, file: File | null) => void;
+  onRemoveFile: (step: number) => void;
+}
+
+function UploadRow({
+  step,
+  title,
+  templateName,
+  rawFile,
+  uploadedFile,
+  stepError,
+  onFileSelect,
+  onRemoveFile,
+}: UploadRowProps) {
+  const isError = Boolean(stepError);
+  const isSuccess = Boolean(rawFile) && !isError;
+
+  return (
+    <label
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files?.[0] || null;
+        if (file) onFileSelect(step, file);
+      }}
+      className={`relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
+        isError
+          ? "bg-red-50/60 border-red-300 hover:border-red-400"
+          : isSuccess
+          ? "bg-white border-gray-200 shadow-sm hover:border-emerald-300"
+          : "bg-white border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/20"
+      }`}
+    >
+      <input
+        type="file"
+        accept=".xlsx, .xls"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0] || null;
+          onFileSelect(step, file);
+          e.target.value = "";
+        }}
+      />
+
+      {/* Left section: Icon + Info */}
+      <div className="flex items-start gap-3.5 min-w-0 flex-1">
+        {/* State Icon */}
+        <div className="shrink-0 mt-0.5">
+          {isError ? (
+            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+          ) : isSuccess ? (
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center font-bold">
+              <Hourglass className="w-5 h-5" />
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="space-y-1 min-w-0 flex-1">
+          {/* Badges */}
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            {isError ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+                {stepError}
+              </span>
+            ) : isSuccess ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                Sudah Diunggah &amp; Valid
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                Belum Diunggah
+              </span>
+            )}
+
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-slate-100/80 text-slate-600 max-w-full break-all">
+              <span className="text-slate-400 font-bold">#</span> Gunakan template resmi: {templateName}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h4 className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight">
+            {title}
+          </h4>
+
+          {/* Subtitle / Description / File Info */}
+          {isError ? (
+            <p className="text-xs sm:text-sm text-red-600/90 font-medium">
+              Silakan periksa dan unggah kembali file Excel yang sesuai dengan format resmi.
+            </p>
+          ) : isSuccess ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
+              <span>
+                File aktif: <strong className="text-slate-700 font-semibold">{uploadedFile?.name || rawFile?.name}</strong>
+              </span>
+              <span>•</span>
+              <span className="text-slate-500">{uploadedFile?.size || "Berkas Siap"}</span>
+            </div>
+          ) : (
+            <p className="text-xs sm:text-sm text-slate-500">
+              Tarik file Excel ke baris ini atau klik tombol pilih file di kanan
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Right Action Button */}
+      <div className="shrink-0 self-end sm:self-center flex items-center gap-2">
+        {isError ? (
+          <span className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
+            <UploadCloud className="w-4 h-4" />
+            Pilih File
+          </span>
+        ) : isSuccess ? (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors">
+              <UploadCloud className="w-4 h-4 text-gray-500" />
+              Ganti File
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onRemoveFile(step);
+              }}
+              className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+              title="Hapus File"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <span className="inline-flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
+            <UploadCloud className="w-4 h-4" />
+            Pilih File
+          </span>
+        )}
+      </div>
+    </label>
+  );
 }
 
 export default function KuesionerPage() {
@@ -418,7 +579,7 @@ export default function KuesionerPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 py-6 animate-in fade-in duration-300">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 py-6 animate-in fade-in duration-300">
       {/* Page Header */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-card">
         <div className="flex items-center gap-3 mb-2">
@@ -444,228 +605,60 @@ export default function KuesionerPage() {
         </div>
       )}
 
-      {/* Bagian 1: Identitas & Afiliasi Responden (Step 0) */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-xl bg-brand-primary-light text-brand-primary flex items-center justify-center">
-            <User className="w-5 h-5" />
+      {/* Banner Unduh Template Kuesioner Resmi */}
+      <div className="bg-emerald-50/40 border border-emerald-200 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-900 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 md:mt-0">
+            <FolderDown className="w-6 h-6 text-white" />
           </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-brand-text">
-              Data Diri &amp; Afiliasi Responden
-            </h2>
-            <p className="text-xs text-brand-text-secondary">
-              Unggah dokumen Excel identitas responden yang telah diisi sesuai template resmi.
+          <div className="space-y-1">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">
+              Unduh Terlebih Dahulu Template Kuesioner Resmi
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-3xl">
+              Pastikan Anda telah mengunduh paket template kuesioner resmi (.xlsx) sebelum melakukan pengisian data. Gunakan format tabel baku tanpa mengubah struktur kolom agar proses validasi sistem berjalan lancar.
             </p>
           </div>
         </div>
+        <a
+          href="/templates/Semua_Template_Kuesioner.zip"
+          download
+          className="inline-flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shrink-0 transition-colors shadow-sm self-stretch sm:self-auto justify-center"
+        >
+          <Download className="w-4 h-4" />
+          <span>Unduh Semua Template (.ZIP)</span>
+        </a>
+      </div>
 
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">
-            Unggah Dokumen Excel Identitas Responden <span className="text-red-500">*</span>
-          </h3>
+      {/* Daftar Card Form Upload Excel */}
+      <div className="space-y-4">
+        {/* Step 0: Identitas Responden */}
+        <UploadRow
+          step={0}
+          title="Identitas & Afiliasi Responden"
+          templateName={FULL_TEMPLATE_NAMES[0]}
+          rawFile={rawFiles[0]}
+          uploadedFile={uploadedExcelFiles[0]}
+          stepError={stepErrors[0]}
+          onFileSelect={handleExcelFileSelected}
+          onRemoveFile={handleRemoveFile}
+        />
 
-          <div className="text-xs text-amber-800 bg-amber-50/80 border border-amber-200 p-3 rounded-xl flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
-            <p className="leading-relaxed">
-              <strong>Perhatian:</strong> Harap unggah file template resmi dengan nama{" "}
-              <span className="font-mono bg-white px-1.5 py-0.5 text-amber-900 border border-amber-300 rounded font-semibold break-all">
-                {FULL_TEMPLATE_NAMES[0]}
-              </span>.
-            </p>
-          </div>
-
-          {stepErrors[0] && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center gap-2.5 animate-in fade-in shadow-subtle">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-              <span className="font-medium">{stepErrors[0]}</span>
-            </div>
-          )}
-
-          <label className="relative flex flex-col items-center justify-center w-full p-8 sm:p-10 border-2 border-dashed border-gray-300 rounded-2xl bg-white hover:bg-emerald-50/20 hover:border-brand-primary cursor-pointer transition-all group">
-            <input
-              type="file"
-              accept=".xlsx, .xls"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null;
-                handleExcelFileSelected(0, file);
-              }}
-            />
-
-            <div className="w-14 h-14 bg-white border border-gray-100 shadow-sm rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <UploadCloud className="w-6 h-6 text-brand-primary" />
-            </div>
-
-            <p className="text-sm font-medium text-gray-700 text-center">
-              <span className="text-brand-primary underline underline-offset-2 decoration-brand-primary/40 font-semibold">
-                Pilih dokumen Excel
-              </span>{" "}
-              atau seret ke area ini
-            </p>
-
-            <p className="text-xs text-gray-500 mt-2 text-center max-w-sm leading-relaxed">
-              Dokumen Data Diri, Afiliasi, &amp; Kontak Responden (Format .xlsx / .xls)
-            </p>
-          </label>
-
-          {rawFiles[0] && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <FileSpreadsheet className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-emerald-950">
-                    {uploadedExcelFiles[0]?.name || rawFiles[0].name}
-                  </p>
-                  <p className="text-[11px] text-emerald-700">
-                    {uploadedExcelFiles[0]?.size || "File Excel Siap Diunggah"}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveFile(0)}
-                className="p-1 rounded-lg hover:bg-emerald-200/50 text-emerald-700 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Bagian 2: Daftar Form Indikator 1 s/d 8 */}
-      <div className="space-y-6">
+        {/* Step 1 s/d 8: Indikator Keolahragaan */}
         {SURVEY_INDICATORS.map((indicator, index) => {
           const stepNum = index + 1;
-          const uploadedFile = uploadedExcelFiles[stepNum];
-          const rawFile = rawFiles[stepNum];
-          const fileName = uploadedFile?.name || rawFile?.name;
-          const fileSize = uploadedFile?.size;
-
           return (
-            <Card key={indicator.id} className="p-6 space-y-6">
-              <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                <div className="w-9 h-9 rounded-lg bg-brand-primary-light text-brand-primary flex items-center justify-center font-bold text-sm">
-                  {indicator.id}
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-brand-text">
-                    {indicator.numberStr}: {indicator.title}
-                  </h3>
-                  <p className="text-xs text-brand-text-secondary">
-                    Indikator Keolahragaan Ke-{indicator.id}
-                  </p>
-                </div>
-              </div>
-
-              {/* Box Petunjuk Teknis */}
-              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 space-y-3">
-                <div className="flex items-start gap-2.5">
-                  <HelpCircle className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
-                      Petunjuk Teknis Pengisian
-                    </h4>
-                    <p className="text-xs text-emerald-900 mt-1 leading-relaxed">
-                      {indicator.fullDesc}
-                    </p>
-                    <p className="text-xs font-semibold text-emerald-800 mt-2">
-                      📌 {indicator.focusHint}
-                    </p>
-                  </div>
-                </div>
-
-                {indicator.keteranganInklusif && (
-                  <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-lg p-3 flex items-start gap-2.5">
-                    <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      </svg>
-                      Aspek Inklusivitas Penyandang Disabilitas
-                    </span>
-                    <p className="text-xs text-indigo-900 leading-relaxed">
-                      {indicator.keteranganInklusif}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold text-brand-text uppercase tracking-wider">
-                  Unggah Dokumen Excel {indicator.title} <span className="text-red-500">*</span>
-                </h4>
-
-                <div className="text-xs text-amber-800 bg-amber-50/80 border border-amber-200 p-3 rounded-xl flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
-                  <p className="leading-relaxed">
-                    <strong>Perhatian:</strong> Harap unggah file template resmi dengan nama{" "}
-                    <span className="font-mono bg-white px-1.5 py-0.5 text-amber-900 border border-amber-300 rounded font-semibold break-all">
-                      {FULL_TEMPLATE_NAMES[indicator.id]}
-                    </span>.
-                  </p>
-                </div>
-
-                {stepErrors[stepNum] && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center gap-2.5 animate-in fade-in shadow-subtle">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                    <span className="font-medium">{stepErrors[stepNum]}</span>
-                  </div>
-                )}
-
-                <label className="relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed border-gray-300 rounded-2xl bg-white hover:bg-emerald-50/20 hover:border-brand-primary cursor-pointer transition-all group">
-                  <input
-                    type="file"
-                    accept=".xlsx, .xls"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      handleExcelFileSelected(stepNum, file);
-                    }}
-                  />
-
-                  <div className="w-14 h-14 bg-white border border-gray-100 shadow-sm rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <UploadCloud className="w-6 h-6 text-brand-primary" />
-                  </div>
-
-                  <p className="text-sm font-medium text-gray-700 text-center">
-                    <span className="text-brand-primary underline underline-offset-2 decoration-brand-primary/40 font-semibold">
-                      Pilih dokumen Excel
-                    </span>{" "}
-                    atau seret ke area ini
-                  </p>
-
-                  <p className="text-xs text-gray-500 mt-2 text-center max-w-sm leading-relaxed">
-                    Surat Penugasan Resmi, Hasil Pertandingan Resmi, Sertifikat, atau Piagam Medali (Format .xlsx / .xls)
-                  </p>
-                </label>
-
-                {rawFile && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                        <FileSpreadsheet className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-emerald-950">{fileName}</p>
-                        <p className="text-[11px] text-emerald-700">
-                          {fileSize || "File Excel Siap Diunggah"}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFile(stepNum)}
-                      className="p-1 rounded-lg hover:bg-emerald-200/50 text-emerald-700 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </Card>
+            <UploadRow
+              key={indicator.id}
+              step={stepNum}
+              title={`${indicator.numberStr}: ${indicator.title}`}
+              templateName={FULL_TEMPLATE_NAMES[indicator.id]}
+              rawFile={rawFiles[stepNum]}
+              uploadedFile={uploadedExcelFiles[stepNum]}
+              stepError={stepErrors[stepNum]}
+              onFileSelect={handleExcelFileSelected}
+              onRemoveFile={handleRemoveFile}
+            />
           );
         })}
       </div>
@@ -695,3 +688,4 @@ export default function KuesionerPage() {
     </div>
   );
 }
+
