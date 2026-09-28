@@ -61,6 +61,10 @@ export default function ValidasiPage() {
   const [isLoadingExcel, setIsLoadingExcel] = useState<boolean>(false);
   const [isFromDatabase, setIsFromDatabase] = useState<boolean>(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
   // Validation Evidences database state: recordId ("row_0", "row_1") -> evidence item
   const [rowValidationFiles, setRowValidationFiles] = useState<
     Record<string, { id?: string; fileName: string; fileUrl: string; fileSize?: string; updatedAt?: string }>
@@ -86,6 +90,7 @@ export default function ValidasiPage() {
 
     setIsReuploading(true);
     setParseError(null);
+    setCurrentPage(1);
 
     try {
       const formData = new FormData();
@@ -187,6 +192,7 @@ export default function ValidasiPage() {
 
   // Otomatis muat data record dari database saat Dropdown Kuesioner & Form dipilih
   useEffect(() => {
+    setCurrentPage(1);
     setTableData([]);
     setTableHeaders([]);
     setActiveFileName(null);
@@ -233,6 +239,7 @@ export default function ValidasiPage() {
 
   // Handler saat user mengunggah file Excel manual di halaman validasi jika file belum ada di DB
   const handleExcelUpload = async (file: File) => {
+    setCurrentPage(1);
     setParseError(null);
     setActiveFileName(file.name);
     setIsFromDatabase(false);
@@ -344,6 +351,11 @@ export default function ValidasiPage() {
 
   const selectedSubmission = submissionsList.find((s) => s.id === selectedSubmissionId);
   const selectedForm = FORM_OPTIONS.find((f) => f.id === selectedFormId);
+
+  // Kalkulasi Pagination
+  const totalPages = Math.max(1, Math.ceil(tableData.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentTableData = tableData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="space-y-6 pb-12">
@@ -609,18 +621,19 @@ export default function ValidasiPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-brand-text">
-                    {tableData.map((row, rowIndex) => {
-                      const recordId = `row_${rowIndex}`;
+                    {currentTableData.map((row, relativeIndex) => {
+                      const absoluteIndex = startIndex + relativeIndex;
+                      const recordId = `row_${absoluteIndex}`;
                       const rowFile = rowValidationFiles[recordId];
                       const isUploading = uploadingRows[recordId];
 
                       return (
                         <tr
-                          key={rowIndex}
+                          key={absoluteIndex}
                           className="hover:bg-gray-50/80 transition-colors"
                         >
                           <td className="p-3.5 text-center font-bold text-gray-500 border-r border-gray-100">
-                            {rowIndex + 1}
+                            {absoluteIndex + 1}
                           </td>
                           {tableHeaders.map((header, colIdx) => (
                             <td key={colIdx} className="p-3.5 border-r border-gray-100 truncate max-w-[250px]">
@@ -664,7 +677,7 @@ export default function ValidasiPage() {
                                       accept=".pdf, application/pdf"
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
-                                        if (file) handleRowFileUpload(rowIndex, file);
+                                        if (file) handleRowFileUpload(absoluteIndex, file);
                                         e.target.value = "";
                                       }}
                                       className="hidden"
@@ -683,7 +696,7 @@ export default function ValidasiPage() {
                                   accept=".pdf, application/pdf"
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
-                                    if (file) handleRowFileUpload(rowIndex, file);
+                                    if (file) handleRowFileUpload(absoluteIndex, file);
                                     e.target.value = "";
                                   }}
                                   className="hidden"
@@ -701,6 +714,44 @@ export default function ValidasiPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-100">
+                  <div className="text-xs text-gray-500 font-medium">
+                    Menampilkan <span className="font-bold text-gray-900">{startIndex + 1}</span> hingga{" "}
+                    <span className="font-bold text-gray-900">
+                      {Math.min(startIndex + itemsPerPage, tableData.length)}
+                    </span>{" "}
+                    dari <span className="font-bold text-gray-900">{tableData.length}</span> record
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 text-xs border-gray-200"
+                    >
+                      Sebelumnya
+                    </Button>
+
+                    <div className="flex items-center justify-center min-w-[2.5rem] h-8 px-3 text-xs font-bold text-brand-primary bg-brand-primary-light/30 rounded-lg">
+                      {currentPage} / {totalPages}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 text-xs border-gray-200"
+                    >
+                      Selanjutnya
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Card>
