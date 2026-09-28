@@ -37,13 +37,13 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     },
     {
       href: "/kuesioner",
-      label: "Kuisioner",
+      label: "Kuesioner",
       icon: FileText,
       match: (p: string) => p.startsWith("/kuesioner"),
     },
     {
       href: "/validasi",
-      label: "Validasi",
+      label: "Validasi Data",
       icon: FileCheck,
       match: (p: string) => p.startsWith("/validasi"),
     },
