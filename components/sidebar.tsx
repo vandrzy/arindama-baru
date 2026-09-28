@@ -60,10 +60,9 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     link.label.toLowerCase().includes(searchQuery.toLowerCase().trim())
   );
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
     if (onClose) onClose();
-    router.push("/login");
+    await logout();
   };
 
   return (

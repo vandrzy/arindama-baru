@@ -58,13 +58,11 @@ export async function middleware(request: NextRequest) {
   const isValid = token ? await verifyToken(token) : false;
   const { pathname } = request.nextUrl;
 
-  const isProtectedRoute =
-    pathname.startsWith("/kuesioner") || pathname.startsWith("/validasi");
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/register");
 
-  // Redirect unauthenticated requests to protected pages
-  if (isProtectedRoute && !isValid) {
+  // Redirect unauthenticated requests to login page
+  if (!isAuthRoute && !isValid) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
@@ -80,9 +78,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/kuesioner/:path*",
-    "/validasi/:path*",
-    "/login",
-    "/register",
+    "/((?!api|_next/static|_next/image|favicon.ico|templates|uploads|.*\\.(?:css|js|map|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)).*)",
   ],
 };

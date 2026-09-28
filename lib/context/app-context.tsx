@@ -130,12 +130,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    fetch("/api/auth/logout", { method: "POST" }).catch((err) =>
-      console.error("Logout API error:", err)
-    );
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error("Logout API error:", err);
+    }
     setCurrentUser(null);
     setRoleState("RESPONDEN");
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
   };
 
   const addSubmission = (sub: SurveySubmission) => {

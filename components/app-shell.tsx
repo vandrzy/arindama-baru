@@ -11,9 +11,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // Close sidebar on mobile when route changes
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+
+  if (isAuthPage) {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50 text-brand-text justify-between">
+        <main className="flex-1 flex flex-col items-center justify-center p-4">
+          {children}
+        </main>
+        <footer className="w-full text-center py-4 text-xs text-slate-500 bg-white border-t border-slate-100">
+          Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur © 2026. Hak Cipta Dilindungi.
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-brand-text">
