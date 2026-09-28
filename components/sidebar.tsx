@@ -30,10 +30,10 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
   const navLinks = [
     {
-      href: "/",
-      label: "Beranda",
+      href: "/dashboard",
+      label: "Dasbor",
       icon: Home,
-      match: (p: string) => p === "/",
+      match: (p: string) => p.startsWith("/dashboard") || p === "/",
     },
     {
       href: "/kuesioner",
@@ -85,7 +85,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         {/* Branding Header (Paling Atas) */}
         <div className="p-5 pb-4 border-b border-slate-100 flex items-center justify-between">
           <Link
-            href="/"
+            href="/dashboard"
             onClick={onClose}
             className="flex items-center gap-3 group shrink-0"
           >

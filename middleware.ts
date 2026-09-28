@@ -61,6 +61,15 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/register");
 
+  // Redirect root "/": Jika sudah login ke /dashboard, jika belum ke /login
+  if (pathname === "/") {
+    if (isValid) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    } else {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
   // Redirect unauthenticated requests to login page
   if (!isAuthRoute && !isValid) {
     const loginUrl = new URL("/login", request.url);
@@ -68,9 +77,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect authenticated requests away from login/register
+  // Redirect authenticated requests away from login/register to /dashboard
   if (isAuthRoute && isValid) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

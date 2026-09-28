@@ -15,7 +15,7 @@ export function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
 
   // Route title mapper for breadcrumbs
   const getBreadcrumbTitle = (path: string) => {
-    if (path === "/") return "Beranda";
+    if (path === "/" || path.startsWith("/dashboard")) return "Dasbor";
     if (path.startsWith("/kuesioner")) return "Kuisioner";
     if (path.startsWith("/validasi")) return "Validasi";
     if (path.startsWith("/statistik")) return "Statistik";
@@ -24,7 +24,7 @@ export function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
     
     // Fallback title formatting
     const segment = path.split("/").filter(Boolean)[0];
-    if (!segment) return "Beranda";
+    if (!segment) return "Dasbor";
     return segment.charAt(0).toUpperCase() + segment.slice(1);
   };
 

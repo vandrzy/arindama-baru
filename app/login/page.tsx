@@ -25,10 +25,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Pengecekan autentikasi: Jika pengguna sudah login, langsung arahkan ke beranda (/) setelah rehidrasi selesai
+  // Pengecekan autentikasi: Jika pengguna sudah login, langsung arahkan ke dasbor (/dashboard) setelah rehidrasi selesai
   React.useEffect(() => {
     if (!isLoading && currentUser) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [isLoading, currentUser, router]);
 
@@ -52,7 +52,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch (err) {
       setLoading(false);

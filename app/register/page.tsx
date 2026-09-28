@@ -24,10 +24,10 @@ export default function RegisterPage() {
   const router = useRouter();
   const { currentUser, isLoading } = useApp();
 
-  // Pengecekan autentikasi: Jika pengguna sudah login, langsung arahkan ke beranda (/) setelah rehidrasi selesai
+  // Pengecekan autentikasi: Jika pengguna sudah login, langsung arahkan ke dasbor (/dashboard) setelah rehidrasi selesai
   React.useEffect(() => {
     if (!isLoading && currentUser) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [isLoading, currentUser, router]);
 
