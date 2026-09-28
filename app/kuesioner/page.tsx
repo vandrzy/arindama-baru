@@ -56,9 +56,7 @@ function UploadRow({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isSuccess && previewRows && previewRows.length > 0) {
-      setShowPreview(true);
-    } else {
+    if (!isSuccess || !previewRows || previewRows.length === 0) {
       setShowPreview(false);
     }
   }, [isSuccess, previewRows]);
