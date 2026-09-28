@@ -193,12 +193,6 @@ export default function KuesionerPage() {
     clearDraft,
   } = useApp();
 
-  // Route protection: Tunggu proses rehidrasi sesi (isLoading === false) sebelum redirect ke login
-  useEffect(() => {
-    if (!isLoading && !currentUser) {
-      router.push("/login");
-    }
-  }, [isLoading, currentUser, router]);
 
   const [rawFiles, setRawFiles] = useState<Record<number, File>>({});
   const [uploadedExcelFiles, setUploadedExcelFiles] = useState<

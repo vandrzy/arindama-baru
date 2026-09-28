@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +41,6 @@ const FORM_OPTIONS: FormOption[] = [
 ];
 
 export default function ValidasiPage() {
-  const router = useRouter();
   const { currentUser, isLoading: isSessionLoading } = useApp();
 
   const [submissionsList, setSubmissionsList] = useState<any[]>([]);
@@ -67,15 +65,8 @@ export default function ValidasiPage() {
   const [uploadingRows, setUploadingRows] = useState<Record<string, boolean>>({});
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Protected route & fetch submissions list
+  // Fetch submissions list (Route is protected server-side via Edge middleware)
   useEffect(() => {
-    if (isSessionLoading) return;
-
-    if (!currentUser) {
-      router.push("/login");
-      return;
-    }
-
     async function loadSubmissions() {
       try {
         const res = await fetch("/api/submissions");
@@ -93,7 +84,7 @@ export default function ValidasiPage() {
     }
 
     loadSubmissions();
-  }, [isSessionLoading, currentUser, router]);
+  }, []);
 
   // Fetch uploaded evidences from DB when submission & form are selected
   const fetchEvidences = async (subId: string, formId: string) => {

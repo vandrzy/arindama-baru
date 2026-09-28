@@ -119,7 +119,7 @@ export default function RegisterPage() {
     }
   };
 
-  if (isLoading || currentUser) {
+  if (currentUser) {
     return null;
   }
 

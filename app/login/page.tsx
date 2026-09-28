@@ -52,14 +52,15 @@ export default function LoginPage() {
         return;
       }
 
-      // Sesi login berhasil diupdate di context, useEffect akan otomatis melakukan redirect ke beranda (/)
+      router.push("/");
+      router.refresh();
     } catch (err) {
       setLoading(false);
       setError("Terjadi kesalahan. Silakan coba lagi.");
     }
   };
 
-  if (isLoading || currentUser) {
+  if (currentUser) {
     return null;
   }
 
