@@ -42,8 +42,8 @@ export default function PrestasiAtletSection({
             {selectedAtletIndicator === "all"
               ? "Indikator 1 & 6"
               : selectedAtletIndicator === "1"
-              ? "Indikator 1 (Pelajar)"
-              : "Indikator 6 (Atlet)"}
+                ? "Indikator 1 (Pelajar)"
+                : "Indikator 6 (Atlet)"}
           </div>
           <p className="text-xs text-gray-500">Prestasi Atlet &amp; Pelajar Keolahragaan</p>
         </div>
@@ -106,8 +106,8 @@ export default function PrestasiAtletSection({
               {selectedAtletIndicator === "all"
                 ? "Indikator 1 & 6"
                 : selectedAtletIndicator === "1"
-                ? "Indikator 1 (Pelajar)"
-                : "Indikator 6 (Atlet)"}
+                  ? "Indikator 1 (Pelajar)"
+                  : "Indikator 6 (Atlet)"}
             </p>
             <p className="text-[11px] opacity-90">
               Skor dikalkulasikan secara otomatis berdasarkan pembobotan resmi tingkat kejuaraan &amp; jenis medali.
@@ -123,9 +123,6 @@ export default function PrestasiAtletSection({
                 <Award className="w-5 h-5 text-emerald-800" />
                 <span>Matriks Perhitungan Bobot Poin Medali</span>
               </h3>
-              <span className="bg-purple-50 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-md border border-purple-100">
-                SK Standar Kemenpora
-              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
@@ -193,7 +190,7 @@ export default function PrestasiAtletSection({
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
             <p className="italic">
-              * Total perolehan skor daerah dihitung otomatis berdasarkan pembobotan resmi SK Kemenpora: Total {activeAtletCalculatedStats.totalBobotScore} Poin.
+              * Total perolehan skor daerah dihitung otomatis: Total {activeAtletCalculatedStats.totalBobotScore} Poin.
             </p>
             <span className="font-semibold text-emerald-700 shrink-0">⚙ Sinkron</span>
           </div>

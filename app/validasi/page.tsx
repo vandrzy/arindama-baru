@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +64,52 @@ export default function ValidasiPage() {
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
+
+  // Header Helper Logic for Merging Asal Wilayah
+  const isKabKotaHeader = (h: string) => {
+    const s = h.toLowerCase().replace(/[\s_\/-]/g, "");
+    return s.includes("kabupaten") || s.includes("kota") || s === "kabkota";
+  };
+
+  const isKecamatanHeader = (h: string) => {
+    return h.toLowerCase().trim() === "kecamatan";
+  };
+
+  const kabKotaKey = useMemo(() => {
+    return tableHeaders.find((h) => isKabKotaHeader(h));
+  }, [tableHeaders]);
+
+  const kecamatanKey = useMemo(() => {
+    return tableHeaders.find((h) => isKecamatanHeader(h));
+  }, [tableHeaders]);
+
+  const displayHeaders = useMemo(() => {
+    if (!tableHeaders || tableHeaders.length === 0) return [];
+    const result: { type: "normal" | "asalWilayah"; key?: string; label: string }[] = [];
+    let addedAsalWilayah = false;
+
+    const formatHeaderLabel = (h: string) => {
+      if (h === "namaLengkap") return "NAMA LENGKAP";
+      if (h === "jenisKelamin") return "JENIS KELAMIN";
+      if (h === "kabupatenKotaAsal") return "KABUPATEN / KOTA";
+      if (h === "pekerjaanJabatan") return "PEKERJAAN / JABATAN";
+      if (h === "nomorTelepon") return "NOMOR TELEPON";
+      return h.replace(/([A-Z])/g, " $1").trim().toUpperCase();
+    };
+
+    for (const h of tableHeaders) {
+      if (isKabKotaHeader(h) || isKecamatanHeader(h)) {
+        if (!addedAsalWilayah) {
+          result.push({ type: "asalWilayah", label: "ASAL WILAYAH" });
+          addedAsalWilayah = true;
+        }
+      } else {
+        result.push({ type: "normal", key: h, label: formatHeaderLabel(h) });
+      }
+    }
+
+    return result;
+  }, [tableHeaders]);
 
   // Validation Evidences database state: recordId ("row_0", "row_1") -> evidence item
   const [rowValidationFiles, setRowValidationFiles] = useState<
@@ -605,22 +651,20 @@ export default function ValidasiPage() {
           {/* Preview Tabel Excel & Button Upload Per Baris */}
           {!isLoadingExcel && tableData.length > 0 && (
             <div className="space-y-4">
-              <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-subtle">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="overflow-x-auto rounded-2xl border border-gray-200/80">
+                <table className="w-full text-left border-collapse min-w-[900px]">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200 text-brand-text uppercase tracking-wider font-extrabold">
-                      <th className="p-3.5 w-12 text-center border-r border-gray-200">No</th>
-                      {tableHeaders.map((header, idx) => (
-                        <th key={idx} className="p-3.5 border-r border-gray-200 min-w-[140px]">
-                          {header}
+                    <tr className="bg-[#F4F6FA] border-b border-gray-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
+                      <th className="py-3.5 px-4 text-center">NO</th>
+                      {displayHeaders.map((dh: any, idx: number) => (
+                        <th key={idx} className="py-3.5 px-4">
+                          {dh.label}
                         </th>
                       ))}
-                      <th className="p-3.5 min-w-[220px] text-center bg-brand-primary-light/50 text-brand-primary">
-                        Aksi / Berkas Validasi (.pdf)
-                      </th>
+                      <th className="py-3.5 px-4 text-center">AKSI / BERKAS VALIDASI (.PDF)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-brand-text">
+                  <tbody className="divide-y divide-gray-100 text-xs text-gray-800">
                     {currentTableData.map((row, relativeIndex) => {
                       const absoluteIndex = startIndex + relativeIndex;
                       const recordId = `row_${absoluteIndex}`;
@@ -630,28 +674,58 @@ export default function ValidasiPage() {
                       return (
                         <tr
                           key={absoluteIndex}
-                          className="hover:bg-gray-50/80 transition-colors"
+                          className="hover:bg-slate-50/80 transition-colors"
                         >
-                          <td className="p-3.5 text-center font-bold text-gray-500 border-r border-gray-100">
+                          <td className="py-3.5 px-4 text-center font-medium text-gray-500">
                             {absoluteIndex + 1}
                           </td>
-                          {tableHeaders.map((header, colIdx) => (
-                            <td key={colIdx} className="p-3.5 border-r border-gray-100 truncate max-w-[250px]">
-                              {row[header] !== undefined && row[header] !== null
-                                ? String(row[header])
-                                : "-"}
-                            </td>
-                          ))}
+
+                          {displayHeaders.map((dh: any, colIdx: number) => {
+                            if (dh.type === "asalWilayah") {
+                              const kabKotaVal =
+                                kabKotaKey && row[kabKotaKey] !== undefined && row[kabKotaKey] !== null
+                                  ? String(row[kabKotaKey])
+                                  : "-";
+                              const kecamatanVal =
+                                kecamatanKey && row[kecamatanKey] !== undefined && row[kecamatanKey] !== null
+                                  ? String(row[kecamatanKey])
+                                  : "-";
+
+                              return (
+                                <td key={colIdx} className="py-3.5 px-4">
+                                  <div className="font-bold text-gray-900">{kabKotaVal}</div>
+                                  <div className="text-[11px] text-gray-500 mt-0.5">Kec. {kecamatanVal}</div>
+                                </td>
+                              );
+                            }
+
+                            const val =
+                              dh.key && row[dh.key] !== undefined && row[dh.key] !== null
+                                ? String(row[dh.key])
+                                : "-";
+                            const isMainName = dh.key?.toLowerCase().includes("nama");
+
+                            return (
+                              <td
+                                key={colIdx}
+                                className={`py-3.5 px-4 truncate max-w-[250px] ${
+                                  isMainName ? "font-bold text-gray-900" : "font-medium text-gray-700"
+                                }`}
+                              >
+                                {val}
+                              </td>
+                            );
+                          })}
 
                           {/* Kolom Tombol Upload / Lihat / Ganti per-baris */}
-                          <td className="p-3.5 text-center bg-brand-primary-light/10 min-w-[220px]">
+                          <td className="py-3.5 px-4 text-center">
                             {isUploading ? (
-                              <div className="flex items-center justify-center gap-1.5 text-xs text-brand-primary font-semibold py-2">
+                              <div className="flex items-center justify-center gap-1.5 text-xs text-brand-primary font-semibold py-1">
                                 <Loader2 className="w-4 h-4 animate-spin text-brand-primary shrink-0" />
                                 <span>Mengunggah...</span>
                               </div>
                             ) : rowFile ? (
-                              <div className="flex flex-col items-center gap-1.5 py-1">
+                              <div className="flex flex-col items-center gap-1 py-0.5">
                                 <Badge variant="success" className="gap-1 text-[11px] py-1 px-2.5 max-w-[200px]">
                                   <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                                   <span className="truncate" title={rowFile.fileName}>{rowFile.fileName}</span>
@@ -717,38 +791,47 @@ export default function ValidasiPage() {
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-100">
-                  <div className="text-xs text-gray-500 font-medium">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                  <span className="text-xs font-medium text-gray-500">
                     Menampilkan <span className="font-bold text-gray-900">{startIndex + 1}</span> hingga{" "}
                     <span className="font-bold text-gray-900">
                       {Math.min(startIndex + itemsPerPage, tableData.length)}
                     </span>{" "}
                     dari <span className="font-bold text-gray-900">{tableData.length}</span> record
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
                       disabled={currentPage === 1}
-                      className="h-8 text-xs border-gray-200"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       Sebelumnya
-                    </Button>
+                    </button>
 
-                    <div className="flex items-center justify-center min-w-[2.5rem] h-8 px-3 text-xs font-bold text-brand-primary bg-brand-primary-light/30 rounded-lg">
-                      {currentPage} / {totalPages}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }).map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(i + 1)}
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                            currentPage === i + 1
+                              ? "bg-brand-primary text-white shadow-sm"
+                              : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                      className="h-8 text-xs border-gray-200"
+                    <button
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       Selanjutnya
-                    </Button>
+                    </button>
                   </div>
                 </div>
               )}
