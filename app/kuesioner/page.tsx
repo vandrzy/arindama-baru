@@ -53,6 +53,7 @@ function UploadRow({
   const isError = Boolean(stepError);
   const isSuccess = Boolean(rawFile) && !isError;
   const [showPreview, setShowPreview] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isSuccess && previewRows && previewRows.length > 0) {
@@ -63,28 +64,68 @@ function UploadRow({
   }, [isSuccess, previewRows]);
 
   const headers = previewRows && previewRows.length > 0 ? Object.keys(previewRows[0]) : [];
+  const badgeText = step === 0 ? "Identitas" : `Indikator ${step}`;
+  const cleanTitle = title.replace(/^(Indikator \d+:\s*|Identitas\s*&\s*)/i, "");
+
+  const handleZoneClick = () => {
+    if (!isSuccess && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   return (
-    <div
-      className={`rounded-2xl border transition-all ${
-        isError
-          ? "bg-red-50/60 border-red-300"
-          : isSuccess
-          ? "bg-white border-emerald-200/80 shadow-sm"
-          : "bg-white border-gray-200 shadow-sm hover:border-emerald-500"
-      }`}
-    >
-      <label
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6 space-y-4">
+      {/* 1. Header Bagian Atas */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <FileSpreadsheet className="w-5 h-5 text-emerald-700 shrink-0" />
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 leading-snug">
+              {title}
+            </h3>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Gunakan template excel <code className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-semibold text-xs">{templateName}</code> untuk mengisi form ini.
+          </p>
+        </div>
+
+        {/* State badge info jika ada error atau success */}
+        {isError && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 shrink-0 self-start sm:self-center">
+            <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+            File Tidak Valid
+          </span>
+        )}
+        {isSuccess && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 shrink-0 self-start sm:self-center">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            Sudah Diunggah &amp; Valid
+          </span>
+        )}
+      </div>
+
+      <hr className="border-gray-100" />
+
+      {/* 2. Drag & Drop Upload Zone */}
+      <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
           const file = e.dataTransfer.files?.[0] || null;
           if (file) onFileSelect(step, file);
         }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 cursor-pointer"
+        onClick={handleZoneClick}
+        className={`border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center transition-colors ${
+          isError
+            ? "border-red-300 bg-red-50/50 cursor-pointer hover:bg-red-50/80"
+            : isSuccess
+            ? "border-emerald-300 bg-emerald-50/30"
+            : "border-emerald-300 bg-white hover:bg-emerald-50/40 cursor-pointer"
+        }`}
       >
         <input
           type="file"
+          ref={fileInputRef}
           accept=".xlsx, .xls"
           className="hidden"
           onChange={(e) => {
@@ -94,138 +135,89 @@ function UploadRow({
           }}
         />
 
-        {/* Left section: Icon + Info */}
-        <div className="flex items-start gap-3.5 min-w-0 flex-1">
-          {/* State Icon */}
-          <div className="shrink-0 mt-0.5">
+        <div className="flex flex-col items-center justify-center">
+          <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-emerald-100 flex items-center justify-center mb-3">
             {isError ? (
-              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
-                <AlertCircle className="w-5 h-5" />
-              </div>
+              <AlertCircle className="w-6 h-6 text-red-600" />
             ) : isSuccess ? (
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
+              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center font-bold">
-                <Hourglass className="w-5 h-5" />
-              </div>
+              <UploadCloud className="w-6 h-6 text-emerald-600" />
             )}
           </div>
 
-          {/* Info */}
-          <div className="space-y-1 min-w-0 flex-1">
-            {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              {isError ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-                  {stepError}
-                </span>
-              ) : isSuccess ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                  Sudah Diunggah &amp; Valid
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-                  Belum Diunggah
-                </span>
-              )}
-
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-slate-100/80 text-slate-600 max-w-full break-all">
-                <span className="text-slate-400 font-bold">#</span> Gunakan template resmi: {templateName}
-              </span>
-            </div>
-
-            {/* Title */}
-            <h4 className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight">
-              {title}
-            </h4>
-
-            {/* Subtitle / Description / File Info */}
-            {isError ? (
-              <p className="text-xs sm:text-sm text-red-600/90 font-medium">
-                Silakan periksa dan unggah kembali file Excel yang sesuai dengan format resmi.
+          {isSuccess ? (
+            <div className="space-y-2">
+              <p className="text-xs sm:text-sm text-gray-700 font-medium">
+                File aktif: <strong className="text-gray-900 font-bold">{uploadedFile?.name || rawFile?.name}</strong>{" "}
+                <span className="text-gray-400">({uploadedFile?.size || "Berkas Siap"})</span>
               </p>
-            ) : isSuccess ? (
-              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
-                <span>
-                  File aktif: <strong className="text-slate-700 font-semibold">{uploadedFile?.name || rawFile?.name}</strong>
-                </span>
-                <span>•</span>
-                <span className="text-slate-500">{uploadedFile?.size || "Berkas Siap"}</span>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                 {previewRows && previewRows.length > 0 && (
-                  <>
-                    <span>•</span>
-                    <span className="text-emerald-700 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-md text-xs">
-                      {previewRows.length} Record Data
-                    </span>
-                  </>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPreview(!showPreview);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs"
+                  >
+                    {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showPreview ? "Sembunyikan Preview" : "Preview Data"}</span>
+                  </button>
                 )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 transition-colors"
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-gray-500" />
+                  <span>Ganti File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveFile(step);
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Hapus</span>
+                </button>
               </div>
-            ) : (
-              <p className="text-xs sm:text-sm text-slate-500">
-                Tarik file Excel ke baris ini atau klik tombol pilih file di kanan
+            </div>
+          ) : isError ? (
+            <div className="space-y-1.5 max-w-lg">
+              <p className="text-xs sm:text-sm font-bold text-red-700 leading-snug">
+                {stepError}
               </p>
-            )}
-          </div>
-        </div>
-
-        {/* Right Action Button */}
-        <div className="shrink-0 self-end sm:self-center flex flex-wrap items-center gap-2">
-          {isSuccess && previewRows && previewRows.length > 0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                setShowPreview(!showPreview);
-              }}
-              className="inline-flex items-center gap-1.5 border border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/70 text-emerald-800 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors shadow-sm"
-              title="Lihat Pratinjau Isi Data Excel"
-            >
-              {showPreview ? <EyeOff className="w-4 h-4 text-emerald-700" /> : <Eye className="w-4 h-4 text-emerald-700" />}
-              <span>{showPreview ? "Tutup Preview" : "Preview Data"}</span>
-            </button>
-          )}
-
-          {isError ? (
-            <span className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
-              <UploadCloud className="w-4 h-4" />
-              Pilih File
-            </span>
-          ) : isSuccess ? (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors">
-                <UploadCloud className="w-4 h-4 text-gray-500" />
-                Ganti File
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  onRemoveFile(step);
-                }}
-                className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
-                title="Hapus File"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <p className="text-xs text-red-600/80 font-medium">
+                Klik di sini atau tarik file Excel baru yang sesuai dengan template resmi untuk mengunggah ulang.
+              </p>
             </div>
           ) : (
-            <span className="inline-flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
-              <UploadCloud className="w-4 h-4" />
-              Pilih File
-            </span>
+            <div>
+              <p className="text-xs sm:text-sm text-gray-700 mb-1">
+                Tarik file Excel ke sini, atau{" "}
+                <span className="text-emerald-700 font-bold hover:underline cursor-pointer inline-block">
+                  Pilih Berkas
+                </span>
+              </p>
+              <p className="text-xs text-gray-400">
+                Format yang didukung: .xlsx, .xls
+              </p>
+            </div>
           )}
         </div>
-      </label>
+      </div>
 
-      {/* Expandable Preview Section */}
+      {/* 4. Expandable Preview Section */}
       {isSuccess && showPreview && previewRows && previewRows.length > 0 && (
-        <div className="border-t border-emerald-100 bg-slate-50/70 p-4 sm:p-5 rounded-b-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="border border-emerald-100 bg-slate-50/70 p-4 sm:p-5 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileSpreadsheet className="w-4.5 h-4.5 text-emerald-700" />
