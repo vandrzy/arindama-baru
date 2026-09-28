@@ -93,7 +93,7 @@ export const FLOW_STEPS: FlowStepItem[] = [
     title: "Unduh Template Excel",
     desc: "Unduh template form Identitas dan ke-8 form Indikator (format .xlsx) yang tersedia di halaman beranda.",
     icon: FileSpreadsheet,
-    tag: "Tersedia di Beranda",
+    tag: "Tersedia di Dasbor",
   },
   {
     step: 3,
