@@ -37,15 +37,16 @@ export async function GET(request: NextRequest) {
 
     if (indicatorIdNum === 0 || formType === "IdentitasResponden") {
       // Fetch Responden Identity
-      const identity = await prisma.respondenIdentity.findUnique({
+      const identities = await prisma.respondenIdentity.findMany({
         where: { submissionId },
+        orderBy: { createdAt: "asc" }
       });
 
-      if (!identity) {
+      if (!identities || identities.length === 0) {
         return NextResponse.json({ success: true, records: [] });
       }
 
-      const formattedRecord = {
+      const formattedRecords = identities.map(identity => ({
         "Nama Lengkap & Gelar": identity.namaLengkap,
         "Jenis Kelamin": identity.jenisKelamin,
         "Tanggal Lahir": identity.tanggalLahir,
@@ -54,9 +55,9 @@ export async function GET(request: NextRequest) {
         "Kecamatan": identity.kecamatan,
         "Pekerjaan/ Jabatan di Bidang Olahraga": identity.pekerjaanJabatan,
         "Nomor Telepon/ Whatsapp Aktif": identity.nomorTelepon,
-      };
+      }));
 
-      return NextResponse.json({ success: true, records: [formattedRecord] });
+      return NextResponse.json({ success: true, records: formattedRecords });
     } else {
       // Fetch Indicator Records
       const records = await prisma.indicatorRecord.findMany({

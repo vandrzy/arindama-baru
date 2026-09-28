@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/lib/context/app-context";
 import * as XLSX from "xlsx";
+import { fixWorksheetRange } from "@/lib/services/excelService";
 import {
   FileCheck,
   UploadCloud,
@@ -20,6 +21,8 @@ import {
   Database,
   Eye,
   FileUp,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 interface FormOption {
@@ -64,6 +67,81 @@ export default function ValidasiPage() {
   >({});
   const [uploadingRows, setUploadingRows] = useState<Record<string, boolean>>({});
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Reupload Excel States & Refs
+  const [isReuploadModalOpen, setIsReuploadModalOpen] = useState(false);
+  const [isReuploading, setIsReuploading] = useState(false);
+  const reuploadInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleReuploadConfirmClick = () => {
+    setIsReuploadModalOpen(false);
+    if (reuploadInputRef.current) {
+      reuploadInputRef.current.value = "";
+      reuploadInputRef.current.click();
+    }
+  };
+  const handleReuploadFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedSubmissionId || !selectedFormId) return;
+
+    setIsReuploading(true);
+    setParseError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("submissionId", selectedSubmissionId);
+      formData.append("formType", selectedFormId);
+
+      const res = await fetch("/api/records/reupload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setParseError(data.error || "Gagal mengunggah ulang file Excel.");
+        return;
+      }
+
+      setNotification("Berhasil mengunggah ulang berkas Excel! Data lama & bukti fisik telah diperbarui.");
+      setParseError(null);
+
+      // Refresh bukti validasi dari DB
+      setRowValidationFiles({});
+      fetchEvidences(selectedSubmissionId, selectedFormId);
+
+      if (Array.isArray(data.records) && data.records.length > 0) {
+        setTableHeaders(Object.keys(data.records[0]));
+        setTableData(data.records);
+        setActiveFileName(`Database Record (${selectedFormId})`);
+        setIsFromDatabase(true);
+      } else {
+        // Fallback fetch jika data.records tidak dikembalikan
+        const recordsRes = await fetch(
+          `/api/records?submissionId=${encodeURIComponent(selectedSubmissionId)}&formType=${encodeURIComponent(selectedFormId)}&t=${Date.now()}`,
+          { cache: "no-store" }
+        );
+        if (recordsRes.ok) {
+          const recordsData = await recordsRes.json();
+          if (recordsData.success && Array.isArray(recordsData.records) && recordsData.records.length > 0) {
+            setTableHeaders(Object.keys(recordsData.records[0]));
+            setTableData(recordsData.records);
+            setActiveFileName(`Database Record (${selectedFormId})`);
+            setIsFromDatabase(true);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("Error reuploading excel:", err);
+      setParseError("Terjadi kesalahan jaringan atau server saat upload ulang Excel.");
+    } finally {
+      setIsReuploading(false);
+    }
+  };
+
+
 
   // Fetch submissions list (Route is protected server-side via Edge middleware)
   useEffect(() => {
@@ -172,6 +250,7 @@ export default function ValidasiPage() {
       }
 
       const worksheet = workbook.Sheets[firstSheetName];
+      fixWorksheetRange(worksheet);
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
 
       if (!jsonData || jsonData.length === 0) {
@@ -449,6 +528,33 @@ export default function ValidasiPage() {
                 Data ditarik dari file Excel database. Unggah berkas validasi (.pdf) untuk tiap baris record data.
               </p>
             </div>
+
+            {/* Tombol Upload Ulang Excel */}
+            <div className="shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isReuploading || isLoadingExcel}
+                onClick={() => setIsReuploadModalOpen(true)}
+                className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all font-semibold text-xs flex items-center gap-2 rounded-xl px-4 py-2"
+              >
+                {isReuploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 text-red-600" />
+                )}
+                <span>Upload Ulang Excel</span>
+              </Button>
+
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={reuploadInputRef}
+                className="hidden"
+                accept=".xlsx, .xls"
+                onChange={handleReuploadFileChange}
+              />
+            </div>
           </div>
 
           {/* Loading Indicator saat mengambil file dari Database */}
@@ -598,6 +704,57 @@ export default function ValidasiPage() {
             </div>
           )}
         </Card>
+      )}
+
+      {/* Modal Konfirmasi Upload Ulang Excel */}
+      {isReuploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-red-100">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-red-100 text-red-600 rounded-2xl shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Konfirmasi Upload Ulang Data Excel
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Form: {selectedForm?.label}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-red-50/80 border border-red-200/80 rounded-2xl p-4 text-xs text-red-900 space-y-2">
+              <p className="font-bold flex items-center gap-1.5 text-red-700">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                Peringatan Penting Penghapusan Data:
+              </p>
+              <p className="leading-relaxed">
+                Apakah Anda yakin ingin mengupload ulang file Excel untuk form ini? <br />
+                <b className="text-red-700 font-extrabold">Perhatian:</b> Tindakan ini akan <u>menghapus secara permanen</u> semua baris data jawaban beserta seluruh file bukti (evidence) yang telah Anda lampirkan sebelumnya untuk form ini.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsReuploadModalOpen(false)}
+                className="text-slate-600 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold px-4"
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                onClick={handleReuploadConfirmClick}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold px-4 flex items-center gap-2 shadow-sm shadow-red-200"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Ya, Pilih File Baru</span>
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

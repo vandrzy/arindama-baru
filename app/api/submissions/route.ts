@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        respondenIdentity: true,
+        respondenIdentities: true,
         indicatorRecords: true,
         validationEvidences: true,
       },
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     rawFileEntries.sort((a, b) => a.step - b.step);
 
     const aggregatedErrors: ValidationErrorDetail[] = [];
-    let parsedIdentity: ParsedIdentityData | null = null;
+    let parsedIdentities: ParsedIdentityData[] = [];
     const allIndicatorRecords: ParsedIndicatorRecordData[] = [];
 
     // Process each uploaded file sequentially
@@ -179,8 +179,8 @@ export async function POST(request: NextRequest) {
         aggregatedErrors.push(...parseResult.errors);
       }
 
-      if (entry.step === 0 && parseResult.identity) {
-        parsedIdentity = parseResult.identity;
+      if (entry.step === 0 && parseResult.identities) {
+        parsedIdentities = parseResult.identities;
       }
 
       if (parseResult.indicatorRecords.length > 0) {
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if step 0 (Identitas) is missing
-    if (!parsedIdentity) {
+    if (parsedIdentities.length === 0) {
       const hasStep0 = rawFileEntries.some((e) => e.step === 0);
       if (!hasStep0) {
         aggregatedErrors.unshift({
@@ -219,15 +219,15 @@ export async function POST(request: NextRequest) {
           userId: payload.id,
           tahunSurvei: data.tahunSurvei,
           totalIndikatorTerisi: new Set(allIndicatorRecords.map((r) => r.indicatorId)).size,
-          respondenIdentity: {
-            create: parsedIdentity!,
+          respondenIdentities: {
+            create: parsedIdentities,
           },
           indicatorRecords: {
             create: allIndicatorRecords,
           },
         },
         include: {
-          respondenIdentity: true,
+          respondenIdentities: true,
           indicatorRecords: true,
         },
       });

@@ -9,6 +9,7 @@ import { useApp } from "@/lib/context/app-context";
 import { SURVEY_INDICATORS } from "@/lib/constants/survey-data";
 import { FULL_TEMPLATE_NAMES, isValidFileName } from "@/lib/constants/ui-data";
 import * as XLSX from "xlsx";
+import { fixWorksheetRange } from "@/lib/services/excelService";
 import { jsPDF } from "jspdf";
 import {
   CheckCircle2,
@@ -21,6 +22,9 @@ import {
   Hourglass,
   FolderDown,
   Download,
+  Eye,
+  EyeOff,
+  ChevronUp,
 } from "lucide-react";
 
 interface UploadRowProps {
@@ -29,6 +33,7 @@ interface UploadRowProps {
   templateName: string;
   rawFile?: File;
   uploadedFile?: { name: string; size: string };
+  previewRows?: any[];
   stepError?: string;
   onFileSelect: (step: number, file: File | null) => void;
   onRemoveFile: (step: number) => void;
@@ -40,144 +45,238 @@ function UploadRow({
   templateName,
   rawFile,
   uploadedFile,
+  previewRows,
   stepError,
   onFileSelect,
   onRemoveFile,
 }: UploadRowProps) {
   const isError = Boolean(stepError);
   const isSuccess = Boolean(rawFile) && !isError;
+  const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (isSuccess && previewRows && previewRows.length > 0) {
+      setShowPreview(true);
+    } else {
+      setShowPreview(false);
+    }
+  }, [isSuccess, previewRows]);
+
+  const headers = previewRows && previewRows.length > 0 ? Object.keys(previewRows[0]) : [];
 
   return (
-    <label
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        e.preventDefault();
-        const file = e.dataTransfer.files?.[0] || null;
-        if (file) onFileSelect(step, file);
-      }}
-      className={`relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
+    <div
+      className={`rounded-2xl border transition-all ${
         isError
-          ? "bg-red-50/60 border-red-300 hover:border-red-400"
+          ? "bg-red-50/60 border-red-300"
           : isSuccess
-          ? "bg-white border-gray-200 shadow-sm hover:border-emerald-300"
-          : "bg-white border-gray-200 shadow-sm hover:border-emerald-500 hover:bg-emerald-50/20"
+          ? "bg-white border-emerald-200/80 shadow-sm"
+          : "bg-white border-gray-200 shadow-sm hover:border-emerald-500"
       }`}
     >
-      <input
-        type="file"
-        accept=".xlsx, .xls"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0] || null;
-          onFileSelect(step, file);
-          e.target.value = "";
+      <label
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const file = e.dataTransfer.files?.[0] || null;
+          if (file) onFileSelect(step, file);
         }}
-      />
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 cursor-pointer"
+      >
+        <input
+          type="file"
+          accept=".xlsx, .xls"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0] || null;
+            onFileSelect(step, file);
+            e.target.value = "";
+          }}
+        />
 
-      {/* Left section: Icon + Info */}
-      <div className="flex items-start gap-3.5 min-w-0 flex-1">
-        {/* State Icon */}
-        <div className="shrink-0 mt-0.5">
-          {isError ? (
-            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
-              <AlertCircle className="w-5 h-5" />
-            </div>
-          ) : isSuccess ? (
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center font-bold">
-              <Hourglass className="w-5 h-5" />
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="space-y-1 min-w-0 flex-1">
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2 mb-1">
+        {/* Left section: Icon + Info */}
+        <div className="flex items-start gap-3.5 min-w-0 flex-1">
+          {/* State Icon */}
+          <div className="shrink-0 mt-0.5">
             {isError ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-                {stepError}
-              </span>
+              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
+                <AlertCircle className="w-5 h-5" />
+              </div>
             ) : isSuccess ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                Sudah Diunggah &amp; Valid
-              </span>
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-                Belum Diunggah
-              </span>
+              <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center font-bold">
+                <Hourglass className="w-5 h-5" />
+              </div>
             )}
-
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-slate-100/80 text-slate-600 max-w-full break-all">
-              <span className="text-slate-400 font-bold">#</span> Gunakan template resmi: {templateName}
-            </span>
           </div>
 
-          {/* Title */}
-          <h4 className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight">
-            {title}
-          </h4>
+          {/* Info */}
+          <div className="space-y-1 min-w-0 flex-1">
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              {isError ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+                  {stepError}
+                </span>
+              ) : isSuccess ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                  Sudah Diunggah &amp; Valid
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                  Belum Diunggah
+                </span>
+              )}
 
-          {/* Subtitle / Description / File Info */}
-          {isError ? (
-            <p className="text-xs sm:text-sm text-red-600/90 font-medium">
-              Silakan periksa dan unggah kembali file Excel yang sesuai dengan format resmi.
-            </p>
-          ) : isSuccess ? (
-            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
-              <span>
-                File aktif: <strong className="text-slate-700 font-semibold">{uploadedFile?.name || rawFile?.name}</strong>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-slate-100/80 text-slate-600 max-w-full break-all">
+                <span className="text-slate-400 font-bold">#</span> Gunakan template resmi: {templateName}
               </span>
-              <span>•</span>
-              <span className="text-slate-500">{uploadedFile?.size || "Berkas Siap"}</span>
             </div>
-          ) : (
-            <p className="text-xs sm:text-sm text-slate-500">
-              Tarik file Excel ke baris ini atau klik tombol pilih file di kanan
-            </p>
-          )}
-        </div>
-      </div>
 
-      {/* Right Action Button */}
-      <div className="shrink-0 self-end sm:self-center flex items-center gap-2">
-        {isError ? (
-          <span className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
-            <UploadCloud className="w-4 h-4" />
-            Pilih File
-          </span>
-        ) : isSuccess ? (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors">
-              <UploadCloud className="w-4 h-4 text-gray-500" />
-              Ganti File
-            </span>
+            {/* Title */}
+            <h4 className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight">
+              {title}
+            </h4>
+
+            {/* Subtitle / Description / File Info */}
+            {isError ? (
+              <p className="text-xs sm:text-sm text-red-600/90 font-medium">
+                Silakan periksa dan unggah kembali file Excel yang sesuai dengan format resmi.
+              </p>
+            ) : isSuccess ? (
+              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
+                <span>
+                  File aktif: <strong className="text-slate-700 font-semibold">{uploadedFile?.name || rawFile?.name}</strong>
+                </span>
+                <span>•</span>
+                <span className="text-slate-500">{uploadedFile?.size || "Berkas Siap"}</span>
+                {previewRows && previewRows.length > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="text-emerald-700 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-md text-xs">
+                      {previewRows.length} Record Data
+                    </span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs sm:text-sm text-slate-500">
+                Tarik file Excel ke baris ini atau klik tombol pilih file di kanan
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right Action Button */}
+        <div className="shrink-0 self-end sm:self-center flex flex-wrap items-center gap-2">
+          {isSuccess && previewRows && previewRows.length > 0 && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                onRemoveFile(step);
+                setShowPreview(!showPreview);
               }}
-              className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
-              title="Hapus File"
+              className="inline-flex items-center gap-1.5 border border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/70 text-emerald-800 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+              title="Lihat Pratinjau Isi Data Excel"
             >
-              <X className="w-4 h-4" />
+              {showPreview ? <EyeOff className="w-4 h-4 text-emerald-700" /> : <Eye className="w-4 h-4 text-emerald-700" />}
+              <span>{showPreview ? "Tutup Preview" : "Preview Data"}</span>
+            </button>
+          )}
+
+          {isError ? (
+            <span className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
+              <UploadCloud className="w-4 h-4" />
+              Pilih File
+            </span>
+          ) : isSuccess ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors">
+                <UploadCloud className="w-4 h-4 text-gray-500" />
+                Ganti File
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onRemoveFile(step);
+                }}
+                className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                title="Hapus File"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
+              <UploadCloud className="w-4 h-4" />
+              Pilih File
+            </span>
+          )}
+        </div>
+      </label>
+
+      {/* Expandable Preview Section */}
+      {isSuccess && showPreview && previewRows && previewRows.length > 0 && (
+        <div className="border-t border-emerald-100 bg-slate-50/70 p-4 sm:p-5 rounded-b-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4.5 h-4.5 text-emerald-700" />
+              <h5 className="text-xs sm:text-sm font-bold text-gray-900">
+                Pratinjau Isi File Excel ({uploadedFile?.name || rawFile?.name})
+              </h5>
+              <span className="text-[11px] font-semibold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
+                {previewRows.length} Record
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPreview(false)}
+              className="text-xs text-gray-500 hover:text-gray-800 font-medium flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-xs"
+            >
+              <span>Sembunyikan</span>
+              <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
             </button>
           </div>
-        ) : (
-          <span className="inline-flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-colors">
-            <UploadCloud className="w-4 h-4" />
-            Pilih File
-          </span>
-        )}
-      </div>
-    </label>
+
+          <div className="overflow-x-auto max-h-80 border border-gray-200 rounded-xl bg-white shadow-subtle custom-scrollbar">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="sticky top-0 bg-emerald-900 text-white uppercase tracking-wider text-[11px] font-bold z-10">
+                <tr>
+                  <th className="p-3 w-10 text-center border-r border-emerald-800">No</th>
+                  {headers.map((h, i) => (
+                    <th key={i} className="p-3 border-r border-emerald-800 whitespace-nowrap min-w-[130px]">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-800 font-medium">
+                {previewRows.map((row, rIdx) => (
+                  <tr key={rIdx} className="hover:bg-emerald-50/50 transition-colors odd:bg-white even:bg-gray-50/40">
+                    <td className="p-2.5 text-center font-bold text-gray-400 border-r border-gray-100 bg-gray-50/70">
+                      {rIdx + 1}
+                    </td>
+                    {headers.map((h, cIdx) => (
+                      <td key={cIdx} className="p-2.5 border-r border-gray-100 max-w-xs truncate" title={String(row[h] ?? "")}>
+                        {row[h] !== undefined && row[h] !== null && String(row[h]).trim() !== "" ? String(row[h]) : "-"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -269,6 +368,7 @@ export default function KuesionerPage() {
         return;
       }
       const worksheet = workbook.Sheets[firstSheetName];
+      fixWorksheetRange(worksheet);
 
       const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       const nonEmptyRows = rawRows.filter(
@@ -314,7 +414,7 @@ export default function KuesionerPage() {
       const previewJsonData = XLSX.utils.sheet_to_json(worksheet);
       setPreviewData((prev) => ({
         ...prev,
-        [step]: previewJsonData.slice(0, 5),
+        [step]: previewJsonData,
       }));
 
       const fileSize = (file.size / (1024 * 1024)).toFixed(2) + " MB";
@@ -648,6 +748,7 @@ export default function KuesionerPage() {
           templateName={FULL_TEMPLATE_NAMES[0]}
           rawFile={rawFiles[0]}
           uploadedFile={uploadedExcelFiles[0]}
+          previewRows={previewData[0]}
           stepError={stepErrors[0]}
           onFileSelect={handleExcelFileSelected}
           onRemoveFile={handleRemoveFile}
@@ -664,6 +765,7 @@ export default function KuesionerPage() {
               templateName={FULL_TEMPLATE_NAMES[indicator.id]}
               rawFile={rawFiles[stepNum]}
               uploadedFile={uploadedExcelFiles[stepNum]}
+              previewRows={previewData[stepNum]}
               stepError={stepErrors[stepNum]}
               onFileSelect={handleExcelFileSelected}
               onRemoveFile={handleRemoveFile}

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        respondenIdentity: true,
+        respondenIdentities: true,
         indicatorRecords: {
           orderBy: { indicatorId: "asc" },
         },

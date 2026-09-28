@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
           orderBy: { createdAt: "desc" },
           take: 1,
           select: {
-            respondenIdentity: {
+            respondenIdentities: {
               select: {
                 kabupatenKotaAsal: true,
               },
@@ -55,8 +55,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { submissions, ...userBase } = userRaw;
-    const dbKabupaten = userBase.kabupatenKota || submissions[0]?.respondenIdentity?.kabupatenKotaAsal || "";
+    const { submissions, ...userBase } = userRaw as any;
+    const dbKabupaten = userBase.kabupatenKota || submissions?.[0]?.respondenIdentities?.[0]?.kabupatenKotaAsal || "";
 
     const user = {
       ...userBase,

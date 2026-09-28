@@ -31,7 +31,7 @@ export interface ParsedIndicatorRecordData {
 }
 
 export interface ExcelParseResult {
-  identity?: ParsedIdentityData;
+  identities?: ParsedIdentityData[];
   indicatorRecords: ParsedIndicatorRecordData[];
   errors: ValidationErrorDetail[];
 }
@@ -143,6 +143,50 @@ function checkTemplateHeaders(
 }
 
 /**
+ * Ensures worksheet '!ref' boundary covers all actual cells present in the worksheet object.
+ * Fixes issue where edited Excel files with outdated '!ref' metadata fail to read rows after row 1.
+ */
+export function fixWorksheetRange(worksheet: XLSX.WorkSheet): void {
+  if (!worksheet) return;
+
+  let minRow = Infinity;
+  let minCol = Infinity;
+  let maxRow = -1;
+  let maxCol = -1;
+
+  for (const key of Object.keys(worksheet)) {
+    if (key.startsWith("!")) continue;
+    try {
+      const cell = XLSX.utils.decode_cell(key);
+      if (cell.r < minRow) minRow = cell.r;
+      if (cell.c < minCol) minCol = cell.c;
+      if (cell.r > maxRow) maxRow = cell.r;
+      if (cell.c > maxCol) maxCol = cell.c;
+    } catch {
+      // ignore non-cell properties
+    }
+  }
+
+  if (minRow !== Infinity && maxRow !== -1 && minCol !== Infinity && maxCol !== -1) {
+    if (worksheet["!ref"]) {
+      try {
+        const existingRef = XLSX.utils.decode_range(worksheet["!ref"]);
+        minRow = Math.min(minRow, existingRef.s.r);
+        minCol = Math.min(minCol, existingRef.s.c);
+        maxRow = Math.max(maxRow, existingRef.e.r);
+        maxCol = Math.max(maxCol, existingRef.e.c);
+      } catch {
+        // ignore invalid existing !ref
+      }
+    }
+    worksheet["!ref"] = XLSX.utils.encode_range({
+      s: { r: minRow, c: minCol },
+      e: { r: maxRow, c: maxCol },
+    });
+  }
+}
+
+/**
  * Parses and validates a single Excel file on disk.
  */
 export function parseAndValidateExcelFile(
@@ -151,7 +195,7 @@ export function parseAndValidateExcelFile(
   fileName: string
 ): ExcelParseResult {
   const errors: ValidationErrorDetail[] = [];
-  let identity: ParsedIdentityData | undefined;
+  let identities: ParsedIdentityData[] = [];
   const indicatorRecords: ParsedIndicatorRecordData[] = [];
 
   try {
@@ -175,6 +219,9 @@ export function parseAndValidateExcelFile(
       });
       return { indicatorRecords, errors };
     }
+
+    // Fix cell range boundary in case !ref was outdated
+    fixWorksheetRange(worksheet);
 
     const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
@@ -220,53 +267,50 @@ export function parseAndValidateExcelFile(
         return { indicatorRecords, errors };
       }
 
-      // Find first non-empty data row
-      let firstDataRow: any[] | null = null;
-      let firstDataRowIndex = -1;
+      const idxMap = headerCheck.colIndices;
 
       for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
         const row = dataRows[rIdx];
-        if (row && row.some((c) => c !== null && c !== undefined && String(c).trim() !== "")) {
-          firstDataRow = row;
-          firstDataRowIndex = headerRowIndex + 2 + rIdx;
-          break;
+        if (!row || !row.some((c) => c !== null && c !== undefined && String(c).trim() !== "")) {
+          continue; // Skip empty rows
+        }
+
+        const displayRow = headerRowIndex + 2 + rIdx;
+
+        const rawIdentity = {
+          namaLengkap: formatCellValue(row[idxMap["Nama Lengkap & Gelar"]]),
+          jenisKelamin: formatCellValue(row[idxMap["Jenis Kelamin"]]),
+          tanggalLahir: formatCellValue(row[idxMap["Tanggal Lahir"]]),
+          umur: formatCellValue(row[idxMap["Umur"]]),
+          kabupatenKotaAsal: formatCellValue(row[idxMap["Kabupaten/ Kota Asal"]]),
+          kecamatan: formatCellValue(row[idxMap["Kecamatan"]]),
+          pekerjaanJabatan: formatCellValue(row[idxMap["Pekerjaan/ Jabatan di Bidang Olahraga"]]),
+          nomorTelepon: formatCellValue(row[idxMap["Nomor Telepon/ Whatsapp Aktif"]]),
+        };
+
+        const valResult = identitasZodSchema.safeParse(rawIdentity);
+        if (!valResult.success) {
+          for (const issue of valResult.error.issues) {
+            errors.push({
+              file: fileName,
+              step,
+              row: displayRow,
+              field: issue.path.join("."),
+              message: `Baris ${displayRow}: ${issue.message}`,
+            });
+          }
+        } else {
+          identities.push(valResult.data);
         }
       }
 
-      if (!firstDataRow) {
+      if (identities.length === 0 && errors.length === 0) {
         errors.push({
           file: fileName,
           step,
-          message: "Form Identitas Responden tidak memiliki data baris yang terisi.",
+          message: "Form Identitas Responden tidak memiliki data baris yang terisi valid.",
         });
-        return { indicatorRecords, errors };
-      }
-
-      const idxMap = headerCheck.colIndices;
-      const rawIdentity = {
-        namaLengkap: formatCellValue(firstDataRow[idxMap["Nama Lengkap & Gelar"]]),
-        jenisKelamin: formatCellValue(firstDataRow[idxMap["Jenis Kelamin"]]),
-        tanggalLahir: formatCellValue(firstDataRow[idxMap["Tanggal Lahir"]]),
-        umur: formatCellValue(firstDataRow[idxMap["Umur"]]),
-        kabupatenKotaAsal: formatCellValue(firstDataRow[idxMap["Kabupaten/ Kota Asal"]]),
-        kecamatan: formatCellValue(firstDataRow[idxMap["Kecamatan"]]),
-        pekerjaanJabatan: formatCellValue(firstDataRow[idxMap["Pekerjaan/ Jabatan di Bidang Olahraga"]]),
-        nomorTelepon: formatCellValue(firstDataRow[idxMap["Nomor Telepon/ Whatsapp Aktif"]]),
-      };
-
-      const valResult = identitasZodSchema.safeParse(rawIdentity);
-      if (!valResult.success) {
-        for (const issue of valResult.error.issues) {
-          errors.push({
-            file: fileName,
-            step,
-            row: firstDataRowIndex,
-            field: issue.path.join("."),
-            message: `Baris ${firstDataRowIndex}: ${issue.message}`,
-          });
-        }
-      } else {
-        identity = valResult.data;
+        return { indicatorRecords, errors, identities };
       }
     } else {
       // Step 1 to 8: Indicator files
@@ -330,5 +374,5 @@ export function parseAndValidateExcelFile(
     });
   }
 
-  return { identity, indicatorRecords, errors };
+  return { identities, indicatorRecords, errors };
 }

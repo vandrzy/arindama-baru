@@ -151,7 +151,7 @@ export async function getStatistikData({
     where: submissionWhere,
     select: {
       id: true,
-      respondenIdentity: true,
+      respondenIdentities: true,
       indicatorRecords: true,
       validationEvidences: true,
     },
@@ -222,7 +222,7 @@ export async function getStatistikData({
 
   // A. Demografi
   const identitiesRaw = matchingSubmissions
-    .map((s) => s.respondenIdentity)
+    .flatMap((s) => s.respondenIdentities)
     .filter((id): id is NonNullable<typeof id> => Boolean(id));
 
   const identities = identitiesRaw.map((id) => ({
