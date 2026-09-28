@@ -91,9 +91,14 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           >
             <BrandLogo className="w-10 h-10 group-hover:scale-105 transition-transform" />
             <div className="flex flex-col">
-              <span className="text-xl font-extrabold tracking-tight text-brand-primary">
-                IPO Arindama
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-extrabold tracking-tight text-brand-primary">
+                  ARINDAMA
+                </span>
+                <span className="text-[11px] font-bold tracking-widest text-brand-accent uppercase">
+                  Sport Survey
+                </span>
+              </div>
             </div>
           </Link>
 
@@ -138,13 +143,13 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   key={link.href}
                   href={link.href}
                   onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-[1rem] text-sm font-semibold transition-all duration-150 ${
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-[1rem] text-sm font-semibold transition-all duration-150 group ${
                     isActive
-                      ? "bg-[#0a1120] text-white shadow-md shadow-slate-900/10"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                      ? "bg-brand-primary text-white shadow-subtle"
+                      : "text-brand-text-secondary hover:text-brand-primary hover:bg-brand-primary-light"
                   }`}
                 >
-                  <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
+                  <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? "text-white" : "text-slate-400 group-hover:text-brand-primary"}`} />
                   <span>{link.label}</span>
                 </Link>
               );
@@ -173,7 +178,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               <Link
                 href="/login"
                 onClick={onClose}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold bg-[#0a1120] text-white hover:bg-slate-800 transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors shadow-sm"
               >
                 <Users className="w-4 h-4" />
                 <span>Masuk Sistem</span>
