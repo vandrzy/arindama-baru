@@ -241,6 +241,21 @@ export async function getStatistikData({
     sdmPendanaanMap[pendanaan] = (sdmPendanaanMap[pendanaan] || 0) + 1;
   });
 
+  // Fetch Dynamic Weights
+  const dynamicWeights = await prisma.dynamicWeight.findMany();
+  // Map them for easier lookup: map[Tingkat] => { emas, perak, perunggu, partisipasi }
+  const weightMatrix = {
+    Internasional: { emas: 10, perak: 8, perunggu: 5, partisipasi: 0 },
+    Nasional: { emas: 5, perak: 4, perunggu: 3, partisipasi: 0 },
+    Provinsi: { emas: 3, perak: 2, perunggu: 1, partisipasi: 0 },
+  };
+  dynamicWeights.forEach(dw => {
+    const level = normalizeLevel(dw.tingkat);
+    if (level === "Internasional" || level === "Nasional" || level === "Provinsi") {
+      weightMatrix[level] = { emas: dw.emas, perak: dw.perak, perunggu: dw.perunggu, partisipasi: dw.partisipasi };
+    }
+  });
+
   // Indikator 1, 6: Prestasi Atlet
   const atletRecords = allIndicatorRecords.filter((r) => [1, 6].includes(r.indicatorId));
   const medalStats = {
@@ -259,21 +274,16 @@ export async function getStatistikData({
 
     if (medal === "Emas") {
       medalStats[keyLevel].Emas += 1;
-      if (keyLevel === "Internasional") totalBobotScore += 10;
-      else if (keyLevel === "Nasional") totalBobotScore += 5;
-      else totalBobotScore += 3;
+      totalBobotScore += weightMatrix[keyLevel].emas;
     } else if (medal === "Perak") {
       medalStats[keyLevel].Perak += 1;
-      if (keyLevel === "Internasional") totalBobotScore += 8;
-      else if (keyLevel === "Nasional") totalBobotScore += 4;
-      else totalBobotScore += 2;
+      totalBobotScore += weightMatrix[keyLevel].perak;
     } else if (medal === "Perunggu") {
       medalStats[keyLevel].Perunggu += 1;
-      if (keyLevel === "Internasional") totalBobotScore += 5;
-      else if (keyLevel === "Nasional") totalBobotScore += 3;
-      else totalBobotScore += 1;
+      totalBobotScore += weightMatrix[keyLevel].perunggu;
     } else {
       medalStats[keyLevel].Partisipasi += 1;
+      totalBobotScore += weightMatrix[keyLevel].partisipasi;
     }
   });
 
@@ -319,6 +329,7 @@ export async function getStatistikData({
       rawList: attachEvidenceToRecords(atletRecords),
       medalStats,
       totalBobotScore,
+      weightMatrix,
       atletChartData: [
         {
           jenjang: "Internasional",

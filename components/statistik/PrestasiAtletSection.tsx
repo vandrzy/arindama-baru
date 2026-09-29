@@ -133,16 +133,16 @@ export default function PrestasiAtletSection({
                   <span>🌐</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-amber-800 font-semibold">● Emas</span> <strong className="text-gray-900">10 Poin</strong>
+                  <span className="text-amber-800 font-semibold">● Emas</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Internasional?.emas ?? 10} Poin</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-amber-800 font-semibold">● Perak</span> <strong className="text-gray-900">8 Poin</strong>
+                  <span className="text-amber-800 font-semibold">● Perak</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Internasional?.perak ?? 8} Poin</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-amber-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">5 Poin</strong>
+                  <span className="text-amber-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Internasional?.perunggu ?? 5} Poin</strong>
                 </div>
                 <div className="flex justify-between border-t border-amber-200/50 pt-1.5 text-gray-500">
-                  <span>Partisipan</span> <strong>0 Poin</strong>
+                  <span>Partisipan</span> <strong>{activeAtletCalculatedStats.weightMatrix?.Internasional?.partisipasi ?? 0} Poin</strong>
                 </div>
               </div>
 
@@ -153,16 +153,16 @@ export default function PrestasiAtletSection({
                   <span>🚩</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sky-800 font-semibold">● Emas</span> <strong className="text-gray-900">5 Poin</strong>
+                  <span className="text-sky-800 font-semibold">● Emas</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Nasional?.emas ?? 5} Poin</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sky-800 font-semibold">● Perak</span> <strong className="text-gray-900">4 Poin</strong>
+                  <span className="text-sky-800 font-semibold">● Perak</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Nasional?.perak ?? 4} Poin</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sky-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">3 Poin</strong>
+                  <span className="text-sky-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Nasional?.perunggu ?? 3} Poin</strong>
                 </div>
                 <div className="flex justify-between border-t border-sky-200/50 pt-1.5 text-gray-500">
-                  <span>Partisipan</span> <strong>0 Poin</strong>
+                  <span>Partisipan</span> <strong>{activeAtletCalculatedStats.weightMatrix?.Nasional?.partisipasi ?? 0} Poin</strong>
                 </div>
               </div>
 
@@ -173,16 +173,16 @@ export default function PrestasiAtletSection({
                   <span>🏛️</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-emerald-800 font-semibold">● Emas</span> <strong className="text-gray-900">3 Poin</strong>
+                  <span className="text-emerald-800 font-semibold">● Emas</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Provinsi?.emas ?? 3} Poin</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-emerald-800 font-semibold">● Perak</span> <strong className="text-gray-900">2 Poin</strong>
+                  <span className="text-emerald-800 font-semibold">● Perak</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Provinsi?.perak ?? 2} Poin</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-emerald-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">1 Poin</strong>
+                  <span className="text-emerald-800 font-semibold">● Perunggu</span> <strong className="text-gray-900">{activeAtletCalculatedStats.weightMatrix?.Provinsi?.perunggu ?? 1} Poin</strong>
                 </div>
                 <div className="flex justify-between border-t border-emerald-200/50 pt-1.5 text-gray-500">
-                  <span>Partisipan</span> <strong>0 Poin</strong>
+                  <span>Partisipan</span> <strong>{activeAtletCalculatedStats.weightMatrix?.Provinsi?.partisipasi ?? 0} Poin</strong>
                 </div>
               </div>
             </div>

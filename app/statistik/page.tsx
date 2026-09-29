@@ -276,6 +276,12 @@ export default function StatistikPage() {
       if (r.indicatorId === 6) totalAtletCount += 1;
     });
 
+    const weightMatrix = atletData.weightMatrix || {
+      Internasional: { emas: 10, perak: 8, perunggu: 5, partisipasi: 0 },
+      Nasional: { emas: 5, perak: 4, perunggu: 3, partisipasi: 0 },
+      Provinsi: { emas: 3, perak: 2, perunggu: 1, partisipasi: 0 },
+    };
+
     filteredAtletList.forEach((r) => {
       const valLevel = (r.tingkatPenyelenggaraan || "").toLowerCase();
       let keyLevel: "Internasional" | "Nasional" | "Provinsi" = "Provinsi";
@@ -290,21 +296,16 @@ export default function StatistikPage() {
 
       if (medal === "Emas") {
         medalStats[keyLevel].Emas += 1;
-        if (keyLevel === "Internasional") totalBobotScore += 10;
-        else if (keyLevel === "Nasional") totalBobotScore += 5;
-        else totalBobotScore += 3;
+        totalBobotScore += weightMatrix[keyLevel].emas;
       } else if (medal === "Perak") {
         medalStats[keyLevel].Perak += 1;
-        if (keyLevel === "Internasional") totalBobotScore += 8;
-        else if (keyLevel === "Nasional") totalBobotScore += 4;
-        else totalBobotScore += 2;
+        totalBobotScore += weightMatrix[keyLevel].perak;
       } else if (medal === "Perunggu") {
         medalStats[keyLevel].Perunggu += 1;
-        if (keyLevel === "Internasional") totalBobotScore += 5;
-        else if (keyLevel === "Nasional") totalBobotScore += 3;
-        else totalBobotScore += 1;
+        totalBobotScore += weightMatrix[keyLevel].perunggu;
       } else {
         medalStats[keyLevel].Partisipasi += 1;
+        totalBobotScore += weightMatrix[keyLevel].partisipasi;
       }
     });
 
@@ -343,8 +344,9 @@ export default function StatistikPage() {
       perbandinganPelajarAtletStats,
       totalPelajarCount,
       totalAtletCount,
+      weightMatrix,
     };
-  }, [rawAtletList, filteredAtletList]);
+  }, [rawAtletList, filteredAtletList, atletData.weightMatrix]);
 
   // Ambil raw data untuk tabel berdasarkan kategori
   let categoryRawData: any[] = [];
