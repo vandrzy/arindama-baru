@@ -78,7 +78,15 @@ export default function RekapitulasiWilayahPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
-
+      {/* HEADER */}
+      <div className="mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Rekapitulasi Indeks Berjenjang &amp; Validasi
+        </h1>
+        <p className="text-sm sm:text-base text-slate-500 mt-1">
+          Pemantauan berjenjang: Kecamatan → Kabupaten/Kota → Provinsi Kalimantan Timur
+        </p>
+      </div>
 
       {/* CARDS RINGKASAN */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
