@@ -164,3 +164,19 @@ model FileAttachment {
   @@index([submissionId])
   @@map("file_attachments")
 }
+
+// ============================================
+// DYNAMIC WEIGHT MATRIX (Bobot Dinamis)
+// ============================================
+
+model DynamicWeight {
+  id           String   @id @default(cuid())
+  tingkat      String   @unique // "Internasional", "Nasional", "Provinsi"
+  emas         Int      @default(100)
+  perak        Int      @default(75)
+  perunggu     Int      @default(50)
+  partisipasi  Int      @default(25)
+  updatedAt    DateTime @updatedAt
+
+  @@map("dynamic_weights")
+}

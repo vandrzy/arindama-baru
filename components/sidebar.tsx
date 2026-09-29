@@ -14,7 +14,8 @@ import {
   LogOut,
   Users,
   X,
-  UserPlus
+  UserPlus,
+  SlidersHorizontal
 } from "lucide-react";
 
 interface SidebarProps {
@@ -42,6 +43,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             label: "Manajemen Akun",
             icon: Users,
             match: (p: string) => p.startsWith("/dashboard/manajemen-akun"),
+          },
+          {
+            href: "/dashboard/bobot-dinamis",
+            label: "Bobot Dinamis",
+            icon: SlidersHorizontal,
+            match: (p: string) => p.startsWith("/dashboard/bobot-dinamis"),
           },
         ]
       : []),
