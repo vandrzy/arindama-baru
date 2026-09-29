@@ -37,6 +37,8 @@ import {
   Info,
   Filter,
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // List 10 Kabupaten/Kota di Kaltim untuk Sebaran
@@ -69,6 +71,15 @@ export default function KuesionerPage() {
   const [selectedTingkat, setSelectedTingkat] = useState<string>("");
   const [selectedMedali, setSelectedMedali] = useState<string>("");
   const [selectedStatusBerkas, setSelectedStatusBerkas] = useState<string>("");
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
+  // Reset pagination when active indicator or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeIndicatorId, searchQuery, selectedWilayah, selectedTingkat, selectedMedali, selectedStatusBerkas]);
 
   // Evidences state: key = `${submissionId}_ind${indicatorId}_row_${rowIndex}` -> evidence obj
   const [rowValidationFiles, setRowValidationFiles] = useState<
@@ -223,6 +234,13 @@ export default function KuesionerPage() {
   const verifiedEvidencesCount = allRecords.filter((r) => r.evidence).length;
   const pendingReviewCount = allRecords.filter((r) => r.status !== "Disetujui" && r.status !== "Sah").length;
   const verifiedPercentage = totalEntries > 0 ? Math.round((verifiedEvidencesCount / totalEntries) * 100) : 0;
+
+  // Paginated records calculation
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRecords = useMemo(() => {
+    return filteredRecords.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredRecords, startIndex, itemsPerPage]);
 
   // Handle Excel file upload for current indicator
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -806,7 +824,7 @@ export default function KuesionerPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
-                {filteredRecords.map((rec, index) => {
+                {paginatedRecords.map((rec, index) => {
                   const isUploadingPdf = uploadingEvidences[rec.evidenceKey];
                   const hasMedali = activeIndicatorId === 1 || activeIndicatorId === 6;
 
@@ -939,6 +957,86 @@ export default function KuesionerPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Controls Footer */}
+        {!isFetchingSubmissions && filteredRecords.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 text-xs">
+            <div className="text-slate-500 font-medium">
+              Menampilkan <strong className="text-slate-800">{startIndex + 1}</strong> s.d.{" "}
+              <strong className="text-slate-800">
+                {Math.min(startIndex + itemsPerPage, filteredRecords.length)}
+              </strong>{" "}
+              dari <strong className="text-slate-800">{filteredRecords.length}</strong> entri data
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* Button Previous */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                className="h-8 px-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1">Sebelumnya</span>
+              </Button>
+
+              {/* Page Number Buttons */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  if (
+                    totalPages > 5 &&
+                    Math.abs(page - currentPage) > 1 &&
+                    page !== 1 &&
+                    page !== totalPages
+                  ) {
+                    if (
+                      (page === 2 && currentPage > 3) ||
+                      (page === totalPages - 1 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <span key={page} className="px-1 text-slate-400 font-bold">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 rounded-xl font-extrabold text-xs transition-colors ${
+                        currentPage === page
+                          ? "bg-[#04331d] text-white shadow-sm"
+                          : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/60"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Button Next */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                className="h-8 px-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+              >
+                <span className="hidden sm:inline mr-1">Selanjutnya</span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         )}
       </Card>
