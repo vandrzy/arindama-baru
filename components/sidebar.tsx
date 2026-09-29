@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BrandLogo } from "./brand-logo";
 import { useApp } from "@/lib/context/app-context";
 import {
   Home,
@@ -16,7 +15,11 @@ import {
   X,
   UserPlus,
   SlidersHorizontal,
-  Map
+  Map,
+  Activity,
+  ShieldCheck,
+  LayoutGrid,
+  ChevronRight
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,57 +33,89 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { currentUser, logout } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const navLinks = [
+  const isAdmin = currentUser?.role === "ADMIN";
+
+  const mainNavLinks = [
     {
       href: "/dashboard",
-      label: "Dasbor",
-      icon: Home,
+      label: "Dashboard Utama",
+      icon: LayoutGrid,
       match: (p: string) => p === "/dashboard" || p === "/",
     },
-    ...(currentUser?.role === "ADMIN"
+    ...(isAdmin
       ? [
           {
             href: "/dashboard/manajemen-akun",
             label: "Data Responden",
-            icon: Users,
+            icon: UserPlus,
             match: (p: string) => p.startsWith("/dashboard/manajemen-akun"),
-          },
-          {
-            href: "/dashboard/bobot-dinamis",
-            label: "Bobot Dinamis",
-            icon: SlidersHorizontal,
-            match: (p: string) => p.startsWith("/dashboard/bobot-dinamis"),
-          },
-          {
-            href: "/dashboard/rekapitulasi-wilayah",
-            label: "Rekapitulasi Wilayah",
-            icon: Map,
-            match: (p: string) => p.startsWith("/dashboard/rekapitulasi-wilayah"),
           },
         ]
       : []),
     {
       href: "/kuesioner",
       label: "Berkas & Bukti Sah",
-      icon: FileText,
+      icon: FileCheck,
       match: (p: string) => p.startsWith("/kuesioner"),
     },
     {
       href: "/statistik",
       label: "Statistik",
-      icon: BarChart3,
+      icon: FileText,
       match: (p: string) => p.startsWith("/statistik"),
     },
+    ...(isAdmin
+      ? [
+          {
+            href: "/dashboard/rekapitulasi-wilayah",
+            label: "Rekapitulasi Wilayah",
+            icon: BarChart3,
+            match: (p: string) => p.startsWith("/dashboard/rekapitulasi-wilayah"),
+          },
+        ]
+      : []),
   ];
 
-  // Filter links by search query
-  const filteredLinks = navLinks.filter((link) =>
-    link.label.toLowerCase().includes(searchQuery.toLowerCase().trim())
-  );
+  const configLinks = isAdmin
+    ? [
+        {
+          href: "/dashboard/bobot-dinamis",
+          label: "Bobot Dinamis",
+          icon: SlidersHorizontal,
+          match: (p: string) => p.startsWith("/dashboard/bobot-dinamis"),
+        },
+      ]
+    : [];
 
   const handleLogout = async () => {
     if (onClose) onClose();
     await logout();
+  };
+
+  const renderLinks = (links: any[]) => {
+    const filtered = links.filter((link) =>
+      link.label.toLowerCase().includes(searchQuery.toLowerCase().trim())
+    );
+
+    return filtered.map((link) => {
+      const Icon = link.icon;
+      const isActive = link.match(pathname);
+      return (
+        <Link
+          key={link.href}
+          href={link.href}
+          onClick={onClose}
+          className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-150 ${
+            isActive
+              ? "bg-[#0f172a] text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? "text-white" : "text-slate-500"}`} />
+          <span>{link.label}</span>
+        </Link>
+      );
+    });
   };
 
   return (
@@ -100,23 +135,23 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        {/* Branding Header (Paling Atas) */}
-        <div className="p-5 pb-4 border-b border-slate-100 flex items-center justify-between">
+        {/* Branding Header */}
+        <div className="px-5 pt-6 pb-4 flex items-center justify-between">
           <Link
             href="/dashboard"
             onClick={onClose}
             className="flex items-center gap-3 group shrink-0"
           >
-            <BrandLogo className="w-10 h-10 group-hover:scale-105 transition-transform" />
+            <div className="w-12 h-12 bg-[#0f766e] rounded-2xl flex items-center justify-center shadow-sm">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-extrabold tracking-tight text-brand-primary">
-                  ARINDAMA
-                </span>
-                <span className="text-[11px] font-bold tracking-widest text-brand-accent uppercase">
-                  Sport Survey
-                </span>
-              </div>
+              <span className="text-lg font-black tracking-tight text-slate-900">
+                IPO Arindama
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400">
+                Pemerintah Provinsi Kaltim
+              </span>
             </div>
           </Link>
 
@@ -132,76 +167,93 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           )}
         </div>
 
-        {/* Search Bar (Bilah Pencarian Fitur) */}
-        <div className="px-4 pt-4 pb-2">
+        {/* Search Bar */}
+        <div className="px-5 pb-4">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Cari fitur menu..."
+              placeholder="Cari data, menu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50/50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
+              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm font-medium rounded-full border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
             />
           </div>
         </div>
 
-        {/* Menu Navigasi (Tengah - Scrollable) */}
-        <div className="flex-1 overflow-y-auto px-4 mt-4 space-y-1">
-          <div className="text-[11px] font-bold text-slate-400 tracking-wider mb-3 uppercase px-2">
-            MENU UTAMA
-          </div>
-
-          {filteredLinks.length > 0 ? (
-            filteredLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = link.match(pathname);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-[1rem] text-sm font-semibold transition-all duration-150 group ${
-                    isActive
-                      ? "bg-brand-primary text-white shadow-subtle"
-                      : "text-brand-text-secondary hover:text-brand-primary hover:bg-brand-primary-light"
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? "text-white" : "text-slate-400 group-hover:text-brand-primary"}`} />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })
-          ) : (
-            <div className="px-3 py-4 text-center text-xs text-slate-400">
-              Tidak ada fitur menu yang cocok dengan &quot;{searchQuery}&quot;
+        {/* Hak Akses Card */}
+        <div className="px-5 pb-2">
+          <div className="border border-slate-100 rounded-2xl p-3 flex items-center justify-between shadow-sm bg-white">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-0.5">
+                Hak Akses Menu
+              </span>
+              <span className="text-xs font-extrabold text-slate-900">
+                {isAdmin ? "Admin Provinsi" : "Responden"}
+              </span>
             </div>
-          )}
+            <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+            </div>
+          </div>
         </div>
 
-        {/* Bottom Section (Keluar / Masuk Sistem) */}
-        <div className="mt-auto border-t border-slate-100 p-4 bg-white">
+        {/* Menu Navigasi (Tengah - Scrollable) */}
+        <div className="flex-1 overflow-y-auto px-3 mt-2 pb-4 space-y-6">
+          
+          <div className="space-y-2">
+            <div className="text-[10px] font-bold text-slate-400 tracking-widest uppercase px-3 mb-1">
+              {isAdmin ? "Menu Utama Admin" : "Menu Utama"}
+            </div>
+            {renderLinks(mainNavLinks)}
+          </div>
+
+          {configLinks.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[10px] font-bold text-slate-400 tracking-widest uppercase px-3 mb-1">
+                Konfigurasi Sistem
+              </div>
+              {renderLinks(configLinks)}
+            </div>
+          )}
+
+        </div>
+
+        {/* Bottom Section */}
+        <div className="px-5 pb-6 bg-white pt-2 border-t border-slate-50">
+          <div className="bg-slate-50/80 border border-slate-100 rounded-2xl p-4 mb-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-extrabold text-slate-900">Dispora Kaltim</span>
+            </div>
+            <p className="text-[11px] font-semibold text-slate-500 leading-snug">
+              Standar 9 Kategori Kemenpora RI Tahun 2026
+            </p>
+          </div>
+
           {currentUser ? (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold text-slate-700 hover:text-red-700 hover:bg-red-50 transition-colors group"
+              className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors group"
             >
               <div className="flex items-center gap-3">
-                <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-600 transition-colors" />
+                <LogOut className="w-4 h-4" />
                 <span>Keluar Sistem</span>
               </div>
+              <ChevronRight className="w-4 h-4 opacity-50" />
             </button>
           ) : (
-            <div className="space-y-2">
-              <Link
-                href="/login"
-                onClick={onClose}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors shadow-sm"
-              >
+            <Link
+              href="/login"
+              onClick={onClose}
+              className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-emerald-600 hover:text-emerald-800 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
                 <Users className="w-4 h-4" />
                 <span>Masuk Sistem</span>
-              </Link>
-            </div>
+              </div>
+              <ChevronRight className="w-4 h-4 opacity-50" />
+            </Link>
           )}
         </div>
       </aside>
