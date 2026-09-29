@@ -451,7 +451,7 @@ function UserFormContent() {
               className="bg-[#0B3D2E] hover:bg-[#07291F] text-white shadow-md rounded-2xl px-6 py-3 text-xs sm:text-sm font-bold flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              <span>{isEditMode ? "Simpan Perubahan" : "Buat Akun"}</span>
+              <span>{isEditMode ? "Simpan Perubahan" : "Tambah Responden"}</span>
             </Button>
           </div>
         </form>

@@ -55,6 +55,38 @@ const KALTIM_REGIONS = [
   { name: "Mahakam Ulu", desc: "Wilayah Ujoh Bilang" },
 ];
 
+// Default Fallback Dynamic Weights Matrix
+const DEFAULT_WEIGHTS = [
+  { tingkat: "Internasional", emas: 100, perak: 75, perunggu: 50, partisipasi: 25 },
+  { tingkat: "Nasional", emas: 60, perak: 45, perunggu: 30, partisipasi: 15 },
+  { tingkat: "Provinsi", emas: 30, perak: 20, perunggu: 15, partisipasi: 10 },
+];
+
+function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
+  if (!rec) return 0;
+  const tingkatStr = (rec.tingkatPenyelenggaraan || "").toLowerCase();
+
+  let matchedRow = dynamicWeightsList.find((w: any) =>
+    tingkatStr.includes((w.tingkat || "").toLowerCase())
+  );
+  if (!matchedRow) {
+    matchedRow = dynamicWeightsList.find((w: any) => w.tingkat === "Provinsi") || {
+      tingkat: "Provinsi",
+      emas: 30,
+      perak: 20,
+      perunggu: 15,
+      partisipasi: 10,
+    };
+  }
+
+  const medaliStr = (rec.medali || "").toLowerCase();
+  if (medaliStr.includes("emas")) return Number(matchedRow.emas);
+  if (medaliStr.includes("perak")) return Number(matchedRow.perak);
+  if (medaliStr.includes("perunggu")) return Number(matchedRow.perunggu);
+
+  return Number(matchedRow.partisipasi);
+}
+
 export default function KuesionerPage() {
   const { currentUser, isLoading: isSessionLoading } = useApp();
 
@@ -64,6 +96,23 @@ export default function KuesionerPage() {
   // Submissions & Database Records States
   const [submissionsList, setSubmissionsList] = useState<any[]>([]);
   const [isFetchingSubmissions, setIsFetchingSubmissions] = useState<boolean>(true);
+
+  // Dynamic Weights Matrix State
+  const [dynamicWeights, setDynamicWeights] = useState<any[]>(DEFAULT_WEIGHTS);
+
+  const loadDynamicWeights = async () => {
+    try {
+      const res = await fetch("/api/bobot-dinamis");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.weights) && data.weights.length > 0) {
+          setDynamicWeights(data.weights);
+        }
+      }
+    } catch (e) {
+      console.error("Gagal mengambil data bobot dinamis:", e);
+    }
+  };
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -126,13 +175,23 @@ export default function KuesionerPage() {
     }
   };
 
-  // Excel Upload State
+  // Excel Upload State & Warning Modal
   const [isUploadingExcel, setIsUploadingExcel] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
+  const [showReuploadWarningModal, setShowReuploadWarningModal] = useState<boolean>(false);
 
   // Re-upload Excel Input Ref
   const excelFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Trigger Excel Upload Handler (Shows Warning Modal if data already exists)
+  const handleTriggerExcelUpload = () => {
+    if (allRecords && allRecords.length > 0) {
+      setShowReuploadWarningModal(true);
+    } else {
+      excelFileInputRef.current?.click();
+    }
+  };
 
   // Fetch all submissions from backend
   const loadSubmissions = async () => {
@@ -178,6 +237,7 @@ export default function KuesionerPage() {
 
   useEffect(() => {
     loadSubmissions();
+    loadDynamicWeights();
   }, []);
 
   const currentIndicator = useMemo(() => {
@@ -248,8 +308,13 @@ export default function KuesionerPage() {
 
       // Filter Medali (Only active for Indicator 1 & 6)
       if ((activeIndicatorId === 1 || activeIndicatorId === 6) && selectedMedali) {
-        if (!rec.medali || !rec.medali.toLowerCase().includes(selectedMedali.toLowerCase())) {
-          return false;
+        if (!rec.medali) return false;
+        const medaliLower = rec.medali.toLowerCase();
+        const selLower = selectedMedali.toLowerCase();
+        if (selLower === "partisipan") {
+          if (!medaliLower.includes("partisip")) return false;
+        } else {
+          if (!medaliLower.includes(selLower)) return false;
         }
       }
 
@@ -267,8 +332,13 @@ export default function KuesionerPage() {
   // Stats calculation
   const totalEntries = allRecords.length;
   const verifiedEvidencesCount = allRecords.filter((r) => r.evidence).length;
-  const pendingReviewCount = allRecords.filter((r) => r.status !== "Disetujui" && r.status !== "Sah").length;
+  const pendingReviewCount = allRecords.filter((r) => r.status !== "Disetujui" && r.status !== "Sah" && r.status !== "Sah & Terverifikasi").length;
   const verifiedPercentage = totalEntries > 0 ? Math.round((verifiedEvidencesCount / totalEntries) * 100) : 0;
+
+  // Total accumulated dynamic weight points for category card
+  const totalCategoryPoints = useMemo(() => {
+    return allRecords.reduce((sum, rec) => sum + calculateRecordPoints(rec, dynamicWeights), 0);
+  }, [allRecords, dynamicWeights]);
 
   // Paginated records calculation
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage));
@@ -608,19 +678,21 @@ export default function KuesionerPage() {
 
           {/* Action Buttons: Unggah Excel & Unduh Format (Dua Tombol) */}
           <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0 self-start lg:self-center">
-            <Button
-              type="button"
-              disabled={isUploadingExcel}
-              onClick={() => excelFileInputRef.current?.click()}
-              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs px-5 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02]"
-            >
-              {isUploadingExcel ? (
-                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-              ) : (
-                <UploadCloud className="w-4 h-4 text-slate-950" />
-              )}
-              <span>Unggah Excel Indikator-{String(activeIndicatorId).padStart(2, "0")}</span>
-            </Button>
+            {currentUser?.role !== "ADMIN" && (
+              <Button
+                type="button"
+                disabled={isUploadingExcel}
+                onClick={handleTriggerExcelUpload}
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs px-5 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02]"
+              >
+                {isUploadingExcel ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                ) : (
+                  <UploadCloud className="w-4 h-4 text-slate-950" />
+                )}
+                <span>Unggah Excel Indikator-{String(activeIndicatorId).padStart(2, "0")}</span>
+              </Button>
+            )}
 
             <Button
               type="button"
@@ -691,7 +763,7 @@ export default function KuesionerPage() {
           </div>
         </Card>
 
-        {/* Card 4: Skor Indeks Kategori (HANYA UNTUK INDIKATOR 1 DAN 6) */}
+        {/* Card 4: Skor Indeks Kategori (Mentotal Jumlah Bobot/Poin yang Didapatkan) */}
         {(activeIndicatorId === 1 || activeIndicatorId === 6) && (
           <Card className="p-5 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
@@ -701,10 +773,10 @@ export default function KuesionerPage() {
               </div>
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">0.790</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">{totalCategoryPoints} Poin</div>
               <p className="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                <span>Kategori Indeks: Tinggi</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span>Akumulasi Total Bobot Dinamis</span>
               </p>
             </div>
           </Card>
@@ -766,6 +838,7 @@ export default function KuesionerPage() {
               <option value="Emas">Medali Emas</option>
               <option value="Perak">Medali Perak</option>
               <option value="Perunggu">Medali Perunggu</option>
+              <option value="partisipan">Partisipan</option>
             </select>
           )}
 
@@ -816,16 +889,18 @@ export default function KuesionerPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              type="button"
-              onClick={() => excelFileInputRef.current?.click()}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2"
-            >
-              <UploadCloud className="w-4 h-4" />
-              <span>Unggah Excel</span>
-            </Button>
-          </div>
+          {currentUser?.role !== "ADMIN" && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                onClick={handleTriggerExcelUpload}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2"
+              >
+                <UploadCloud className="w-4 h-4" />
+                <span>Unggah Excel</span>
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Loading Spinner */}
@@ -837,9 +912,15 @@ export default function KuesionerPage() {
         ) : filteredRecords.length === 0 ? (
           <div className="py-16 text-center space-y-3 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
             <FileSpreadsheet className="w-12 h-12 text-slate-400 mx-auto" />
-            <h4 className="text-sm font-bold text-slate-800">Belum ada data submisi terunggah</h4>
+            <h4 className="text-sm font-bold text-slate-800">
+              {allRecords.length > 0 || searchQuery || selectedWilayah || selectedTingkat || selectedMedali || selectedStatusBerkas
+                ? "Data yang sesuai tidak ditemukan"
+                : "Belum ada data submisi terunggah"}
+            </h4>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Silakan unggah berkas Excel sesuai dengan template resmi untuk mengisikan data pada Indikator-{String(activeIndicatorId).padStart(2, "0")}.
+              {allRecords.length > 0 || searchQuery || selectedWilayah || selectedTingkat || selectedMedali || selectedStatusBerkas
+                ? "Silakan coba ubah kata kunci pencarian atau sesuaikan opsi filter Anda."
+                : `Silakan unggah berkas Excel sesuai dengan template resmi untuk mengisikan data pada Indikator-${String(activeIndicatorId).padStart(2, "0")}.`}
             </p>
           </div>
         ) : (
@@ -906,8 +987,8 @@ export default function KuesionerPage() {
                       {/* BOBOT */}
                       {(activeIndicatorId === 1 || activeIndicatorId === 6) && (
                         <td className="py-3.5 px-4 text-center font-bold text-slate-700">
-                          <span className="inline-block px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs">
-                            {currentIndicator.bobotNilai * 20} pts
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-extrabold">
+                            {calculateRecordPoints(rec, dynamicWeights)} pts
                           </span>
                         </td>
                       )}
@@ -1312,6 +1393,46 @@ export default function KuesionerPage() {
                   </a>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 8. MODAL PERINGATAN UNGGAH ULANG EXCEL */}
+      {showReuploadWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-slate-200 relative text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto ring-4 ring-amber-50">
+              <AlertTriangle className="w-7 h-7 text-amber-600" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-base font-extrabold text-slate-900">
+                Peringatan Unggah Ulang Excel
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Anda sudah memiliki data yang terunggah pada <strong className="text-slate-900">Indikator-{String(activeIndicatorId).padStart(2, "0")}</strong>. Mengunggah berkas Excel baru akan <strong className="text-rose-600 font-bold">menghapus dan menggantikan seluruh data lama</strong> pada indikator ini.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowReuploadWarningModal(false)}
+                className="w-1/2 rounded-xl text-xs font-semibold py-2.5 h-10 border-slate-200"
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowReuploadWarningModal(false);
+                  excelFileInputRef.current?.click();
+                }}
+                className="w-1/2 rounded-xl text-xs font-bold py-2.5 h-10 bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
+              >
+                Lanjutkan Unggah
+              </Button>
             </div>
           </div>
         </div>
