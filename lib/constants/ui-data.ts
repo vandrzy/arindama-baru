@@ -26,12 +26,6 @@ export interface FlowStepItem {
 export const SURVEY_TEMPLATES: SurveyTemplateItem[] = [
   {
     id: 1,
-    title: "Identitas Responden",
-    file: "IdentitasResponden_Fixed.xlsx",
-    desc: "Form isian profil instansi, kontak penanggung jawab, dan data wilayah administratif.",
-  },
-  {
-    id: 2,
     title: "Indikator 1: Kejuaraan Pelajar",
     file: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx",
     desc: "Data partisipasi dan perolehan medali pada kejuaraan pelajar tingkat nasional & internasional.",

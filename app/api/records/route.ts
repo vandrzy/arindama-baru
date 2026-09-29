@@ -41,69 +41,22 @@ export async function GET(request: NextRequest) {
 
     const indicatorIdNum = parseInt(formType);
 
-    if (indicatorIdNum === 0 || formType === "IdentitasResponden") {
-      const totalCount = await prisma.respondenIdentity.count({
-        where: { submissionId },
-      });
+    const totalCount = await prisma.indicatorRecord.count({
+      where: {
+        submissionId,
+        indicatorId: indicatorIdNum,
+      },
+    });
 
-      const queryOpts: any = {
-        where: { submissionId },
-        orderBy: { createdAt: "asc" },
-      };
-
-      if (limit > 0) {
-        queryOpts.take = limit;
-        queryOpts.skip = skip;
-      }
-
-      // Fetch Responden Identity
-      const identities = await prisma.respondenIdentity.findMany(queryOpts);
-
-      if (!identities || identities.length === 0) {
-        return NextResponse.json({
-          success: true,
-          records: [],
-          totalRecords: totalCount,
-          currentPage: page,
-          totalPages: limit > 0 ? Math.ceil(totalCount / limit) : 1,
-        });
-      }
-
-      const formattedRecords = identities.map((identity) => ({
-        "Nama Lengkap & Gelar": identity.namaLengkap,
-        "Jenis Kelamin": identity.jenisKelamin,
-        "Tanggal Lahir": identity.tanggalLahir,
-        "Umur": identity.umur,
-        "Kabupaten/ Kota Asal": identity.kabupatenKotaAsal,
-        "Kecamatan": identity.kecamatan,
-        "Pekerjaan/ Jabatan di Bidang Olahraga": identity.pekerjaanJabatan,
-        "Nomor Telepon/ Whatsapp Aktif": identity.nomorTelepon,
-      }));
-
-      return NextResponse.json({
-        success: true,
-        records: formattedRecords,
-        totalRecords: totalCount,
-        currentPage: page,
-        totalPages: limit > 0 ? Math.ceil(totalCount / limit) : 1,
-      });
-    } else {
-      const totalCount = await prisma.indicatorRecord.count({
-        where: {
-          submissionId,
-          indicatorId: indicatorIdNum,
-        },
-      });
-
-      const queryOpts: any = {
-        where: {
-          submissionId,
-          indicatorId: indicatorIdNum,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      };
+    const queryOpts: any = {
+      where: {
+        submissionId,
+        indicatorId: indicatorIdNum,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    };
 
       if (limit > 0) {
         queryOpts.take = limit;
@@ -126,6 +79,7 @@ export async function GET(request: NextRequest) {
         }
 
         item["Uraian Capaian"] = rec.uraianCapaian;
+        item["Status"] = rec.status;
         return item;
       });
 
@@ -136,7 +90,6 @@ export async function GET(request: NextRequest) {
         currentPage: page,
         totalPages: limit > 0 ? Math.ceil(totalCount / limit) : 1,
       });
-    }
   } catch (error) {
     console.error("Get records error:", error);
     return NextResponse.json(

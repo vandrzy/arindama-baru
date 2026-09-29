@@ -50,25 +50,15 @@ export function normalizeMedal(val?: string): string {
  * Optimized retrieval of admin UI filter dropdown options using SQL pushdown (distinct & select)
  */
 export async function getAdminFiltersData(paramKota?: string, paramInstansi?: string) {
-  const [userKota, identityKota] = await Promise.all([
-    prisma.user.findMany({
-      where: { kabupatenKota: { not: "" } },
-      distinct: ["kabupatenKota"],
-      select: { kabupatenKota: true },
-    }),
-    prisma.respondenIdentity.findMany({
-      where: { kabupatenKotaAsal: { not: "" } },
-      distinct: ["kabupatenKotaAsal"],
-      select: { kabupatenKotaAsal: true },
-    }),
-  ]);
+  const userKota = await prisma.user.findMany({
+    where: { kabupatenKota: { not: "" } },
+    distinct: ["kabupatenKota"],
+    select: { kabupatenKota: true },
+  });
 
   const uniqueKotaSet = new Set<string>(KABUPATEN_KOTA_OPTIONS);
   userKota.forEach((u) => {
     if (u.kabupatenKota?.trim()) uniqueKotaSet.add(u.kabupatenKota.trim());
-  });
-  identityKota.forEach((i) => {
-    if (i.kabupatenKotaAsal?.trim()) uniqueKotaSet.add(i.kabupatenKotaAsal.trim());
   });
   const listKota = Array.from(uniqueKotaSet).sort();
 
@@ -151,7 +141,6 @@ export async function getStatistikData({
     where: submissionWhere,
     select: {
       id: true,
-      respondenIdentities: true,
       indicatorRecords: true,
       validationEvidences: true,
     },
@@ -169,12 +158,6 @@ export async function getStatistikData({
       }
       if (ev.formType) {
         evidenceMap.set(`${s.id}:${ev.formType}`, ev);
-        
-        // Alias mappings for formType
-        if (ev.formType === "0" || ev.formType === "identitas") {
-          evidenceMap.set(`${s.id}:0`, ev);
-          evidenceMap.set(`${s.id}:identitas`, ev);
-        }
 
         const numMatch = ev.formType.match(/^(?:indikator[_-]?)?([1-8])$/i);
         if (numMatch) {
@@ -189,16 +172,6 @@ export async function getStatistikData({
       }
     });
   });
-
-  const getEvidenceForIdentity = (submissionId: string, id: string) => {
-    return (
-      evidenceMap.get(`${submissionId}:${id}`) ||
-      evidenceMap.get(`${submissionId}:0`) ||
-      evidenceMap.get(`${submissionId}:identitas`) ||
-      evidenceMap.get(`${submissionId}:row_0`) ||
-      null
-    );
-  };
 
   const getEvidenceForRecord = (
     submissionId: string,
@@ -219,56 +192,6 @@ export async function getStatistikData({
       null
     );
   };
-
-  // A. Demografi
-  const identitiesRaw = matchingSubmissions
-    .flatMap((s) => s.respondenIdentities)
-    .filter((id): id is NonNullable<typeof id> => Boolean(id));
-
-  const identities = identitiesRaw.map((id) => ({
-    ...id,
-    validationEvidence: getEvidenceForIdentity(id.submissionId, id.id),
-  }));
-
-  const totalResponden = identities.length;
-
-  const jenisKelaminStats = [
-    { name: "Laki-laki", value: 0 },
-    { name: "Perempuan", value: 0 },
-  ];
-  const umurStats: Record<string, number> = {
-    "< 20 Tahun": 0,
-    "20 - 30 Tahun": 0,
-    "31 - 40 Tahun": 0,
-    "41 - 50 Tahun": 0,
-    "> 50 Tahun": 0,
-  };
-  const pekerjaanMap: Record<string, number> = {};
-  const kotaMap: Record<string, number> = {};
-
-  identities.forEach((id) => {
-    const jk = (id.jenisKelamin || "").toLowerCase();
-    if (jk.includes("perempuan") || jk.includes("wanita") || jk === "p") {
-      jenisKelaminStats[1].value += 1;
-    } else {
-      jenisKelaminStats[0].value += 1;
-    }
-
-    const u = parseInt(id.umur) || 0;
-    if (u > 0) {
-      if (u < 20) umurStats["< 20 Tahun"] += 1;
-      else if (u <= 30) umurStats["20 - 30 Tahun"] += 1;
-      else if (u <= 40) umurStats["31 - 40 Tahun"] += 1;
-      else if (u <= 50) umurStats["41 - 50 Tahun"] += 1;
-      else umurStats["> 50 Tahun"] += 1;
-    }
-
-    const pk = id.pekerjaanJabatan || "Tidak Diisi";
-    pekerjaanMap[pk] = (pekerjaanMap[pk] || 0) + 1;
-
-    const kt = id.kabupatenKotaAsal || "Tidak Diisi";
-    kotaMap[kt] = (kotaMap[kt] || 0) + 1;
-  });
 
   // B. Indicators Processing
   const allIndicatorRecords = matchingSubmissions.flatMap((s) => s.indicatorRecords);
@@ -379,15 +302,6 @@ export async function getStatistikData({
   });
 
   return {
-    demografi: {
-      totalResponden,
-      identitiesList: identities,
-      rawList: identities,
-      jenisKelaminStats,
-      umurStats: Object.entries(umurStats).map(([name, value]) => ({ name, value })),
-      pekerjaanStats: Object.entries(pekerjaanMap).map(([name, value]) => ({ name, value })),
-      kotaStats: Object.entries(kotaMap).map(([name, value]) => ({ name, value })),
-    },
     mutuSDM: {
       totalRecords: mutuRecords.length,
       rawList: attachEvidenceToRecords(mutuRecords),

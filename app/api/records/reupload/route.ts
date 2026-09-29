@@ -82,13 +82,18 @@ export async function POST(request: NextRequest) {
     }
 
     const stepNum = parseInt(formType);
-    const isIdentity = stepNum === 0 || formType === "IdentitasResponden";
+    if (isNaN(stepNum) || stepNum < 1 || stepNum > 8) {
+      return NextResponse.json(
+        { error: "formType indikator tidak valid (harus 1 s.d. 8)." },
+        { status: 400 }
+      );
+    }
 
     // Convert file to Buffer for parsing
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    // Validasi Excel menggunakan excelService (pass fileBuffer, stepNum, file.name)
-    const validationResult = parseAndValidateExcelFile(fileBuffer, isNaN(stepNum) ? 0 : stepNum, file.name);
+    // Validasi Excel menggunakan excelService
+    const validationResult = parseAndValidateExcelFile(fileBuffer, stepNum, file.name);
     
     if (validationResult.errors.length > 0) {
       const errorMsg = validationResult.errors.map((e) => e.message).join(" | ");
@@ -98,20 +103,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (isIdentity && (!validationResult.identities || validationResult.identities.length === 0)) {
+    if (!validationResult.indicatorRecords || validationResult.indicatorRecords.length === 0) {
       return NextResponse.json(
-        { error: "File Excel tidak berisi data Identitas Responden yang valid." },
+        { error: `File Excel tidak berisi baris data untuk Indikator ${stepNum}.` },
         { status: 400 }
       );
-    }
-
-    if (!isIdentity) {
-      if (!validationResult.indicatorRecords || validationResult.indicatorRecords.length === 0) {
-        return NextResponse.json(
-          { error: `File Excel tidak berisi baris data untuk Indikator ${stepNum}.` },
-          { status: 400 }
-        );
-      }
     }
 
     // Ambil bukti validasi (evidence) lama untuk dihapus filenya setelah DB transaction berhasil
@@ -133,65 +129,40 @@ export async function POST(request: NextRequest) {
       });
 
       // 2. Hapus data record lama & Simpan data record baru
-      if (isIdentity) {
-        await tx.respondenIdentity.deleteMany({
-          where: { submissionId },
-        });
-
-        if (validationResult.identities && validationResult.identities.length > 0) {
-          await tx.respondenIdentity.createMany({
-            data: validationResult.identities.map(id => ({
-              submissionId,
-              namaLengkap: id.namaLengkap,
-              jenisKelamin: id.jenisKelamin,
-              tanggalLahir: id.tanggalLahir,
-              umur: id.umur,
-              kabupatenKotaAsal: id.kabupatenKotaAsal,
-              kecamatan: id.kecamatan,
-              pekerjaanJabatan: id.pekerjaanJabatan,
-              nomorTelepon: id.nomorTelepon,
-            })),
-          });
-        }
-      } else {
-        await tx.indicatorRecord.deleteMany({
-          where: {
-            submissionId,
-            indicatorId: stepNum,
-          },
-        });
-
-        const recordsToInsert = (validationResult.indicatorRecords || []).map((rec: ParsedIndicatorRecordData) => ({
+      await tx.indicatorRecord.deleteMany({
+        where: {
           submissionId,
           indicatorId: stepNum,
-          namaKegiatan: rec.namaKegiatan,
-          cabangOlahraga: rec.cabangOlahraga,
-          tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan,
-          sumberPendanaan: rec.sumberPendanaan,
-          medali: rec.medali || null,
-          uraianCapaian: rec.uraianCapaian,
-        }));
+        },
+      });
 
-        if (recordsToInsert.length > 0) {
-          await tx.indicatorRecord.createMany({
-            data: recordsToInsert,
-          });
-        }
+      const recordsToInsert = (validationResult.indicatorRecords || []).map((rec: ParsedIndicatorRecordData) => ({
+        submissionId,
+        indicatorId: stepNum,
+        namaKegiatan: rec.namaKegiatan,
+        cabangOlahraga: rec.cabangOlahraga,
+        tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan,
+        sumberPendanaan: rec.sumberPendanaan,
+        medali: rec.medali || null,
+        uraianCapaian: rec.uraianCapaian,
+      }));
+
+      if (recordsToInsert.length > 0) {
+        await tx.indicatorRecord.createMany({
+          data: recordsToInsert,
+        });
       }
 
       // 3. Update total indikator terisi pada submission
-      const filledIdentity = await tx.respondenIdentity.findFirst({ where: { submissionId } });
       const filledIndicators = await tx.indicatorRecord.groupBy({
         by: ["indicatorId"],
         where: { submissionId },
       });
 
-      const newTotalTerisi = (filledIdentity ? 1 : 0) + filledIndicators.length;
-
       await tx.submission.update({
         where: { id: submissionId },
         data: {
-          totalIndikatorTerisi: newTotalTerisi,
+          totalIndikatorTerisi: filledIndicators.length,
         },
       });
     });
@@ -214,38 +185,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Ambil data terbaru yang tersimpan untuk dikembalikan langsung ke client
-    let latestRecords: Record<string, any>[] = [];
-    if (isIdentity) {
-      const identities = await prisma.respondenIdentity.findMany({ where: { submissionId }, orderBy: { createdAt: "asc" } });
-      latestRecords = identities.map(identity => ({
-        "Nama Lengkap & Gelar": identity.namaLengkap,
-        "Jenis Kelamin": identity.jenisKelamin,
-        "Tanggal Lahir": identity.tanggalLahir,
-        "Umur": identity.umur,
-        "Kabupaten/ Kota Asal": identity.kabupatenKotaAsal,
-        "Kecamatan": identity.kecamatan,
-        "Pekerjaan/ Jabatan di Bidang Olahraga": identity.pekerjaanJabatan,
-        "Nomor Telepon/ Whatsapp Aktif": identity.nomorTelepon,
-      }));
-    } else {
-      const dbRecords = await prisma.indicatorRecord.findMany({
-        where: { submissionId, indicatorId: stepNum },
-        orderBy: { createdAt: "asc" },
-      });
-      latestRecords = dbRecords.map((rec) => {
-        const item: Record<string, any> = {
-          "Nama Kegiatan/ Kejuaraan Olahraga": rec.namaKegiatan,
-          "Cabang Olahraga": rec.cabangOlahraga,
-          "Tingkat Penyelenggaraan": rec.tingkatPenyelenggaraan,
-          "Sumber Pendanaan": rec.sumberPendanaan,
-        };
-        if (stepNum === 1 || stepNum === 6) {
-          item["Medali"] = rec.medali || "-";
-        }
-        item["Uraian Capaian"] = rec.uraianCapaian;
-        return item;
-      });
-    }
+    const dbRecords = await prisma.indicatorRecord.findMany({
+      where: { submissionId, indicatorId: stepNum },
+      orderBy: { createdAt: "asc" },
+    });
+    const latestRecords = dbRecords.map((rec) => {
+      const item: Record<string, any> = {
+        "Nama Kegiatan/ Kejuaraan Olahraga": rec.namaKegiatan,
+        "Cabang Olahraga": rec.cabangOlahraga,
+        "Tingkat Penyelenggaraan": rec.tingkatPenyelenggaraan,
+        "Sumber Pendanaan": rec.sumberPendanaan,
+      };
+      if (stepNum === 1 || stepNum === 6) {
+        item["Medali"] = rec.medali || "-";
+      }
+      item["Uraian Capaian"] = rec.uraianCapaian;
+      item["Status"] = rec.status;
+      return item;
+    });
 
     return NextResponse.json({
       success: true,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { verifyJwtToken } from "@/lib/auth";
-import { parseAndValidateExcelFile, ValidationErrorDetail, ParsedIdentityData, ParsedIndicatorRecordData } from "@/lib/services/excelService";
+import { parseAndValidateExcelFile, ValidationErrorDetail, ParsedIndicatorRecordData } from "@/lib/services/excelService";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
@@ -71,7 +71,6 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        respondenIdentities: true,
         indicatorRecords: true,
         validationEvidences: true,
       },
@@ -163,7 +162,6 @@ export async function POST(request: NextRequest) {
     rawFileEntries.sort((a, b) => a.step - b.step);
 
     const aggregatedErrors: ValidationErrorDetail[] = [];
-    let parsedIdentities: ParsedIdentityData[] = [];
     const allIndicatorRecords: ParsedIndicatorRecordData[] = [];
 
     // Process each uploaded file sequentially
@@ -179,24 +177,8 @@ export async function POST(request: NextRequest) {
         aggregatedErrors.push(...parseResult.errors);
       }
 
-      if (entry.step === 0 && parseResult.identities) {
-        parsedIdentities = parseResult.identities;
-      }
-
       if (parseResult.indicatorRecords.length > 0) {
         allIndicatorRecords.push(...parseResult.indicatorRecords);
-      }
-    }
-
-    // Check if step 0 (Identitas) is missing
-    if (parsedIdentities.length === 0) {
-      const hasStep0 = rawFileEntries.some((e) => e.step === 0);
-      if (!hasStep0) {
-        aggregatedErrors.unshift({
-          file: "Form Identitas Responden",
-          step: 0,
-          message: "Form Identitas Responden (file 0) wajib diunggah.",
-        });
       }
     }
 
@@ -219,15 +201,11 @@ export async function POST(request: NextRequest) {
           userId: payload.id,
           tahunSurvei: data.tahunSurvei,
           totalIndikatorTerisi: new Set(allIndicatorRecords.map((r) => r.indicatorId)).size,
-          respondenIdentities: {
-            create: parsedIdentities,
-          },
           indicatorRecords: {
             create: allIndicatorRecords,
           },
         },
         include: {
-          respondenIdentities: true,
           indicatorRecords: true,
         },
       });

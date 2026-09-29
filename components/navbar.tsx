@@ -64,12 +64,6 @@ export function Navbar() {
       match: (p: string) => p.startsWith("/kuesioner"),
     });
     navLinks.push({
-      href: "/validasi",
-      label: "Validasi",
-      icon: FileCheck,
-      match: (p: string) => p.startsWith("/validasi"),
-    });
-    navLinks.push({
       href: "/statistik",
       label: "Statistik",
       icon: BarChart3,

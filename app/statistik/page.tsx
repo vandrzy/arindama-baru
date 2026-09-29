@@ -30,9 +30,6 @@ import {
 } from "lucide-react";
 import { KABUPATEN_KOTA_OPTIONS, INSTANSI_OPTIONS } from "@/lib/constants/survey-data";
 
-const DemografiSection = dynamic(() => import("@/components/statistik/DemografiSection"), {
-  loading: () => <Throbber message="Memuat statistik demografi..." />,
-});
 const MutuSDMSection = dynamic(() => import("@/components/statistik/MutuSDMSection"), {
   loading: () => <Throbber message="Memuat statistik mutu SDM..." />,
 });
@@ -68,7 +65,6 @@ const MEDAL_COLORS = {
 };
 
 type CategoryKey =
-  | "demografi"
   | "mutuSDM"
   | "kinerjaSDM"
   | "prestasiAtlet"
@@ -83,15 +79,8 @@ const CATEGORIES: Array<{
   description: string;
 }> = [
   {
-    key: "demografi",
-    label: "1. Demografi SDM Olahraga",
-    shortLabel: "Demografi SDM",
-    icon: Users,
-    description: "Profil identitas responden: sebaran jenis kelamin dan kelompok usia.",
-  },
-  {
     key: "mutuSDM",
-    label: "2. Peningkatan Mutu SDM",
+    label: "1. Peningkatan Mutu SDM",
     shortLabel: "Mutu SDM",
     icon: GraduationCap,
     description: "Evaluasi pelatihan dan penataran SDM Olahraga (Wasit, Pelatih, Juri, dll) serta perbandingan sumber pendanaan.",
@@ -129,7 +118,7 @@ const CATEGORIES: Array<{
 export default function StatistikPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("demografi");
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("mutuSDM");
   const [selectedKinerjaIndicator, setSelectedKinerjaIndicator] = useState<string>("all");
   const [selectedAtletIndicator, setSelectedAtletIndicator] = useState<string>("all");
 
@@ -359,8 +348,7 @@ export default function StatistikPage() {
 
   // Ambil raw data untuk tabel berdasarkan kategori
   let categoryRawData: any[] = [];
-  if (selectedCategory === "demografi") categoryRawData = demografiData.identitiesList || demografiData.rawList || [];
-  else if (selectedCategory === "mutuSDM") categoryRawData = mutuData.rawList || [];
+  if (selectedCategory === "mutuSDM") categoryRawData = mutuData.rawList || [];
   else if (selectedCategory === "kinerjaSDM") categoryRawData = filteredKinerjaList;
   else if (selectedCategory === "prestasiAtlet") categoryRawData = filteredAtletList;
   else if (selectedCategory === "eventOlahraga") categoryRawData = eventData.rawList || [];
@@ -405,7 +393,6 @@ export default function StatistikPage() {
 
   // Check if current responden has data in selected category
   const hasCategoryData = (catKey: CategoryKey): boolean => {
-    if (catKey === "demografi") return (demografiData.totalResponden || 0) > 0;
     if (catKey === "mutuSDM") return (mutuData.totalRecords || 0) > 0;
     if (catKey === "kinerjaSDM") return filteredKinerjaList.length > 0;
     if (catKey === "prestasiAtlet") return filteredAtletList.length > 0;
@@ -626,9 +613,6 @@ export default function StatistikPage() {
 
       {/* 4. Display Selected Category Visualizations */}
       <div className="space-y-6">
-        {selectedCategory === "demografi" && (
-          <DemografiSection demografiData={demografiData} hasCategoryData={hasCategoryData} />
-        )}
         {selectedCategory === "mutuSDM" && (
           <MutuSDMSection mutuData={mutuData} hasCategoryData={hasCategoryData} />
         )}
@@ -707,17 +691,7 @@ export default function StatistikPage() {
                 <th className="py-3.5 px-4">NO</th>
                 
                 {/* Header Kolom Berdasarkan Kategori */}
-                {selectedCategory === "demografi" ? (
-                  <>
-                    <th className="py-3.5 px-4">NAMA LENGKAP</th>
-                    <th className="py-3.5 px-4">JENIS KELAMIN</th>
-                    <th className="py-3.5 px-4">UMUR</th>
-                    <th className="py-3.5 px-4">ASAL WILAYAH</th>
-                    <th className="py-3.5 px-4">PEKERJAAN/JABATAN</th>
-                    <th className="py-3.5 px-4">TELEPON</th>
-                    <th className="py-3.5 px-4 text-center">BERKAS VALIDASI</th>
-                  </>
-                ) : selectedCategory === "prestasiAtlet" ? (
+                {selectedCategory === "prestasiAtlet" ? (
                   <>
                     <th className="py-3.5 px-4">INDIKATOR</th>
                     <th className="py-3.5 px-4">NAMA KEGIATAN</th>
@@ -755,29 +729,7 @@ export default function StatistikPage() {
                         {startIndex + idx + 1}
                       </td>
                       
-                      {selectedCategory === "demografi" ? (
-                        <>
-                          <td className="py-3.5 px-4 font-bold text-gray-900">{row.namaLengkap}</td>
-                          <td className="py-3.5 px-4">
-                            {isMale ? (
-                              <span className="inline-flex items-center gap-1 bg-emerald-100/90 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold border border-emerald-200/50">
-                                <span className="text-emerald-700">♂</span> Laki-laki
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold border border-purple-200/50">
-                                <span className="text-purple-700">♀</span> Perempuan
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 font-medium text-gray-700">{row.umur} Thn</td>
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-gray-900">{row.kabupatenKotaAsal || "-"}</div>
-                            <div className="text-[11px] text-gray-500 mt-0.5">Kec. {row.kecamatan || "-"}</div>
-                          </td>
-                          <td className="py-3.5 px-4 text-gray-700">{row.pekerjaanJabatan || "-"}</td>
-                          <td className="py-3.5 px-4 text-gray-600 font-mono">{row.nomorTelepon || "-"}</td>
-                        </>
-                      ) : selectedCategory === "prestasiAtlet" || row.indicatorId === 1 || row.indicatorId === 6 ? (
+                      {selectedCategory === "prestasiAtlet" || row.indicatorId === 1 || row.indicatorId === 6 ? (
                         <>
                           <td className="py-3.5 px-4 text-gray-500">
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200/60">

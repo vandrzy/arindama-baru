@@ -9,17 +9,6 @@ export interface ValidationErrorDetail {
   message: string;
 }
 
-export interface ParsedIdentityData {
-  namaLengkap: string;
-  jenisKelamin: string;
-  tanggalLahir: string;
-  umur: string;
-  kabupatenKotaAsal: string;
-  kecamatan: string;
-  pekerjaanJabatan: string;
-  nomorTelepon: string;
-}
-
 export interface ParsedIndicatorRecordData {
   indicatorId: number;
   namaKegiatan: string;
@@ -31,7 +20,6 @@ export interface ParsedIndicatorRecordData {
 }
 
 export interface ExcelParseResult {
-  identities?: ParsedIdentityData[];
   indicatorRecords: ParsedIndicatorRecordData[];
   errors: ValidationErrorDetail[];
 }
@@ -69,39 +57,39 @@ const indicatorZodSchema = z.object({
   indicatorId: z.number().int(),
   namaKegiatan: z.string().min(1, "Nama Kegiatan/ Kejuaraan Olahraga wajib diisi"),
   cabangOlahraga: z.string().min(1, "Cabang Olahraga wajib diisi"),
-  tingkatPenyelenggaraan: z.string().min(1, "Tingkat Penyelenggaraan wajib diisi"),
-  sumberPendanaan: z.string().min(1, "Sumber Pendanaan wajib diisi"),
+  tingkatPenyelenggaraan: z.string().optional().default("Tk. Provinsi"),
+  sumberPendanaan: z.string().optional().default("APBD/Dispora"),
   medali: z.string().nullable().optional(),
-  uraianCapaian: z.string().min(1, "Uraian Capaian wajib diisi"),
+  uraianCapaian: z.string().optional().default("-"),
 });
 
 // Dictionary of allowed headers per column index
 const IDENTITY_COLUMN_ALIASES: Record<number, { name: string; aliases: string[] }> = {
-  0: { name: "Nama Lengkap & Gelar", aliases: ["nama lengkap & gelar", "nama lengkap"] },
-  1: { name: "Jenis Kelamin", aliases: ["jenis kelamin", "kelamin"] },
-  2: { name: "Tanggal Lahir", aliases: ["tanggal lahir", "tgl lahir"] },
+  0: { name: "Nama Lengkap & Gelar", aliases: ["nama", "nama lengkap", "nama lengkap & gelar"] },
+  1: { name: "Jenis Kelamin", aliases: ["jenis kelamin", "kelamin", "jk"] },
+  2: { name: "Tanggal Lahir", aliases: ["tanggal lahir", "tgl lahir", "tgl"] },
   3: { name: "Umur", aliases: ["umur", "usia"] },
-  4: { name: "Kabupaten/ Kota Asal", aliases: ["kabupaten/ kota asal", "kabupaten/kota asal", "kabupaten / kota asal", "kabupaten kota asal"] },
+  4: { name: "Kabupaten/ Kota Asal", aliases: ["kabupaten", "kota", "kabupaten/ kota asal", "kabupaten/kota asal", "kabupaten / kota asal", "kabupaten kota asal", "asal"] },
   5: { name: "Kecamatan", aliases: ["kecamatan"] },
-  6: { name: "Pekerjaan/ Jabatan di Bidang Olahraga", aliases: ["pekerjaan/ jabatan di bidang olahraga", "pekerjaan/jabatan di bidang olahraga", "pekerjaan / jabatan di bidang olahraga", "pekerjaan/jabatan"] },
-  7: { name: "Nomor Telepon/ Whatsapp Aktif", aliases: ["nomor telepon/ whatsapp aktif", "nomor telepon/whatsapp aktif", "nomor telepon / whatsapp aktif", "nomor telepon", "nomor whatsapp"] },
+  6: { name: "Pekerjaan/ Jabatan di Bidang Olahraga", aliases: ["pekerjaan", "jabatan", "pekerjaan/ jabatan di bidang olahraga", "pekerjaan/jabatan di bidang olahraga", "pekerjaan / jabatan di bidang olahraga", "pekerjaan/jabatan"] },
+  7: { name: "Nomor Telepon/ Whatsapp Aktif", aliases: ["nomor telepon", "telepon", "whatsapp", "wa", "hp", "nomor telepon/ whatsapp aktif", "nomor telepon/whatsapp aktif", "nomor telepon / whatsapp aktif", "nomor whatsapp"] },
 };
 
 const INDICATOR_WITH_MEDAL_ALIASES: Record<number, { name: string; aliases: string[] }> = {
-  0: { name: "Nama Kegiatan/ Kejuaraan Olahraga", aliases: ["nama kegiatan/ kejuaraan olahraga", "nama kegiatan/kejuaraan olahraga", "nama kegiatan / kejuaraan olahraga"] },
+  0: { name: "Nama Kegiatan/ Kejuaraan Olahraga", aliases: ["nama kegiatan", "kegiatan", "kejuaraan", "nama kegiatan/ kejuaraan olahraga", "nama kegiatan/kejuaraan olahraga", "nama kegiatan / kejuaraan olahraga"] },
   1: { name: "Cabang Olahraga", aliases: ["cabang olahraga", "cabor"] },
-  2: { name: "Tingkat Penyelenggara", aliases: ["tingkat penyelenggara", "tingkat penyelenggaraan"] },
-  3: { name: "Sumber Pendanaan", aliases: ["sumber pendanaan"] },
+  2: { name: "Tingkat Penyelenggara", aliases: ["tingkat", "tingkat penyelenggara", "tingkat penyelenggaraan"] },
+  3: { name: "Sumber Pendanaan", aliases: ["pendanaan", "sumber pendanaan", "sumber"] },
   4: { name: "Medali", aliases: ["medali", "perolehan medali"] },
-  5: { name: "Uraian Capaian", aliases: ["uraian capaian", "uraian"] },
+  5: { name: "Uraian Capaian", aliases: ["uraian", "capaian", "uraian capaian"] },
 };
 
 const INDICATOR_STANDARD_ALIASES: Record<number, { name: string; aliases: string[] }> = {
-  0: { name: "Nama Kegiatan/ Kejuaraan Olahraga", aliases: ["nama kegiatan/ kejuaraan olahraga", "nama kegiatan/kejuaraan olahraga", "nama kegiatan / kejuaraan olahraga"] },
+  0: { name: "Nama Kegiatan/ Kejuaraan Olahraga", aliases: ["nama kegiatan", "kegiatan", "kejuaraan", "nama kegiatan/ kejuaraan olahraga", "nama kegiatan/kejuaraan olahraga", "nama kegiatan / kejuaraan olahraga"] },
   1: { name: "Cabang Olahraga", aliases: ["cabang olahraga", "cabor"] },
-  2: { name: "Tingkat Penyelenggaraan", aliases: ["tingkat penyelenggaraan", "tingkat penyelenggara"] },
-  3: { name: "Sumber Pendanaan", aliases: ["sumber pendanaan"] },
-  4: { name: "Uraian Capaian", aliases: ["uraian capaian", "uraian"] },
+  2: { name: "Tingkat Penyelenggaraan", aliases: ["tingkat", "tingkat penyelenggaraan", "tingkat penyelenggara"] },
+  3: { name: "Sumber Pendanaan", aliases: ["pendanaan", "sumber pendanaan", "sumber"] },
+  4: { name: "Uraian Capaian", aliases: ["uraian", "capaian", "uraian capaian"] },
 };
 
 /**
@@ -195,7 +183,6 @@ export function parseAndValidateExcelFile(
   fileName: string
 ): ExcelParseResult {
   const errors: ValidationErrorDetail[] = [];
-  let identities: ParsedIdentityData[] = [];
   const indicatorRecords: ParsedIndicatorRecordData[] = [];
 
   try {
@@ -255,67 +242,9 @@ export function parseAndValidateExcelFile(
     const rawHeaders = rawRows[headerRowIndex].map(normalizeHeader);
     const dataRows = rawRows.slice(headerRowIndex + 1);
 
-    if (step === 0) {
-      const headerCheck = checkTemplateHeaders(rawHeaders, IDENTITY_COLUMN_ALIASES);
-      if (!headerCheck.valid) {
-        errors.push({
-          file: fileName,
-          step,
-          row: headerRowIndex + 1,
-          message: `Header template Identitas tidak sesuai. Kolom yang tidak ditemukan / salah: ${headerCheck.missing.join(", ")}`,
-        });
-        return { indicatorRecords, errors };
-      }
-
-      const idxMap = headerCheck.colIndices;
-
-      for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
-        const row = dataRows[rIdx];
-        if (!row || !row.some((c) => c !== null && c !== undefined && String(c).trim() !== "")) {
-          continue; // Skip empty rows
-        }
-
-        const displayRow = headerRowIndex + 2 + rIdx;
-
-        const rawIdentity = {
-          namaLengkap: formatCellValue(row[idxMap["Nama Lengkap & Gelar"]]),
-          jenisKelamin: formatCellValue(row[idxMap["Jenis Kelamin"]]),
-          tanggalLahir: formatCellValue(row[idxMap["Tanggal Lahir"]]),
-          umur: formatCellValue(row[idxMap["Umur"]]),
-          kabupatenKotaAsal: formatCellValue(row[idxMap["Kabupaten/ Kota Asal"]]),
-          kecamatan: formatCellValue(row[idxMap["Kecamatan"]]),
-          pekerjaanJabatan: formatCellValue(row[idxMap["Pekerjaan/ Jabatan di Bidang Olahraga"]]),
-          nomorTelepon: formatCellValue(row[idxMap["Nomor Telepon/ Whatsapp Aktif"]]),
-        };
-
-        const valResult = identitasZodSchema.safeParse(rawIdentity);
-        if (!valResult.success) {
-          for (const issue of valResult.error.issues) {
-            errors.push({
-              file: fileName,
-              step,
-              row: displayRow,
-              field: issue.path.join("."),
-              message: `Baris ${displayRow}: ${issue.message}`,
-            });
-          }
-        } else {
-          identities.push(valResult.data);
-        }
-      }
-
-      if (identities.length === 0 && errors.length === 0) {
-        errors.push({
-          file: fileName,
-          step,
-          message: "Form Identitas Responden tidak memiliki data baris yang terisi valid.",
-        });
-        return { indicatorRecords, errors, identities };
-      }
-    } else {
-      // Step 1 to 8: Indicator files
-      const aliasesConfig = (step === 1 || step === 6) ? INDICATOR_WITH_MEDAL_ALIASES : INDICATOR_STANDARD_ALIASES;
-      const headerCheck = checkTemplateHeaders(rawHeaders, aliasesConfig);
+    // Step 1 to 8: Indicator files
+    const aliasesConfig = (step === 1 || step === 6) ? INDICATOR_WITH_MEDAL_ALIASES : INDICATOR_STANDARD_ALIASES;
+    const headerCheck = checkTemplateHeaders(rawHeaders, aliasesConfig);
 
       if (!headerCheck.valid) {
         errors.push({
@@ -365,7 +294,6 @@ export function parseAndValidateExcelFile(
           } as ParsedIndicatorRecordData);
         }
       }
-    }
   } catch (err: any) {
     errors.push({
       file: fileName,
@@ -374,5 +302,5 @@ export function parseAndValidateExcelFile(
     });
   }
 
-  return { identities, indicatorRecords, errors };
+  return { indicatorRecords, errors };
 }

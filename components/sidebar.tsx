@@ -52,12 +52,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       match: (p: string) => p.startsWith("/kuesioner"),
     },
     {
-      href: "/validasi",
-      label: "Validasi Data",
-      icon: FileCheck,
-      match: (p: string) => p.startsWith("/validasi"),
-    },
-    {
       href: "/statistik",
       label: "Statistik",
       icon: BarChart3,

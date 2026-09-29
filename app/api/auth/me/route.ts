@@ -34,17 +34,6 @@ export async function GET(request: NextRequest) {
         jabatan: true,
         instansi: true,
         kabupatenKota: true,
-        submissions: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: {
-            respondenIdentities: {
-              select: {
-                kabupatenKotaAsal: true,
-              },
-            },
-          },
-        },
       },
     });
 
@@ -55,12 +44,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { submissions, ...userBase } = userRaw as any;
-    const dbKabupaten = userBase.kabupatenKota || submissions?.[0]?.respondenIdentities?.[0]?.kabupatenKotaAsal || "";
-
     const user = {
-      ...userBase,
-      kabupatenKota: dbKabupaten,
+      ...userRaw,
+      kabupatenKota: userRaw.kabupatenKota || "",
     };
 
     return NextResponse.json({
