@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/lib/context/app-context";
 import { SURVEY_TEMPLATES, FLOW_STEPS } from "@/lib/constants/ui-data";
+import { AdminView } from "./AdminView";
 import {
   FileText,
   FileSpreadsheet,
@@ -17,6 +18,10 @@ import {
 
 export default function DashboardPage() {
   const { currentUser } = useApp();
+
+  if (currentUser?.role === "ADMIN") {
+    return <AdminView />;
+  }
 
   return (
     <div className="space-y-10 sm:space-y-12">
