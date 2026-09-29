@@ -25,6 +25,7 @@ model User {
   jabatan       String   @default("")
   kabupatenKota String   @default("")
   instansi      String   @default("")
+  nomorTelepon  String   @default("")
   
   // Relations
   submissions Submission[]

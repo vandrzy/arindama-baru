@@ -33,8 +33,18 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       href: "/dashboard",
       label: "Dasbor",
       icon: Home,
-      match: (p: string) => p.startsWith("/dashboard") || p === "/",
+      match: (p: string) => p === "/dashboard" || p === "/",
     },
+    ...(currentUser?.role === "ADMIN"
+      ? [
+          {
+            href: "/dashboard/manajemen-akun",
+            label: "Manajemen Akun",
+            icon: Users,
+            match: (p: string) => p.startsWith("/dashboard/manajemen-akun"),
+          },
+        ]
+      : []),
     {
       href: "/kuesioner",
       label: "Kuesioner",
@@ -182,14 +192,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               >
                 <Users className="w-4 h-4" />
                 <span>Masuk Sistem</span>
-              </Link>
-              <Link
-                href="/register"
-                onClick={onClose}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-600 hover:text-brand-primary hover:bg-slate-50 transition-colors"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Daftar Akun Baru</span>
               </Link>
             </div>
           )}

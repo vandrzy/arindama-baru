@@ -248,10 +248,7 @@ export default function LoginPage() {
 
               <div className="text-center pt-2">
                 <span className="text-xs text-gray-500">
-                  Belum punya akun?{" "}
-                  <Link href="/register" className="text-[#0B3D2E] font-bold hover:underline">
-                    Daftar sekarang
-                  </Link>
+                  Belum punya akun? Hubungi Administrator Dispora Kaltim untuk pembuatan akun.
                 </span>
               </div>
             </form>

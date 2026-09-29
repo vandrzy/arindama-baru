@@ -58,8 +58,7 @@ export async function middleware(request: NextRequest) {
   const isValid = token ? await verifyToken(token) : false;
   const { pathname } = request.nextUrl;
 
-  const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/register");
+  const isAuthRoute = pathname.startsWith("/login");
 
   // Redirect root "/": Jika sudah login ke /dashboard, jika belum ke /login
   if (pathname === "/") {
