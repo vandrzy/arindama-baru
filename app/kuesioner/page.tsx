@@ -87,9 +87,44 @@ export default function KuesionerPage() {
   >({});
   const [uploadingEvidences, setUploadingEvidences] = useState<Record<string, boolean>>({});
 
-  // PDF Preview Modal State
+  // PDF Preview Modal State & Verification Selection
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [previewPdfTitle, setPreviewPdfTitle] = useState<string>("");
+  const [selectedRecordForVerification, setSelectedRecordForVerification] = useState<any | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+
+  // Admin Verification Status Update Handler
+  const handleUpdateVerificationStatus = async (recordId: string, newStatus: string) => {
+    setUpdatingStatusId(recordId);
+    try {
+      const res = await fetch(`/api/admin/verifikasi/${recordId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setNotification(`Status verifikasi berhasil diubah menjadi "${newStatus}"`);
+        setTimeout(() => setNotification(null), 4000);
+
+        if (selectedRecordForVerification && selectedRecordForVerification.id === recordId) {
+          setSelectedRecordForVerification((prev: any) => (prev ? { ...prev, status: newStatus } : null));
+        }
+
+        await loadSubmissions();
+      } else {
+        setUploadError(data.error || "Gagal memperbarui status verifikasi.");
+        setTimeout(() => setUploadError(null), 4000);
+      }
+    } catch (err: any) {
+      console.error("Gagal update status verifikasi:", err);
+      setUploadError("Terjadi kesalahan koneksi saat mengupdate status.");
+      setTimeout(() => setUploadError(null), 4000);
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
 
   // Excel Upload State
   const [isUploadingExcel, setIsUploadingExcel] = useState<boolean>(false);
@@ -446,7 +481,7 @@ export default function KuesionerPage() {
     return (
       <div className="py-24 text-center space-y-3">
         <Loader2 className="w-10 h-10 text-emerald-700 animate-spin mx-auto" />
-        <p className="text-sm font-semibold text-slate-700">Memuat data kuesioner...</p>
+        <p className="text-sm font-semibold text-slate-700">Memuat berkas &amp; bukti sah...</p>
       </div>
     );
   }
@@ -684,7 +719,7 @@ export default function KuesionerPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Cari nama peserta, cabor, atau kegiatan..."
+              placeholder="Cari nama responden, cabor, atau kegiatan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50/50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
@@ -812,7 +847,7 @@ export default function KuesionerPage() {
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
-                  <th className="py-3.5 px-4">PESERTA / RESPONDEN</th>
+                  <th className="py-3.5 px-4">RESPONDEN</th>
                   <th className="py-3.5 px-4">WILAYAH (KALTIM)</th>
                   <th className="py-3.5 px-4">CABOR &amp; KEGIATAN</th>
                   <th className="py-3.5 px-4">TINGKAT &amp; CAPAIAN</th>
@@ -821,16 +856,20 @@ export default function KuesionerPage() {
                   )}
                   <th className="py-3.5 px-4 text-center">DOKUMEN SAH</th>
                   <th className="py-3.5 px-4 text-center">STATUS</th>
+                  {currentUser?.role === "ADMIN" && (
+                    <th className="py-3.5 px-4 text-center">AKSI</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
                 {paginatedRecords.map((rec, index) => {
                   const isUploadingPdf = uploadingEvidences[rec.evidenceKey];
                   const hasMedali = activeIndicatorId === 1 || activeIndicatorId === 6;
+                  const isAdmin = currentUser?.role === "ADMIN";
 
                   return (
                     <tr key={rec.id || index} className="hover:bg-slate-50/80 transition-colors">
-                      {/* PESERTA / RESPONDEN */}
+                      {/* RESPONDEN */}
                       <td className="py-3.5 px-4">
                         <div>
                           <div className="font-bold text-slate-900">{rec.userNama}</div>
@@ -880,6 +919,21 @@ export default function KuesionerPage() {
                             <Loader2 className="w-4 h-4 animate-spin text-emerald-700" />
                             <span>Mengunggah...</span>
                           </div>
+                        ) : isAdmin ? (
+                          rec.evidence ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300"
+                              title={rec.evidence.fileName}
+                            >
+                              <FileText className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span className="truncate max-w-[120px]">{rec.evidence.fileName}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                              <span>Belum Upload</span>
+                            </span>
+                          )
                         ) : rec.evidence ? (
                           <div className="flex items-center justify-center gap-1.5">
                             <Button
@@ -888,11 +942,12 @@ export default function KuesionerPage() {
                               onClick={() => {
                                 setPreviewPdfUrl(`/api/files/download?url=${encodeURIComponent(rec.evidence.fileUrl)}`);
                                 setPreviewPdfTitle(rec.evidence.fileName);
+                                setSelectedRecordForVerification(rec);
                               }}
-                              className="h-8 text-[11px] px-3 gap-1.5 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-xl"
+                              className="h-8 text-[11px] px-3 gap-1.5 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-xl font-semibold"
                             >
                               <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                              <span className="font-semibold truncate max-w-[110px]" title={rec.evidence.fileName}>
+                              <span className="truncate max-w-[110px]" title={rec.evidence.fileName}>
                                 {rec.evidence.fileName}
                               </span>
                             </Button>
@@ -935,23 +990,47 @@ export default function KuesionerPage() {
 
                       {/* STATUS */}
                       <td className="py-3.5 px-4 text-center">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
-                            rec.status === "Disetujui" || rec.status === "Sah"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              rec.status === "Disetujui" || rec.status === "Sah"
-                                ? "bg-emerald-600"
-                                : "bg-amber-600"
-                            }`}
-                          />
-                          {rec.status && rec.status !== "Sah & Terverifikasi" ? rec.status : "Menunggu Review"}
-                        </span>
+                        {rec.status === "Sah & Terverifikasi" || rec.status === "Disetujui" || rec.status === "Sah" ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Sah &amp; Terverifikasi</span>
+                          </span>
+                        ) : rec.status === "Revisi" ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Revisi</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                            <Hourglass className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Menunggu Review</span>
+                          </span>
+                        )}
                       </td>
+
+                      {/* AKSI (Hanya Admin) */}
+                      {isAdmin && (
+                        <td className="py-3.5 px-4 text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              if (rec.evidence) {
+                                setPreviewPdfUrl(`/api/files/download?url=${encodeURIComponent(rec.evidence.fileUrl)}`);
+                                setPreviewPdfTitle(rec.evidence.fileName);
+                              } else {
+                                setPreviewPdfUrl(null);
+                                setPreviewPdfTitle(rec.namaKegiatan || "Berkas Bukti");
+                              }
+                              setSelectedRecordForVerification(rec);
+                            }}
+                            className="h-8 w-8 p-0 rounded-xl border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:scale-105 transition-all mx-auto flex items-center justify-center shadow-xs"
+                            title="Buka Berkas & Verifikasi Status"
+                          >
+                            <Eye className="w-4 h-4 text-emerald-700" />
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -1121,8 +1200,8 @@ export default function KuesionerPage() {
         </div>
       </Card>
 
-      {/* 7. MODAL PRATINJAU PDF (PDF PREVIEW MODAL) */}
-      {previewPdfUrl && (
+      {/* 7. MODAL PRATINJAU PDF & VERIFIKASI */}
+      {(previewPdfUrl || selectedRecordForVerification) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-4 border border-slate-200 relative">
             {/* Header Modal */}
@@ -1130,48 +1209,109 @@ export default function KuesionerPage() {
               <div className="flex items-center gap-2 overflow-hidden">
                 <FileText className="w-5 h-5 text-emerald-700 shrink-0" />
                 <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate" title={previewPdfTitle}>
-                  Pratinjau Berkas Validasi: {previewPdfTitle}
+                  Pratinjau Berkas Validasi: {previewPdfTitle || "Berkas Bukti"}
                 </h3>
               </div>
 
               <button
                 type="button"
-                onClick={() => setPreviewPdfUrl(null)}
+                onClick={() => {
+                  setPreviewPdfUrl(null);
+                  setSelectedRecordForVerification(null);
+                }}
                 className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Iframe / Object PDF Viewer */}
-            <div className="w-full h-[550px] bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 relative">
-              <iframe
-                src={previewPdfUrl}
-                className="w-full h-full rounded-2xl"
-                title="Pratinjau PDF Validasi"
-              />
-            </div>
+            {/* Content: Iframe PDF or Empty state */}
+            {previewPdfUrl ? (
+              <div className="w-full h-[550px] bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 relative">
+                <iframe
+                  src={previewPdfUrl}
+                  className="w-full h-full rounded-2xl"
+                  title="Pratinjau PDF Validasi"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-[320px] flex flex-col items-center justify-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 p-6 text-center space-y-3">
+                <AlertCircle className="w-12 h-12 text-rose-500" />
+                <h4 className="font-extrabold text-slate-800 text-sm">Belum Ada Berkas PDF Terunggah</h4>
+                <p className="text-xs text-slate-500 max-w-md">
+                  Responden belum mengunggah dokumen bukti PDF untuk kegiatan ini. Anda dapat menetapkan status verifikasi di bawah ini.
+                </p>
+              </div>
+            )}
 
             {/* Footer Modal */}
-            <div className="flex items-center justify-end gap-3 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPreviewPdfUrl(null)}
-                className="rounded-xl text-xs font-semibold px-4"
-              >
-                Tutup Pratinjau
-              </Button>
-              <a
-                href={previewPdfUrl}
-                download={previewPdfTitle}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Unduh File</span>
-              </a>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100">
+              {currentUser?.role === "ADMIN" && selectedRecordForVerification ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700">Verifikasi Berkas:</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={updatingStatusId === selectedRecordForVerification.id}
+                    onClick={() => handleUpdateVerificationStatus(selectedRecordForVerification.id, "Revisi")}
+                    className={`h-8 text-xs font-bold px-3 rounded-xl gap-1.5 transition-all ${
+                      selectedRecordForVerification.status === "Revisi"
+                        ? "bg-rose-600 text-white shadow-sm ring-2 ring-rose-300"
+                        : "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                    }`}
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Tandai Revisi</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={updatingStatusId === selectedRecordForVerification.id}
+                    onClick={() =>
+                      handleUpdateVerificationStatus(selectedRecordForVerification.id, "Sah & Terverifikasi")
+                    }
+                    className={`h-8 text-xs font-bold px-3 rounded-xl gap-1.5 transition-all ${
+                      selectedRecordForVerification.status === "Sah & Terverifikasi" ||
+                      selectedRecordForVerification.status === "Sah" ||
+                      selectedRecordForVerification.status === "Disetujui"
+                        ? "bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-300"
+                        : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Sah &amp; Terverifikasi</span>
+                  </Button>
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setPreviewPdfUrl(null);
+                    setSelectedRecordForVerification(null);
+                  }}
+                  className="rounded-xl text-xs font-semibold px-4 h-8"
+                >
+                  Tutup Pratinjau
+                </Button>
+                {previewPdfUrl && (
+                  <a
+                    href={previewPdfUrl}
+                    download={previewPdfTitle}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 h-8 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Unduh File</span>
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>

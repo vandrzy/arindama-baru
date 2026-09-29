@@ -259,3 +259,68 @@ export async function DELETE(
     );
   }
 }
+
+// PATCH /api/users/[id] - Update user role directly
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const admin = await verifyAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Akses ditolak. Membutuhkan hak akses Admin." },
+        { status: 403 }
+      );
+    }
+
+    const { id } = params;
+    const body = await request.json();
+    const newRole = body.role;
+
+    if (!newRole || !["ADMIN", "RESPONDEN"].includes(newRole)) {
+      return NextResponse.json(
+        { error: "Role tidak valid (harus ADMIN atau RESPONDEN)." },
+        { status: 400 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Akun tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { role: newRole },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        nama: true,
+        role: true,
+        jabatan: true,
+        kabupatenKota: true,
+        instansi: true,
+        nomorTelepon: true,
+        updatedAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Role pengguna "${updatedUser.nama}" berhasil diperbarui menjadi ${updatedUser.role}.`,
+      user: updatedUser,
+    });
+  } catch (error: any) {
+    console.error("PATCH /api/users/[id] error:", error);
+    return NextResponse.json(
+      { error: error?.message || "Gagal memperbarui role akun." },
+      { status: 500 }
+    );
+  }
+}
+

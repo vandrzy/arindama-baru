@@ -201,19 +201,19 @@ function UserFormContent() {
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 hover:text-[#0B3D2E] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Kembali ke Manajemen Akun</span>
+          <span>Kembali ke Data Responden</span>
         </Link>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-10 space-y-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {isEditMode ? "Edit Data Akun" : "Tambah Akun Baru"}
+            {isEditMode ? "Edit Data Responden" : "Tambah Responden Baru"}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isEditMode
-              ? "Perbarui informasi dan hak akses pengguna."
-              : "Isi formulir berikut untuk membuat akun baru dalam sistem."}
+              ? "Perbarui informasi akun responden survei keolahragaan."
+              : "Isi formulir berikut untuk membuat akun responden baru dalam sistem."}
           </p>
         </div>
 
@@ -319,25 +319,6 @@ function UserFormContent() {
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                </div>
-              </div>
-
-              {/* Role */}
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Peran Akses (Role) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    className="w-full h-11 pl-10 pr-4 rounded-2xl border border-slate-200 text-sm focus:border-[#0B3D2E] focus:ring-2 focus:ring-[#0B3D2E]/20 outline-none transition-all appearance-none bg-white text-slate-800"
-                  >
-                    <option value="RESPONDEN">RESPONDEN (Pengisi Survei &amp; Validasi)</option>
-                    <option value="ADMIN">ADMIN (Akses Penuh Manajemen)</option>
-                  </select>
                 </div>
               </div>
             </div>

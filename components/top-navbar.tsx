@@ -16,7 +16,7 @@ export function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
   // Route title mapper for breadcrumbs
   const getBreadcrumbTitle = (path: string) => {
     if (path === "/" || path.startsWith("/dashboard")) return "Dasbor";
-    if (path.startsWith("/kuesioner")) return "Kuisioner";
+    if (path.startsWith("/kuesioner")) return "Berkas & Bukti Sah";
     if (path.startsWith("/validasi")) return "Validasi";
     if (path.startsWith("/statistik")) return "Statistik";
     if (path.startsWith("/login")) return "Masuk Sistem";

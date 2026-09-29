@@ -59,7 +59,7 @@ export function Navbar() {
     });
     navLinks.push({
       href: "/kuesioner",
-      label: "Kuisioner",
+      label: "Berkas & Bukti Sah",
       icon: FileText,
       match: (p: string) => p.startsWith("/kuesioner"),
     });

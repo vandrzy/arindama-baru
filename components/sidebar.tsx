@@ -40,7 +40,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       ? [
           {
             href: "/dashboard/manajemen-akun",
-            label: "Manajemen Akun",
+            label: "Data Responden",
             icon: Users,
             match: (p: string) => p.startsWith("/dashboard/manajemen-akun"),
           },
@@ -54,7 +54,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       : []),
     {
       href: "/kuesioner",
-      label: "Kuesioner",
+      label: "Berkas & Bukti Sah",
       icon: FileText,
       match: (p: string) => p.startsWith("/kuesioner"),
     },
