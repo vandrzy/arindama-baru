@@ -87,28 +87,28 @@ const CATEGORIES: Array<{
   },
   {
     key: "kinerjaSDM",
-    label: "3. Kinerja SDM",
+    label: "2. Kinerja SDM",
     shortLabel: "Kinerja SDM",
     icon: TrendingUp,
     description: "Evaluasi jenjang penugasan Wasit, Pelatih, Juri pada kejuaraan serta perbandingan sumber pendanaan operasional.",
   },
   {
     key: "prestasiAtlet",
-    label: "4. Prestasi Atlet",
+    label: "3. Prestasi Atlet",
     shortLabel: "Prestasi Atlet",
     icon: Medal,
     description: "Visualisasi perolehan medali (Provinsi, Nasional, Internasional) dan hasil kalkulasi bobot poin capaian.",
   },
   {
     key: "eventOlahraga",
-    label: "5. Statistik Penyelenggara Event Olahraga",
+    label: "4. Statistik Penyelenggara Event Olahraga",
     shortLabel: "Penyelenggara Event",
     icon: Calendar,
     description: "Sebaran tingkat penyelenggaraan event keolahragaan dan analisis asal sumber pendanaan kegiatan.",
   },
   {
     key: "prestasiKejuaraan",
-    label: "6. Prestasi Kejuaraan",
+    label: "5. Prestasi Kejuaraan",
     shortLabel: "Prestasi Kejuaraan",
     icon: Trophy,
     description: "Distribusi partisipasi dan capaian kejuaraan beserta struktur pendanaan pendukung.",
@@ -585,7 +585,7 @@ export default function StatistikPage() {
         </div>
 
         {/* Tab Buttons Desktop/Tablet */}
-        <div className="hidden lg:grid grid-cols-3 xl:grid-cols-6 gap-2">
+        <div className="hidden lg:grid grid-cols-2 xl:grid-cols-5 gap-3">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isActive = selectedCategory === cat.key;
@@ -593,14 +593,14 @@ export default function StatistikPage() {
               <button
                 key={cat.key}
                 onClick={() => setSelectedCategory(cat.key)}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl text-center transition-all duration-150 border ${
+                className={`flex flex-col items-center justify-center p-4 rounded-xl text-center transition-all duration-200 border ${
                   isActive
-                    ? "bg-brand-primary text-white border-brand-primary shadow-subtle font-bold"
-                    : "bg-gray-50 text-brand-text-secondary border-gray-100 hover:bg-teal-50/50 hover:text-brand-primary hover:border-teal-200"
+                    ? "bg-brand-primary text-white border-brand-primary shadow-md font-bold scale-[1.02]"
+                    : "bg-gray-50 text-brand-text-secondary border-gray-100 hover:bg-teal-50/50 hover:text-brand-primary hover:border-teal-200 hover:shadow-sm"
                 }`}
               >
-                <Icon className={`w-5 h-5 mb-1.5 ${isActive ? "text-white" : "text-brand-primary"}`} />
-                <span className="text-xs leading-tight">{cat.shortLabel}</span>
+                <Icon className={`w-6 h-6 mb-2 ${isActive ? "text-white" : "text-brand-primary"}`} />
+                <span className="text-sm font-semibold leading-tight">{cat.shortLabel}</span>
               </button>
             );
           })}
