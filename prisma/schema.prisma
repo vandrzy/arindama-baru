@@ -30,6 +30,7 @@ model User {
   // Relations
   submissions Submission[]
   auditLogs   AuditLog[]
+  respondens  Responden[]
   
   // Timestamps
   createdAt   DateTime @default(now())
@@ -181,4 +182,27 @@ model DynamicWeight {
 
   @@unique([pilar, tingkat])
   @@map("dynamic_weights")
+}
+
+// ============================================
+// RESPONDEN
+// ============================================
+
+model Responden {
+  nik             String   @id @unique // NIK is the primary key
+  nama            String
+  jenisKelamin    String   @default("Laki-laki")
+  tanggalLahir    DateTime
+  kabupatenKota   String
+  kecamatan       String
+  cabangOlahraga  String
+  nomorTelepon    String
+
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("responden")
 }

@@ -39,6 +39,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       icon: LayoutGrid,
       match: (p: string) => p === "/dashboard" || p === "/",
     },
+    {
+      href: "/dashboard/responden",
+      label: "Responden",
+      icon: UserCheck,
+      match: (p: string) => p.startsWith("/dashboard/responden"),
+    },
     ...(isAdmin
       ? [
           {
