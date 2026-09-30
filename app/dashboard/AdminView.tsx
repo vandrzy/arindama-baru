@@ -216,14 +216,7 @@ export function AdminView() {
 
           <div className="mt-4 space-y-2">
             <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-              {(data?.totalResponden || 2940).toLocaleString("id-ID")}
-            </div>
-
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#e0e7ff] text-[#4338ca]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#4f46e5]"></span>
-                {data?.targetPercent || "93.3% Target Tercapai"}
-              </span>
+              {(data?.totalResponden || 0).toLocaleString("id-ID")}
             </div>
 
             <p className="text-xs font-medium text-slate-400">
@@ -245,7 +238,7 @@ export function AdminView() {
 
           <div className="mt-3 space-y-2">
             <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-              {(data?.medaliSah?.total || 384).toLocaleString("id-ID")}
+              {(data?.medaliSah?.total || 0).toLocaleString("id-ID")}
             </div>
 
             <div className="space-y-1.5">
@@ -261,11 +254,11 @@ export function AdminView() {
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#fef08a]/90 text-[#854d0e] border border-yellow-200/80">
                   <Award className="w-3.5 h-3.5 text-[#b45309]" />
-                  {data?.medaliSah?.emas || 124} Emas
+                  {data?.medaliSah?.emas || 0} Emas
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#e2e8f0]/90 text-[#334155] border border-slate-200/80">
                   <Award className="w-3.5 h-3.5 text-slate-500" />
-                  {data?.medaliSah?.perak || 142} Perak
+                  {data?.medaliSah?.perak || 0} Perak
                 </span>
               </div>
 
@@ -273,7 +266,7 @@ export function AdminView() {
               <div>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#ffedd5] text-[#9a3412] border border-orange-200/80">
                   <Award className="w-3.5 h-3.5 text-[#c2410c]" />
-                  {data?.medaliSah?.perunggu || 118} Perunggu
+                  {data?.medaliSah?.perunggu || 0} Perunggu
                 </span>
               </div>
             </div>

@@ -156,25 +156,27 @@ export async function GET(request: NextRequest) {
     let totalKomposit = 0;
 
     allRecords.forEach(rec => {
+      const medaliStr = (rec.medali || rec.uraianCapaian || "").toLowerCase();
+      if (medaliStr.includes("emas")) {
+        medaliSah.emas++;
+        medaliSah.total++;
+      } else if (medaliStr.includes("perak")) {
+        medaliSah.perak++;
+        medaliSah.total++;
+      } else if (medaliStr.includes("perunggu")) {
+        medaliSah.perunggu++;
+        medaliSah.total++;
+      }
+
       const isVerified = verifiedStatuses.includes(rec.status);
       const isMedalIndicator = rec.indicatorId === 1 || rec.indicatorId === 6;
       const user = rec.submission.user;
       
-      if (isVerified && isMedalIndicator) {
-        const medaliStr = (rec.medali || "").toLowerCase();
-        if (medaliStr.includes("emas")) {
-          medaliSah.emas++;
-          medaliSah.total++;
-        } else if (medaliStr.includes("perak")) {
-          medaliSah.perak++;
-          medaliSah.total++;
-        } else if (medaliStr.includes("perunggu")) {
-          medaliSah.perunggu++;
-          medaliSah.total++;
-        }
-        
+      if (isVerified || isMedalIndicator) {
         const score = calculateRecordPoints(rec, weights);
-        totalKomposit += score;
+        if (isVerified) {
+          totalKomposit += score;
+        }
         
         const instansi = user.instansi;
         if (instansi === "KONI") pilarScores.KONI += score;
@@ -184,7 +186,7 @@ export async function GET(request: NextRequest) {
 
         const namaWilayah = user.kabupatenKota || "Lainnya";
         let wData = wilayahMap.get(namaWilayah);
-        if (wData) {
+        if (wData && isVerified) {
           wData.skor += score;
         }
       }
