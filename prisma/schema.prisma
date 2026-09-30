@@ -171,12 +171,14 @@ model FileAttachment {
 
 model DynamicWeight {
   id           String   @id @default(cuid())
-  tingkat      String   @unique // "Internasional", "Nasional", "Provinsi"
+  pilar        String   @default("PRESTASI") // "PRESTASI", "DISABILITAS", "REKREASI"
+  tingkat      String   // "Internasional", "Nasional", "Provinsi"
   emas         Int      @default(100)
   perak        Int      @default(75)
   perunggu     Int      @default(50)
   partisipasi  Int      @default(25)
   updatedAt    DateTime @updatedAt
 
+  @@unique([pilar, tingkat])
   @@map("dynamic_weights")
 }

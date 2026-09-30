@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJwtToken } from "@/lib/auth";
-import { getDynamicWeights, updateDynamicWeights, WeightRow } from "@/lib/services/weightService";
+import {
+  getDynamicWeights,
+  updateDynamicWeights,
+  resetDynamicWeights,
+  WeightRow,
+} from "@/lib/services/weightService";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +85,39 @@ export async function PUT(request: NextRequest) {
     console.error("PUT bobot-dinamis error:", error);
     return NextResponse.json(
       { error: "Gagal memperbarui konfigurasi bobot.", details: error?.message },
+      { status: 500 }
+    );
+  }
+}
+
+// POST: Reset dynamic weight matrix to Kemenpora standard
+export async function POST(request: NextRequest) {
+  try {
+    const auth = checkAdminAccess(request);
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const resetWeights = await resetDynamicWeights();
+
+    await prisma.auditLog.create({
+      data: {
+        userId: auth.payload.id,
+        action: "RESET_DYNAMIC_WEIGHTS",
+        entity: "DynamicWeight",
+        details: { resetTo: "Kemenpora Standard" },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Konfigurasi bobot berhasil dikembalikan ke Standar Kemenpora.",
+      weights: resetWeights,
+    });
+  } catch (error: any) {
+    console.error("POST reset bobot-dinamis error:", error);
+    return NextResponse.json(
+      { error: "Gagal mengembalikan standar bobot.", details: error?.message },
       { status: 500 }
     );
   }

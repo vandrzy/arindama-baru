@@ -66,11 +66,18 @@ function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
   if (!rec) return 0;
   const tingkatStr = (rec.tingkatPenyelenggaraan || "").toLowerCase();
 
+  let targetPilar = "PRESTASI";
+  if (rec.indicatorId === 2 || rec.indicatorId === 7) targetPilar = "DISABILITAS";
+  if (rec.indicatorId === 3 || rec.indicatorId === 8) targetPilar = "REKREASI";
+
   let matchedRow = dynamicWeightsList.find((w: any) =>
+    (w.pilar ? w.pilar === targetPilar : true) &&
     tingkatStr.includes((w.tingkat || "").toLowerCase())
   );
   if (!matchedRow) {
-    matchedRow = dynamicWeightsList.find((w: any) => w.tingkat === "Provinsi") || {
+    matchedRow = dynamicWeightsList.find((w: any) =>
+      (w.pilar ? w.pilar === targetPilar : true) && w.tingkat === "Provinsi"
+    ) || {
       tingkat: "Provinsi",
       emas: 30,
       perak: 20,
