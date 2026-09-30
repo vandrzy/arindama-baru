@@ -12,6 +12,7 @@ import * as XLSX from "xlsx";
 import { fixWorksheetRange } from "@/lib/services/excelService";
 import {
   FileSpreadsheet,
+  Layers,
   UploadCloud,
   CheckCircle2,
   AlertCircle,
@@ -39,6 +40,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Database,
 } from "lucide-react";
 
 // List 10 Kabupaten/Kota di Kaltim untuk Sebaran
@@ -148,6 +150,10 @@ export default function KuesionerPage() {
   const [previewPdfTitle, setPreviewPdfTitle] = useState<string>("");
   const [selectedRecordForVerification, setSelectedRecordForVerification] = useState<any | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [showUploadExcelModal, setShowUploadExcelModal] = useState(false);
+  const [respondensList, setRespondensList] = useState<any[]>([]);
+  const [selectedUploadResponden, setSelectedUploadResponden] = useState<string>("");
 
   // Admin Verification Status Update Handler
   const handleUpdateVerificationStatus = async (recordId: string, newStatus: string) => {
@@ -196,7 +202,7 @@ export default function KuesionerPage() {
     if (allRecords && allRecords.length > 0) {
       setShowReuploadWarningModal(true);
     } else {
-      excelFileInputRef.current?.click();
+      setShowUploadExcelModal(true);
     }
   };
 
@@ -242,9 +248,24 @@ export default function KuesionerPage() {
     }
   };
 
+  const loadRespondens = async () => {
+    try {
+      const res = await fetch("/api/responden?limit=1000");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.responden)) {
+          setRespondensList(data.responden);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil daftar responden:", err);
+    }
+  };
+
   useEffect(() => {
     loadSubmissions();
     loadDynamicWeights();
+    loadRespondens();
   }, []);
 
   const currentIndicator = useMemo(() => {
@@ -355,9 +376,13 @@ export default function KuesionerPage() {
   }, [filteredRecords, startIndex, itemsPerPage]);
 
   // Handle Excel file upload for current indicator
-  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleExcelUpload = async (file: File) => {
     if (!file) return;
+
+    if (!selectedUploadResponden) {
+      setUploadError("Pilih responden terlebih dahulu.");
+      return;
+    }
 
     setIsUploadingExcel(true);
     setUploadError(null);
@@ -372,6 +397,7 @@ export default function KuesionerPage() {
 
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("respondenNik", selectedUploadResponden);
 
       if (targetSubmissionId) {
         formData.append("submissionId", targetSubmissionId);
@@ -406,15 +432,13 @@ export default function KuesionerPage() {
 
       setNotification(`Berhasil mengunggah file Excel untuk Indikator-${String(activeIndicatorId).padStart(2, "0")}`);
       setTimeout(() => setNotification(null), 4000);
+      setShowUploadExcelModal(false);
       await loadSubmissions();
     } catch (err: any) {
       console.error("Excel upload error:", err);
       setUploadError(err.message || "Gagal mengunggah file Excel.");
     } finally {
       setIsUploadingExcel(false);
-      if (excelFileInputRef.current) {
-        excelFileInputRef.current.value = "";
-      }
     }
   };
 
@@ -565,15 +589,6 @@ export default function KuesionerPage() {
 
   return (
     <div className="space-y-8 pb-16">
-      {/* Hidden File Input for Excel Upload */}
-      <input
-        type="file"
-        ref={excelFileInputRef}
-        accept=".xlsx, .xls"
-        className="hidden"
-        onChange={handleExcelUpload}
-      />
-
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-800 text-white text-xs sm:text-sm font-semibold px-4 py-3 rounded-2xl shadow-elevated flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -583,21 +598,26 @@ export default function KuesionerPage() {
       )}
 
       {/* 1. BAGIAN TABS: PILIH KATEGORI EVALUASI (Indikator 1 - 8) */}
-      <Card className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-4">
-        <div className="flex items-center justify-between">
+      <Card className="p-4 sm:p-6 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-emerald-600 animate-pulse" />
-            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800">
+            <Layers className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-sm font-black tracking-widest text-slate-800">
               PILIH KATEGORI EVALUASI
             </h2>
           </div>
-          <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-            Klik salah satu kategori untuk melihat rincian
-          </span>
+          <Button
+            type="button"
+            variant="outline"
+            className="hidden sm:flex bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 font-bold text-xs px-4 py-2 rounded-xl items-center gap-2 transition-all"
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>Download Semua Format (ZIP)</span>
+          </Button>
         </div>
 
-        {/* Tab Buttons Horizontal Scroll */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        {/* Tab Buttons */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {SURVEY_INDICATORS.map((ind) => {
             const isActive = ind.id === activeIndicatorId;
             const codeStr = `Indikator-${String(ind.id).padStart(2, "0")}`;
@@ -617,20 +637,22 @@ export default function KuesionerPage() {
                 key={ind.id}
                 type="button"
                 onClick={() => setActiveIndicatorId(ind.id)}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all duration-150 group ${
+                className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border text-center transition-all duration-150 group h-full ${
                   isActive
-                    ? "bg-[#04331d] text-white border-[#04331d] shadow-md scale-[1.02]"
-                    : "bg-slate-50/70 text-slate-700 border-slate-200/80 hover:bg-emerald-50/50 hover:border-emerald-200"
+                    ? "bg-[#0b1f18] text-white border-emerald-400 shadow-md ring-1 ring-emerald-400"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                 }`}
               >
                 <span
-                  className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full mb-1.5 ${
-                    isActive ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-200/60 text-slate-500"
+                  className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md mb-2 border ${
+                    isActive 
+                      ? "bg-emerald-400 text-slate-900 border-emerald-400" 
+                      : "bg-slate-50 text-slate-500 border-slate-200"
                   }`}
                 >
-                  {codeStr}
+                  INDIKATOR-{String(ind.id).padStart(2, "0")}
                 </span>
-                <span className={`text-xs font-bold leading-tight ${isActive ? "text-white" : "text-slate-800"}`}>
+                <span className={`text-xs sm:text-sm font-bold leading-tight ${isActive ? "text-white" : "text-slate-800"}`}>
                   {shortTitles[ind.id] || ind.title}
                 </span>
               </button>
@@ -640,75 +662,67 @@ export default function KuesionerPage() {
       </Card>
 
       {/* 2. CARD INFO KATEGORI / HEADER HIJAU TUA (Sesuai Referensi Gambar Desain) */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#04331d] via-[#07482b] to-[#032615] text-white p-6 sm:p-10 shadow-elevated border border-emerald-800/40">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-4 max-w-3xl">
+      <div className="relative overflow-hidden rounded-[32px] bg-[#0b1f18] text-white p-6 sm:p-10 shadow-elevated border-none">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8 relative z-10">
+          <div className="space-y-5 max-w-3xl">
             {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
-                Indikator-{String(currentIndicator.id).padStart(2, "0")}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="bg-emerald-400 text-slate-900 border-none text-xs font-extrabold px-3 py-1 rounded-md uppercase tracking-wider">
+                INDIKATOR-{String(currentIndicator.id).padStart(2, "0")}
               </span>
-              <span className="bg-emerald-900/60 text-emerald-200 border border-emerald-700/40 text-xs font-medium px-3 py-1 rounded-full">
-                Olahraga Prestasi
-              </span>
-              <span className="bg-emerald-900/60 text-emerald-200 border border-emerald-700/40 text-xs font-medium px-3 py-1 rounded-full">
-                Wilayah Provinsi Kaltim
+              <span className="bg-white/10 text-emerald-50 border border-white/5 text-xs font-medium px-3 py-1 rounded-full">
+                Olahraga Prestasi &amp; Pelajar
               </span>
             </div>
 
             {/* Judul & Deskripsi */}
-            <div className="space-y-2">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            <div className="space-y-3">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
                 {currentIndicator.title}
               </h1>
-              <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
                 {currentIndicator.fullDesc}
               </p>
             </div>
-
-            {/* Tags Info: Dasar Hukum & Target */}
-            <div className="flex flex-wrap items-center gap-4 text-xs pt-1">
-              <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-800/50 px-3 py-1.5 rounded-xl">
-                <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>
-                  Dasar Hukum: <strong className="text-white font-semibold">Pedoman BAPOPSI &amp; Bidang Pembudayaan Prestasi Kaltim</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-800/50 px-3 py-1.5 rounded-xl">
-                <Award className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>
-                  Target: <strong className="text-white font-semibold">Minimal 20 Medali Pelajar/Tahun</strong>
-                </span>
-              </div>
-            </div>
           </div>
 
-          {/* Action Buttons: Unggah Excel & Unduh Format (Dua Tombol) */}
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0 self-start lg:self-center">
+          {/* Action Buttons: Tambah Entri, Unggah Excel & Unduh Format (Tiga Tombol) */}
+          <div className="flex flex-col gap-3 shrink-0 self-start lg:self-start w-full lg:w-64 pt-2">
             {currentUser?.role !== "ADMIN" && (
-              <Button
-                type="button"
-                disabled={isUploadingExcel}
-                onClick={handleTriggerExcelUpload}
-                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs px-5 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02]"
-              >
-                {isUploadingExcel ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                ) : (
-                  <UploadCloud className="w-4 h-4 text-slate-950" />
-                )}
-                <span>Unggah Excel Indikator-{String(activeIndicatorId).padStart(2, "0")}</span>
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  onClick={() => setShowManualModal(true)}
+                  className="w-full bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-bold text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border-none"
+                >
+                  <span className="text-lg leading-none mb-0.5">+</span>
+                  <span>Tambah Entri Kegiatan</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  disabled={isUploadingExcel}
+                  onClick={handleTriggerExcelUpload}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white font-medium text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 border border-white/10 transition-all"
+                >
+                  {isUploadingExcel ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <FileText className="w-4 h-4 text-white" />
+                  )}
+                  <span>Unggah Berkas Excel</span>
+                </Button>
+              </>
             )}
 
             <Button
               type="button"
               variant="outline"
               onClick={handleDownloadTemplate}
-              className="bg-emerald-950/60 hover:bg-emerald-900/80 text-white border-emerald-700/60 font-semibold text-xs px-5 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all"
+              className="w-full bg-white/5 hover:bg-white/10 text-emerald-300 font-medium text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 border border-emerald-700/50 transition-all"
             >
               <Download className="w-4 h-4 text-emerald-300" />
-              <span>Unduh Format Indikator-{String(activeIndicatorId).padStart(2, "0")}</span>
+              <span>Unduh Format Excel (INDIKATOR-{String(activeIndicatorId).padStart(2, "0")})</span>
             </Button>
           </div>
         </div>
@@ -722,72 +736,56 @@ export default function KuesionerPage() {
       </div>
 
       {/* 3. BARISAN CARD STATISTIK (Ringkasan Data) */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${activeIndicatorId === 1 || activeIndicatorId === 6 ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4`}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Card 1: Total Submisi Entri */}
-        <Card className="p-5 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-2 relative overflow-hidden">
+        <Card className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-4 relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Submisi Entri</span>
-            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <FileSpreadsheet className="w-5 h-5" />
+            <span className="text-sm font-bold text-slate-700 capitalize">Total Submisi Entri</span>
+            <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <Database className="w-4 h-4" />
             </div>
           </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">{totalEntries} Entri</div>
-            <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-1">
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Tercatat se-Kalimantan Timur</span>
+          <div className="space-y-1">
+            <div className="text-4xl font-extrabold text-slate-900">{totalEntries}</div>
+            <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 pt-1">
+              <Check className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Wilayah {selectedWilayah || "Semua"}</span>
             </p>
           </div>
         </Card>
 
         {/* Card 2: Berkas Terverifikasi Sah */}
-        <Card className="p-5 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-2 relative overflow-hidden">
+        <Card className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-4 relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Berkas Terverifikasi Sah</span>
-            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5" />
+            <span className="text-sm font-bold text-slate-700 capitalize">Berkas Terverifikasi Sah</span>
+            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">{verifiedEvidencesCount} Berkas</div>
-            <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-1">
-              <span>{verifiedPercentage}% memiliki dokumen sah</span>
+          <div className="space-y-1">
+            <div className="text-4xl font-extrabold text-slate-900">{verifiedEvidencesCount}</div>
+            <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 pt-1">
+              <span className="font-bold text-emerald-600">{verifiedPercentage}%</span>
+              <span>memiliki dokumen sah</span>
             </p>
           </div>
         </Card>
 
         {/* Card 3: Menunggu Validasi */}
-        <Card className="p-5 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-2 relative overflow-hidden">
+        <Card className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-4 relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Menunggu Validasi</span>
-            <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
+            <span className="text-sm font-bold text-slate-700 capitalize">Menunggu Validasi</span>
+            <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">{pendingReviewCount} Berkas</div>
-            <p className="text-[11px] text-amber-600 font-semibold mt-1">Perlu review verifikator Dispora</p>
+          <div className="space-y-1">
+            <div className="text-4xl font-extrabold text-slate-900">{pendingReviewCount}</div>
+            <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 pt-1">
+              Perlu review Dispora
+            </p>
           </div>
         </Card>
-
-        {/* Card 4: Skor Indeks Kategori (Mentotal Jumlah Bobot/Poin yang Didapatkan) */}
-        {(activeIndicatorId === 1 || activeIndicatorId === 6) && (
-          <Card className="p-5 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-2 relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Skor Indeks Kategori</span>
-              <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                <Award className="w-5 h-5" />
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">{totalCategoryPoints} Poin</div>
-              <p className="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                <span>Akumulasi Total Bobot Dinamis</span>
-              </p>
-            </div>
-          </Card>
-        )}
       </div>
 
       {/* 4. FILTER TABLE & SEARCH BAR */}
@@ -900,11 +898,10 @@ export default function KuesionerPage() {
             <div className="flex items-center gap-2 shrink-0">
               <Button
                 type="button"
-                onClick={handleTriggerExcelUpload}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2"
+                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm"
               >
-                <UploadCloud className="w-4 h-4" />
-                <span>Unggah Excel</span>
+                <Download className="w-4 h-4" />
+                <span>Cetak Rekap</span>
               </Button>
             </div>
           )}
@@ -935,18 +932,13 @@ export default function KuesionerPage() {
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
-                  <th className="py-3.5 px-4">OPERATOR</th>
-                  <th className="py-3.5 px-4">WILAYAH (KALTIM)</th>
-                  <th className="py-3.5 px-4">CABOR &amp; KEGIATAN</th>
-                  <th className="py-3.5 px-4">TINGKAT &amp; CAPAIAN</th>
-                  {(activeIndicatorId === 1 || activeIndicatorId === 6) && (
-                    <th className="py-3.5 px-4 text-center">BOBOT</th>
-                  )}
-                  <th className="py-3.5 px-4 text-center">DOKUMEN SAH</th>
-                  <th className="py-3.5 px-4 text-center">STATUS</th>
-                  {currentUser?.role === "ADMIN" && (
-                    <th className="py-3.5 px-4 text-center">AKSI</th>
-                  )}
+                  <th className="py-3.5 px-4">RESPONDEN</th>
+                  <th className="py-3.5 px-4">NAMA KEGIATAN</th>
+                  <th className="py-3.5 px-4">{(activeIndicatorId === 1 || activeIndicatorId === 6) ? "JENJANG & CAPAIAN" : "JENJANG"}</th>
+                  <th className="py-3.5 px-4">WILAYAH</th>
+                  <th className="py-3.5 px-4 text-center">BUKTI PDF</th>
+                  <th className="py-3.5 px-4 text-center">STATUS VALIDASI</th>
+                  <th className="py-3.5 px-4 text-center">AKSI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
@@ -957,31 +949,25 @@ export default function KuesionerPage() {
 
                   return (
                     <tr key={rec.id || index} className="hover:bg-slate-50/80 transition-colors">
-                      {/* OPERATOR */}
+                      {/* RESPONDEN */}
                       <td className="py-3.5 px-4">
                         <div>
-                          <div className="font-bold text-slate-900">{rec.userNama}</div>
+                          <div className="font-bold text-slate-900">{rec.responden?.nama || rec.userNama}</div>
                           <div className="text-[10px] text-slate-400 mt-0.5">
-                            Input: {new Date(rec.createdAt).toISOString().split("T")[0]}
+                            NIK: {rec.responden?.nik || "-"}
                           </div>
                         </div>
                       </td>
 
-                      {/* WILAYAH */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{rec.userKabKota}</div>
-                        <div className="text-[11px] text-slate-400">Kalimantan Timur</div>
-                      </td>
-
-                      {/* CABOR & KEGIATAN */}
+                      {/* NAMA KEGIATAN */}
                       <td className="py-3.5 px-4 max-w-[220px]">
-                        <div className="font-bold text-slate-900">{rec.cabangOlahraga || "-"}</div>
-                        <div className="text-[11px] text-slate-500 truncate" title={rec.namaKegiatan}>
-                          {rec.namaKegiatan || "-"}
+                        <div className="font-bold text-slate-900">{rec.namaKegiatan || "-"}</div>
+                        <div className="text-[11px] text-slate-500 truncate" title={rec.cabangOlahraga}>
+                          {rec.cabangOlahraga || "-"}
                         </div>
                       </td>
 
-                      {/* TINGKAT & CAPAIAN */}
+                      {/* JENJANG & CAPAIAN */}
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-900">{rec.tingkatPenyelenggaraan || "-"}</div>
                         {hasMedali && rec.medali && (
@@ -991,14 +977,13 @@ export default function KuesionerPage() {
                         )}
                       </td>
 
-                      {/* BOBOT */}
-                      {(activeIndicatorId === 1 || activeIndicatorId === 6) && (
-                        <td className="py-3.5 px-4 text-center font-bold text-slate-700">
-                          <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-extrabold">
-                            {calculateRecordPoints(rec, dynamicWeights)} pts
-                          </span>
-                        </td>
-                      )}
+                      {/* WILAYAH */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900">{rec.userKabKota || "-"}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {rec.responden?.kecamatan || "-"}
+                        </div>
+                      </td>
 
                       {/* DOKUMEN SAH (PDF Upload & Preview Trigger) */}
                       <td className="py-3.5 px-4 text-center">
@@ -1096,29 +1081,52 @@ export default function KuesionerPage() {
                         )}
                       </td>
 
-                      {/* AKSI (Hanya Admin) */}
-                      {isAdmin && (
-                        <td className="py-3.5 px-4 text-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              if (rec.evidence) {
-                                setPreviewPdfUrl(`/api/files/download?url=${encodeURIComponent(rec.evidence.fileUrl)}`);
-                                setPreviewPdfTitle(rec.evidence.fileName);
-                              } else {
-                                setPreviewPdfUrl(null);
-                                setPreviewPdfTitle(rec.namaKegiatan || "Berkas Bukti");
-                              }
+                      {/* AKSI */}
+                      <td className="py-3.5 px-4 text-center flex items-center justify-center gap-2">
+                        {/* Lihat PDF (Disable jika tidak ada evidence) */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!rec.evidence}
+                          onClick={() => {
+                            if (rec.evidence) {
+                              setPreviewPdfUrl(`/api/files/download?url=${encodeURIComponent(rec.evidence.fileUrl)}`);
+                              setPreviewPdfTitle(rec.evidence.fileName);
                               setSelectedRecordForVerification(rec);
-                            }}
-                            className="h-8 w-8 p-0 rounded-xl border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 hover:scale-105 transition-all mx-auto flex items-center justify-center shadow-xs"
-                            title="Buka Berkas & Verifikasi Status"
-                          >
-                            <Eye className="w-4 h-4 text-emerald-700" />
-                          </Button>
-                        </td>
-                      )}
+                            }
+                          }}
+                          className="h-8 w-8 p-0 rounded-xl border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Buka Berkas & Verifikasi Status"
+                        >
+                          <Eye className="w-4 h-4 text-emerald-700" />
+                        </Button>
+
+                        {/* Edit Button */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                             // Nanti disambungkan ke state untuk edit
+                          }}
+                          className="h-8 w-8 p-0 rounded-xl border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all shadow-xs"
+                          title="Edit Entri"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                        </Button>
+
+                        {/* Hapus Button */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                             // Nanti disambungkan ke fungsi hapus
+                          }}
+                          className="h-8 w-8 p-0 rounded-xl border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-all shadow-xs"
+                          title="Hapus Entri"
+                        >
+                          <Trash2 className="w-4 h-4 text-rose-700" />
+                        </Button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -1208,85 +1216,6 @@ export default function KuesionerPage() {
         )}
       </Card>
 
-      {/* 6. BAGIAN "SEBARAN CAPAIAN INDIKATOR" */}
-      <Card className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-emerald-700" />
-              <h3 className="text-base font-extrabold text-slate-900">
-                Sebaran Capaian Indikator
-              </h3>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {currentUser?.role === "ADMIN"
-                ? "Rekapitulasi keterisian dan data terverifikasi untuk 8 Indikator se-Kalimantan Timur."
-                : "Rekapitulasi keterisian dan data terverifikasi untuk 8 Indikator dari data yang Anda inputkan."}
-            </p>
-          </div>
-
-          <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200/80 self-start sm:self-center">
-            {currentUser?.role === "ADMIN" ? "Seluruh Kalimantan Timur" : `Operator: ${currentUser?.nama || "User"}`}
-          </span>
-        </div>
-
-        {/* Cards Grid 8 Indikator */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {indicatorStats.map((indStat) => {
-            const isActive = indStat.id === activeIndicatorId;
-            const badgeColor =
-              indStat.percentage > 0
-                ? indStat.percentage >= 80
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-blue-100 text-blue-800"
-                : "bg-slate-100 text-slate-600";
-            const barColor =
-              indStat.percentage >= 80
-                ? "bg-emerald-600"
-                : indStat.percentage >= 50
-                ? "bg-blue-600"
-                : "bg-amber-500";
-
-            return (
-              <div
-                key={indStat.id}
-                onClick={() => setActiveIndicatorId(indStat.id)}
-                className={`p-4 rounded-2xl border space-y-3 cursor-pointer transition-all ${
-                  isActive
-                    ? "bg-emerald-50/60 border-emerald-300 ring-2 ring-emerald-600/20 shadow-sm scale-[1.01]"
-                    : "bg-slate-50/70 border-slate-200/70 hover:bg-slate-100/70 hover:border-slate-300"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      {indStat.codeStr}
-                    </span>
-                    <h4 className="text-xs font-extrabold text-slate-900 mt-1.5 line-clamp-1" title={indStat.fullTitle}>
-                      {indStat.title}
-                    </h4>
-                  </div>
-                  <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shrink-0 ${badgeColor}`}>
-                    {indStat.verified} Sah
-                  </span>
-                </div>
-
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-slate-700">
-                      {indStat.verified} / {indStat.count} Terverifikasi
-                    </span>
-                    <span className="font-extrabold text-slate-900">{indStat.percentage}%</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                    <div className={`h-full rounded-full ${barColor}`} style={{ width: `${indStat.percentage}%` }} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
 
       {/* 7. MODAL PRATINJAU PDF & VERIFIKASI */}
       {(previewPdfUrl || selectedRecordForVerification) && (
@@ -1404,6 +1333,108 @@ export default function KuesionerPage() {
           </div>
         </div>
       )}
+      {/* 9. MODAL FORM MANUAL TAMBAH/EDIT ENTRI */}
+      {showManualModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Entri Kegiatan Manual</h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualModal(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 pt-2 space-y-4 overflow-y-auto custom-scrollbar">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Pilih Responden *</label>
+                <select
+                  defaultValue=""
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                >
+                  <option value="" disabled>Pilih Responden...</option>
+                  {respondensList.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.nama} - NIK: {r.nik}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Nama Kegiatan / Ajang Kejuaraan *</label>
+                <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Cabang Olahraga *</label>
+                  <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Tingkat Penyelenggara *</label>
+                  <select defaultValue="Provinsi" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+                    <option value="Provinsi">Provinsi</option>
+                    <option value="Nasional">Nasional</option>
+                    <option value="Internasional">Internasional</option>
+                  </select>
+                </div>
+              </div>
+
+              {(activeIndicatorId === 1 || activeIndicatorId === 6) && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Capaian Medali *</label>
+                    <select defaultValue="Emas" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+                      <option value="Emas">Emas</option>
+                      <option value="Perak">Perak</option>
+                      <option value="Perunggu">Perunggu</option>
+                      <option value="Partisipasi">Partisipasi</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Sumber Pendanaan *</label>
+                    <select defaultValue="APBD (Daerah)" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+                      <option value="APBD (Daerah)">APBD (Daerah)</option>
+                      <option value="APBN (Pusat/Kemenpora)">APBN (Pusat/Kemenpora)</option>
+                      <option value="Swasta / Sponsorship">Swasta / Sponsorship</option>
+                      <option value="Kombinasi (Pemerintah & Swasta)">Kombinasi (Pemerintah & Swasta)</option>
+                      <option value="Mandiri">Mandiri</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-slate-700">Uraian Capaian</label>
+                 <textarea rows={3} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" placeholder="Masukkan detail capaian..."></textarea>
+              </div>
+
+              <div className="space-y-1.5 pb-2">
+                <label className="text-xs font-bold text-slate-700">Berkas Bukti Fisik PDF (Opsional)</label>
+                <input type="file" accept=".pdf" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+              </div>
+            </div>
+            
+            <div className="p-6 pt-4 border-t border-slate-100 shrink-0 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowManualModal(false)}>Batal</Button>
+              <Button className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold">Simpan Entri Kegiatan</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 8. MODAL PERINGATAN UNGGAH ULANG EXCEL */}
       {showReuploadWarningModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
@@ -1434,12 +1465,100 @@ export default function KuesionerPage() {
                 type="button"
                 onClick={() => {
                   setShowReuploadWarningModal(false);
-                  excelFileInputRef.current?.click();
+                  setShowUploadExcelModal(true);
                 }}
                 className="w-1/2 rounded-xl text-xs font-bold py-2.5 h-10 bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
               >
                 Lanjutkan Unggah
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 9. MODAL UNGGAH EXCEL */}
+      {showUploadExcelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700">
+                  <UploadCloud className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Unggah File Excel</h3>
+                  <p className="text-xs text-slate-500">Isi otomatis data Indikator-{String(activeIndicatorId).padStart(2, "0")}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUploadExcelModal(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 pt-2 space-y-4 overflow-y-auto custom-scrollbar">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Pilih Responden *</label>
+                <select
+                  value={selectedUploadResponden}
+                  onChange={(e) => setSelectedUploadResponden(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                >
+                  <option value="" disabled>Pilih Responden...</option>
+                  {respondensList.map((r) => (
+                    <option key={r.id} value={r.nik}>
+                      {r.nama} - NIK: {r.nik}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Area Dropzone */}
+              <div className="space-y-1.5 pt-2">
+                <label className="text-xs font-bold text-slate-700">Dokumen Template Excel *</label>
+                <div 
+                  className="w-full border-2 border-dashed border-emerald-300 bg-emerald-50/50 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-emerald-50 transition-colors cursor-pointer group"
+                  onClick={() => excelFileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files?.[0]) {
+                      handleExcelUpload(e.dataTransfer.files[0]);
+                    }
+                  }}
+                >
+                  <input
+                    type="file"
+                    ref={excelFileInputRef}
+                    accept=".xlsx, .xls"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) handleExcelUpload(e.target.files[0]);
+                    }}
+                  />
+                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-emerald-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <FileText className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-700 mb-1">Pilih atau Tarik File Excel ke Sini</span>
+                  <span className="text-[10px] text-slate-500">Maks. 10MB (.xlsx, .xls)</span>
+                </div>
+              </div>
+
+              {uploadError && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs font-medium flex gap-2 items-start mt-2 pb-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                  <div className="break-words w-full">
+                    <p className="font-bold mb-1">Gagal Validasi / Unggah:</p>
+                    <p className="opacity-90">{uploadError}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 pt-4 border-t border-slate-100 shrink-0 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowUploadExcelModal(false)}>Tutup</Button>
             </div>
           </div>
         </div>

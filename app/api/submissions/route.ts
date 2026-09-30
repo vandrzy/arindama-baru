@@ -71,7 +71,11 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        indicatorRecords: true,
+        indicatorRecords: {
+          include: {
+            responden: true
+          }
+        },
         validationEvidences: true,
       },
       orderBy: {
@@ -193,6 +197,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const respondenNik = formData.get("respondenNik") as string | null;
+
     // Transactional save to DB
     const submission = await prisma.$transaction(async (tx) => {
       const sub = await tx.submission.create({
@@ -202,7 +208,10 @@ export async function POST(request: NextRequest) {
           tahunSurvei: data.tahunSurvei,
           totalIndikatorTerisi: new Set(allIndicatorRecords.map((r) => r.indicatorId)).size,
           indicatorRecords: {
-            create: allIndicatorRecords,
+            create: allIndicatorRecords.map(r => ({
+              ...r,
+              respondenNik: respondenNik || undefined
+            })),
           },
         },
         include: {

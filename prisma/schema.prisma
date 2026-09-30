@@ -88,12 +88,16 @@ model IndicatorRecord {
   uraianCapaian           String
   status                  String     @default("Menunggu Review")
 
+  respondenNik            String?
+  responden               Responden? @relation(fields: [respondenNik], references: [nik], onDelete: SetNull)
+
   submission              Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
 
   @@index([submissionId])
   @@index([indicatorId])
+  @@index([respondenNik])
   @@map("indicator_records")
 }
 
@@ -200,6 +204,8 @@ model Responden {
 
   userId          String?
   user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  indicatorRecords IndicatorRecord[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

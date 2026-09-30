@@ -260,7 +260,7 @@ export default function RespondenPage() {
                 }}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none appearance-none"
               >
-                <option value="" disabled>Pilih Kabupaten / Kota...</option>
+                <option value="" disabled hidden>Pilih Kabupaten / Kota...</option>
                 {Object.keys(KALTIM_DATA).map((kab) => (
                   <option key={kab} value={kab}>{kab}</option>
                 ))}
@@ -275,7 +275,7 @@ export default function RespondenPage() {
                 onChange={(e) => setFormData({ ...formData, kecamatan: e.target.value })}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="" disabled>Pilih Kecamatan...</option>
+                <option value="" disabled hidden>Pilih Kecamatan...</option>
                 {kecamatanList.map((kec: string) => (
                   <option key={kec} value={kec}>{kec}</option>
                 ))}

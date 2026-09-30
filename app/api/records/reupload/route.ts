@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
     const submissionId = formData.get("submissionId") as string | null;
     const formType = formData.get("formType") as string | null;
+    const respondenNik = formData.get("respondenNik") as string | null;
 
     if (!file || !submissionId || formType === null || formType === undefined) {
       return NextResponse.json(
@@ -145,6 +146,7 @@ export async function POST(request: NextRequest) {
         sumberPendanaan: rec.sumberPendanaan,
         medali: rec.medali || null,
         uraianCapaian: rec.uraianCapaian,
+        ...(respondenNik && { respondenNik }),
       }));
 
       if (recordsToInsert.length > 0) {
