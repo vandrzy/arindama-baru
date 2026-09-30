@@ -27,7 +27,7 @@ const updateUserSchema = z.object({
   email: z.string().email("Email tidak valid"),
   password: z.string().optional().or(z.literal("")),
   nama: z.string().min(3, "Nama wajib diisi"),
-  role: z.enum(["ADMIN", "RESPONDEN"]).default("RESPONDEN"),
+  role: z.enum(["ADMIN", "OPERATOR"]).default("OPERATOR"),
   jabatan: z.string().min(2, "Jabatan wajib diisi"),
   kabupatenKota: z.string().min(3, "Kabupaten/Kota wajib diisi"),
   instansi: z.string().min(2, "Instansi wajib diisi"),
@@ -278,9 +278,9 @@ export async function PATCH(
     const body = await request.json();
     const newRole = body.role;
 
-    if (!newRole || !["ADMIN", "RESPONDEN"].includes(newRole)) {
+    if (!newRole || !["ADMIN", "OPERATOR"].includes(newRole)) {
       return NextResponse.json(
-        { error: "Role tidak valid (harus ADMIN atau RESPONDEN)." },
+        { error: "Role tidak valid (harus ADMIN atau OPERATOR)." },
         { status: 400 }
       );
     }

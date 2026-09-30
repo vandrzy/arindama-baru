@@ -107,10 +107,10 @@ export async function GET(request: NextRequest) {
 
     let medaliSah = { emas: 0, perak: 0, perunggu: 0, total: 0 };
     
-    // Total Responden
+    // Total Operator
     const allUsers = await prisma.user.findMany({
       where: {
-        role: "RESPONDEN",
+        role: "OPERATOR",
         ...(pilarFilter !== "Semua" ? {
           instansi: pilarFilter === "Prestasi (KONI)" ? "KONI" :
                    pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
         } : {})
       }
     });
-    const totalResponden = allUsers.length;
+    const totalOperator = allUsers.length;
 
     // Pilar Scores and Composite Score
     const pilarScores = {
@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 10)
       .map(r => ({
         id: r.id,
-        responden: r.submission.user.nama || "Tanpa Nama",
+        operator: r.submission.user.nama || "Tanpa Nama",
         instansi: r.submission.user.instansi || "-",
         indikator: r.indicatorId === 1 ? "1 (Capaian Prestasi Nasional/Internasional)" : "6 (Capaian Prestasi Daerah)",
         kejuaraan: r.namaKegiatan || "-",
@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       totalKomposit: Math.round(totalKomposit),
-      totalResponden,
+      totalOperator,
       medaliSah,
       antreanValidasi,
       totalDataTerverifikasi,

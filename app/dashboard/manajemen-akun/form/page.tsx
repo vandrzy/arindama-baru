@@ -37,7 +37,7 @@ function UserFormContent() {
     password: "",
     confirmPassword: "",
     nama: "",
-    role: "RESPONDEN" as "ADMIN" | "RESPONDEN",
+    role: "OPERATOR" as "ADMIN" | "OPERATOR",
     jabatan: "",
     kabupatenKota: "",
     instansi: "",
@@ -77,7 +77,7 @@ function UserFormContent() {
             password: "",
             confirmPassword: "",
             nama: u.nama || "",
-            role: u.role || "RESPONDEN",
+            role: u.role || "OPERATOR",
             jabatan: u.jabatan || "",
             kabupatenKota: u.kabupatenKota || "",
             instansi: u.instansi || "",
@@ -201,19 +201,19 @@ function UserFormContent() {
           className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 hover:text-[#0B3D2E] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Kembali ke Data Responden</span>
+          <span>Kembali ke Data Operator</span>
         </Link>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-10 space-y-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {isEditMode ? "Edit Data Responden" : "Tambah Responden Baru"}
+            {isEditMode ? "Edit Data Operator" : "Tambah Operator Baru"}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isEditMode
-              ? "Perbarui informasi akun responden survei keolahragaan."
-              : "Isi formulir berikut untuk membuat akun responden baru dalam sistem."}
+              ? "Perbarui informasi akun operator survei keolahragaan."
+              : "Isi formulir berikut untuk membuat akun operator baru dalam sistem."}
           </p>
         </div>
 
@@ -324,7 +324,7 @@ function UserFormContent() {
             </div>
           </div>
 
-          {/* Profil Responden */}
+          {/* Profil Operator */}
           <div className="space-y-4 pt-2">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">
               Informasi Profil &amp; Instansi
@@ -451,7 +451,7 @@ function UserFormContent() {
               className="bg-[#0B3D2E] hover:bg-[#07291F] text-white shadow-md rounded-2xl px-6 py-3 text-xs sm:text-sm font-bold flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              <span>{isEditMode ? "Simpan Perubahan" : "Tambah Responden"}</span>
+              <span>{isEditMode ? "Simpan Perubahan" : "Tambah Operator"}</span>
             </Button>
           </div>
         </form>

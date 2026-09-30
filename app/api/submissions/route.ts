@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const filterUserId = searchParams.get("userId");
     const tahun = searchParams.get("tahun");
 
-    const targetUserId = payload.role === "RESPONDEN" ? payload.id : filterUserId || undefined;
+    const targetUserId = payload.role === "OPERATOR" ? payload.id : filterUserId || undefined;
 
     const submissions = await prisma.submission.findMany({
       where: {

@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     // Aggregation by Kabupaten/Kota (or Province)
     const wilayahMap = new Map<string, {
       namaWilayah: string,
-      jumlahResponden: Set<string>,
+      jumlahOperator: Set<string>,
       medaliEmas: number,
       medaliPerak: number,
       medaliPerunggu: number,
@@ -117,10 +117,10 @@ export async function GET(request: NextRequest) {
       skor: number
     }>();
 
-    // Init map with all RESPONDEN users to ensure they are counted even with 0 records
+    // Init map with all OPERATOR users to ensure they are counted even with 0 records
     const allUsers = await prisma.user.findMany({
       where: {
-        role: "RESPONDEN",
+        role: "OPERATOR",
         ...(pilarFilter !== "Semua" ? {
           instansi: pilarFilter === "Prestasi (KONI)" ? "KONI" :
                    pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
@@ -130,14 +130,14 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const totalResponden = allUsers.length;
+    const totalOperator = allUsers.length;
 
     allUsers.forEach(u => {
       const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (u.kabupatenKota || "Lainnya");
       if (!wilayahMap.has(namaWilayah)) {
         wilayahMap.set(namaWilayah, {
           namaWilayah,
-          jumlahResponden: new Set(),
+          jumlahOperator: new Set(),
           medaliEmas: 0,
           medaliPerak: 0,
           medaliPerunggu: 0,
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
           skor: 0
         });
       }
-      wilayahMap.get(namaWilayah)!.jumlahResponden.add(u.id);
+      wilayahMap.get(namaWilayah)!.jumlahOperator.add(u.id);
     });
 
     allRecords.forEach(rec => {
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
       if (!wData) {
         wData = {
           namaWilayah,
-          jumlahResponden: new Set(),
+          jumlahOperator: new Set(),
           medaliEmas: 0,
           medaliPerak: 0,
           medaliPerunggu: 0,
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
         };
         wilayahMap.set(namaWilayah, wData);
       }
-      wData.jumlahResponden.add(user.id);
+      wData.jumlahOperator.add(user.id);
 
       if (isVerified || isMedalIndicator) {
         if (medaliStr.includes("emas")) {
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
 
     const peringkatWilayah = Array.from(wilayahMap.values()).map(w => ({
       namaWilayah: w.namaWilayah,
-      jumlahResponden: w.jumlahResponden.size,
+      jumlahOperator: w.jumlahOperator.size,
       medaliEmas: w.medaliEmas,
       medaliPerak: w.medaliPerak,
       medaliPerunggu: w.medaliPerunggu,
@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
       totalDataTerverifikasi,
       persentaseTerverifikasi,
       medaliSah,
-      totalResponden,
+      totalOperator,
       peringkatWilayah
     });
 

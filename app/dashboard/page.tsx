@@ -3,7 +3,7 @@
 import React from "react";
 import { useApp } from "@/lib/context/app-context";
 import { AdminView } from "./AdminView";
-import { RespondenView } from "./RespondenView";
+import { OperatorView } from "./OperatorView";
 
 export default function DashboardPage() {
   const { currentUser } = useApp();
@@ -12,5 +12,5 @@ export default function DashboardPage() {
     return <AdminView />;
   }
 
-  return <RespondenView />;
+  return <OperatorView />;
 }

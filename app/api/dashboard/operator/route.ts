@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const submissionIds = submissions.map((s: any) => s.id);
 
     const indikatorNames = [
-      "Biodata Responden",
+      "Biodata Operator",
       "Kejuaraan Pelajar",
       "Peningkatan Mutu SDM",
       "Pelatih Bawa Tim",
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
       status8Indikator
     });
   } catch (error) {
-    console.error("Dashboard responden error:", error);
+    console.error("Dashboard operator error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

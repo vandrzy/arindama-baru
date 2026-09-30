@@ -90,7 +90,7 @@ export function AdminView() {
     if (!q) return true;
     return (
       (sub.namaKegiatan || sub.kejuaraan || "").toLowerCase().includes(q) ||
-      (sub.peserta || sub.responden || "").toLowerCase().includes(q) ||
+      (sub.peserta || sub.operator || "").toLowerCase().includes(q) ||
       (sub.cabangOlahraga || sub.cabor || "").toLowerCase().includes(q)
     );
   });
@@ -203,11 +203,11 @@ export function AdminView() {
           </div>
         </div>
 
-        {/* Card 2: RESPONDEN TERDATA (Soft Blue/Indigo Tint) */}
+        {/* Card 2: OPERATOR TERDATA (Soft Blue/Indigo Tint) */}
         <div className="p-5 rounded-2xl bg-[#f4f7ff] border border-[#e0e7ff] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
-              RESPONDEN TERDATA
+              OPERATOR TERDATA
             </span>
             <div className="w-9 h-9 rounded-full bg-[#e0e7ff] flex items-center justify-center text-[#4f46e5] shrink-0">
               <User className="w-5 h-5" />
@@ -216,7 +216,7 @@ export function AdminView() {
 
           <div className="mt-4 space-y-2">
             <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-              {(data?.totalResponden || 0).toLocaleString("id-ID")}
+              {(data?.totalOperator || 0).toLocaleString("id-ID")}
             </div>
 
             <p className="text-xs font-medium text-slate-400">
@@ -514,7 +514,7 @@ export function AdminView() {
             <thead>
               <tr className="bg-slate-50/60 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                 <th className="py-3.5 px-6 pl-8">NAMA KEGIATAN &amp; CABOR</th>
-                <th className="py-3.5 px-6">RESPONDEN</th>
+                <th className="py-3.5 px-6">OPERATOR</th>
                 <th className="py-3.5 px-6">TINGKAT</th>
                 <th className="py-3.5 px-6">CAPAIAN MEDALI</th>
                 <th className="py-3.5 px-6 text-center">STATUS BERKAS</th>
@@ -572,7 +572,7 @@ export function AdminView() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="font-bold text-slate-700">{sub.peserta || sub.responden || "-"}</div>
+                        <div className="font-bold text-slate-700">{sub.peserta || sub.operator || "-"}</div>
                       </td>
                       <td className="py-4 px-6">
                         <span className="px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { UserRole, SurveySubmission, RespondentIdentity, SurveyAnswer, AuthUser } from "@/lib/types";
+import { UserRole, SurveySubmission, OperatortIdentity, SurveyAnswer, AuthUser } from "@/lib/types";
 import { INITIAL_SUBMISSIONS } from "@/lib/constants/survey-data";
 
 // SECURITY: Hardcoded accounts REMOVED for production safety
@@ -17,14 +17,14 @@ interface AppContextType {
   logout: () => void;
   submissions: SurveySubmission[];
   addSubmission: (submission: SurveySubmission) => void;
-  draftIdentity: RespondentIdentity;
-  setDraftIdentity: React.Dispatch<React.SetStateAction<RespondentIdentity>>;
+  draftIdentity: OperatortIdentity;
+  setDraftIdentity: React.Dispatch<React.SetStateAction<OperatortIdentity>>;
   draftAnswers: Record<number, SurveyAnswer>;
   setDraftAnswers: React.Dispatch<React.SetStateAction<Record<number, SurveyAnswer>>>;
   clearDraft: () => void;
 }
 
-const defaultIdentity: RespondentIdentity = {
+const defaultIdentity: OperatortIdentity = {
   namaLengkap: "",
   umur: "",
   jenisKelamin: "",
@@ -37,12 +37,12 @@ const defaultIdentity: RespondentIdentity = {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRoleState] = useState<UserRole>("RESPONDEN");
+  const [role, setRoleState] = useState<UserRole>("OPERATOR");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const [submissions, setSubmissions] = useState<SurveySubmission[]>(INITIAL_SUBMISSIONS);
-  const [draftIdentity, setDraftIdentity] = useState<RespondentIdentity>(defaultIdentity);
+  const [draftIdentity, setDraftIdentity] = useState<OperatortIdentity>(defaultIdentity);
   const [draftAnswers, setDraftAnswers] = useState<Record<number, SurveyAnswer>>({});
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -137,7 +137,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error("Logout API error:", err);
     }
     setCurrentUser(null);
-    setRoleState("RESPONDEN");
+    setRoleState("OPERATOR");
     if (typeof window !== "undefined") {
       window.location.href = "/login";
     }

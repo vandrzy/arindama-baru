@@ -21,7 +21,7 @@ model User {
   email       String   @unique
   password    String   // Hashed with bcrypt
   nama        String
-  role        UserRole @default(RESPONDEN)
+  role        UserRole @default(OPERATOR)
   jabatan       String   @default("")
   kabupatenKota String   @default("")
   instansi      String   @default("")
@@ -43,7 +43,7 @@ model User {
 
 enum UserRole {
   ADMIN
-  RESPONDEN
+  OPERATOR
 }
 
 // ============================================

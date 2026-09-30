@@ -77,10 +77,10 @@ export async function getAdminFiltersData(paramKota?: string, paramInstansi?: st
   });
   const listInstansi = Array.from(uniqueInstansiSet).sort();
 
-  // Filtered Responden list
-  const respondenUsers = await prisma.user.findMany({
+  // Filtered Operator list
+  const operatorUsers = await prisma.user.findMany({
     where: {
-      role: "RESPONDEN",
+      role: "OPERATOR",
       ...(paramKota ? { kabupatenKota: { equals: paramKota } } : {}),
       ...(paramInstansi ? { instansi: { equals: paramInstansi } } : {}),
     },
@@ -94,7 +94,7 @@ export async function getAdminFiltersData(paramKota?: string, paramInstansi?: st
     orderBy: { nama: "asc" },
   });
 
-  const listResponden = respondenUsers.map((u) => ({
+  const listOperator = operatorUsers.map((u) => ({
     id: u.id,
     nama: u.nama,
     email: u.email,
@@ -105,7 +105,7 @@ export async function getAdminFiltersData(paramKota?: string, paramInstansi?: st
   return {
     listKota,
     listInstansi,
-    listResponden,
+    listOperator,
   };
 }
 
@@ -121,7 +121,7 @@ export async function getStatistikData({
   // 1. Build Submission filter condition
   const submissionWhere: any = {};
 
-  if (currentUser.role === "RESPONDEN") {
+  if (currentUser.role === "OPERATOR") {
     submissionWhere.userId = currentUser.id;
   } else if (currentUser.role === "ADMIN") {
     if (paramUserId) {

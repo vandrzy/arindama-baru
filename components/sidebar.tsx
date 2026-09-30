@@ -43,7 +43,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       ? [
           {
             href: "/dashboard/manajemen-akun",
-            label: "Responden",
+            label: "Operator",
             icon: Users,
             match: (p: string) => p.startsWith("/dashboard/manajemen-akun"),
           },

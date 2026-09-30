@@ -141,7 +141,7 @@ export default function StatistikPage() {
   // Admin UI state filters
   const [selectedKota, setSelectedKota] = useState<string>("");
   const [selectedInstansi, setSelectedInstansi] = useState<string>("");
-  const [selectedRespondenId, setSelectedRespondenId] = useState<string>("");
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string>("");
   const [adminFilterMessage, setAdminFilterMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function StatistikPage() {
   const fetchStatistik = async (
     kota = selectedKota,
     instansi = selectedInstansi,
-    respId = selectedRespondenId
+    respId = selectedOperatorId
   ) => {
     try {
       setLoading(true);
@@ -179,9 +179,9 @@ export default function StatistikPage() {
   };
 
   const handleApplyAdminFilter = () => {
-    fetchStatistik(selectedKota, selectedInstansi, selectedRespondenId);
+    fetchStatistik(selectedKota, selectedInstansi, selectedOperatorId);
     setAdminFilterMessage(
-      `Filter Admin Berhasil Diterapkan: Kota "${selectedKota || "Semua"}", Instansi "${selectedInstansi || "Semua"}", dan Responden "${selectedRespondenId ? "ID " + selectedRespondenId : "Semua"}"`
+      `Filter Admin Berhasil Diterapkan: Kota "${selectedKota || "Semua"}", Instansi "${selectedInstansi || "Semua"}", dan Operator "${selectedOperatorId ? "ID " + selectedOperatorId : "Semua"}"`
     );
     setTimeout(() => setAdminFilterMessage(null), 5000);
   };
@@ -189,7 +189,7 @@ export default function StatistikPage() {
   const handleResetAdminFilter = () => {
     setSelectedKota("");
     setSelectedInstansi("");
-    setSelectedRespondenId("");
+    setSelectedOperatorId("");
     fetchStatistik("", "", "");
     setAdminFilterMessage("Filter Admin berhasil direset ke tampilan default (Seluruh Data).");
     setTimeout(() => setAdminFilterMessage(null), 4000);
@@ -393,7 +393,7 @@ export default function StatistikPage() {
   const activeCategoryObj = CATEGORIES.find((c) => c.key === selectedCategory)!;
   const isAdmin = currentUser?.role === "ADMIN";
 
-  // Check if current responden has data in selected category
+  // Check if current operator has data in selected category
   const hasCategoryData = (catKey: CategoryKey): boolean => {
     if (catKey === "mutuSDM") return (mutuData.totalRecords || 0) > 0;
     if (catKey === "kinerjaSDM") return filteredKinerjaList.length > 0;
@@ -436,7 +436,7 @@ export default function StatistikPage() {
           <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed">
             {isAdmin
               ? "Dashboard Admin untuk memantau sebaran demografi, mutu SDM, capaian prestasi atlet, serta statistik event keolahragaan daerah."
-              : `Selamat datang, ${currentUser?.nama || "Responden"}. Halaman ini menampilkan visualisasi grafik dan kalkulasi bobot prestasi dari kuesioner yang telah Anda masukkan.`}
+              : `Selamat datang, ${currentUser?.nama || "Operator"}. Halaman ini menampilkan visualisasi grafik dan kalkulasi bobot prestasi dari kuesioner yang telah Anda masukkan.`}
           </p>
         </div>
       </div>
@@ -457,7 +457,7 @@ export default function StatistikPage() {
                   </span>
                 </h2>
                 <p className="text-xs text-brand-text-secondary">
-                  Gunakan filter di bawah ini untuk menyesuaikan parameter wilayah, instansi, dan responden.
+                  Gunakan filter di bawah ini untuk menyesuaikan parameter wilayah, instansi, dan operator.
                 </p>
               </div>
             </div>
@@ -522,19 +522,19 @@ export default function StatistikPage() {
               </select>
             </div>
 
-            {/* Filter 3: Responden */}
+            {/* Filter 3: Operator */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-brand-text flex items-center gap-1.5">
                 <UserCheck className="w-3.5 h-3.5 text-brand-primary" />
-                <span>3. Spesifik Responden</span>
+                <span>3. Spesifik Operator</span>
               </label>
               <select
-                value={selectedRespondenId}
-                onChange={(e) => setSelectedRespondenId(e.target.value)}
+                value={selectedOperatorId}
+                onChange={(e) => setSelectedOperatorId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-brand-text bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
               >
-                <option value="">-- Semua Responden ({adminFiltersData?.listResponden?.length || 0}) --</option>
-                {adminFiltersData?.listResponden?.map((resp: any) => (
+                <option value="">-- Semua Operator ({adminFiltersData?.listOperator?.length || 0}) --</option>
+                {adminFiltersData?.listOperator?.map((resp: any) => (
                   <option key={resp.id} value={resp.id}>
                     {resp.nama} ({resp.kabupatenKota || "Samarinda"})
                   </option>

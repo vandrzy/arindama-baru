@@ -28,9 +28,9 @@ export default function DemografiSection({ demografiData, hasCategoryData }: Dem
             <span className="text-xs font-semibold text-gray-500">Total Entri Identitas</span>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-none">
-                {demografiData?.totalResponden || 0}
+                {demografiData?.totalOperator || 0}
               </span>
-              <span className="text-sm font-semibold text-gray-700">Responden</span>
+              <span className="text-sm font-semibold text-gray-700">Operator</span>
             </div>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
@@ -61,7 +61,7 @@ export default function DemografiSection({ demografiData, hasCategoryData }: Dem
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <TrendingUp className="w-5 h-5 text-emerald-800" />
             <h3 className="text-base font-bold text-gray-900">
-              Proporsi Jenis Kelamin Responden
+              Proporsi Jenis Kelamin Operator
             </h3>
           </div>
 
@@ -136,7 +136,7 @@ export default function DemografiSection({ demografiData, hasCategoryData }: Dem
             <div className="flex items-center gap-2 border-b border-gray-100 pb-3 mb-4">
               <BarChart3 className="w-5 h-5 text-emerald-800" />
               <h3 className="text-base font-bold text-gray-900">
-                Sebaran Kelompok Usia Responden
+                Sebaran Kelompok Usia Operator
               </h3>
             </div>
 
@@ -163,7 +163,7 @@ export default function DemografiSection({ demografiData, hasCategoryData }: Dem
                     <Tooltip />
                     <Bar
                       dataKey="value"
-                      name="Jumlah Responden"
+                      name="Jumlah Operator"
                       fill="#003820"
                       radius={[6, 6, 0, 0]}
                       barSize={44}
@@ -172,7 +172,7 @@ export default function DemografiSection({ demografiData, hasCategoryData }: Dem
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyDataChartHint title="Belum Ada Data Usia Responden" />
+              <EmptyDataChartHint title="Belum Ada Data Usia Operator" />
             )}
           </div>
 
@@ -182,7 +182,7 @@ export default function DemografiSection({ demografiData, hasCategoryData }: Dem
               Rentang Usia Dominan: <strong className="text-emerald-950 font-bold">{dominantAgeLabel}</strong>
             </span>
             <span className="bg-blue-100/80 text-blue-800 font-bold px-3 py-1 rounded-full text-xs border border-blue-200/60 shrink-0 self-start sm:self-auto">
-              Akumulasi: {demografiData?.totalResponden || 0} Data
+              Akumulasi: {demografiData?.totalOperator || 0} Data
             </span>
           </div>
         </div>

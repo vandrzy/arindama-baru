@@ -31,7 +31,7 @@ interface UserItem {
   username: string;
   email: string;
   nama: string;
-  role: "ADMIN" | "RESPONDEN";
+  role: "ADMIN" | "OPERATOR";
   jabatan: string;
   kabupatenKota: string;
   instansi: string;
@@ -177,10 +177,10 @@ export default function ManajemenAkunPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Basis Data Responden Kalimantan Timur
+            Basis Data Operator Kalimantan Timur
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Audit kepatuhan kuota responden dari 105 Kecamatan se-Kalimantan Timur (Standar Kemenpora RI)
+            Audit kepatuhan kuota operator dari 105 Kecamatan se-Kalimantan Timur (Standar Kemenpora RI)
           </p>
         </div>
 
@@ -191,7 +191,7 @@ export default function ManajemenAkunPage() {
             className="bg-slate-950 hover:bg-slate-800 text-white shadow-sm rounded-2xl px-5 py-2.5 text-xs font-extrabold flex items-center gap-2 shrink-0 self-start sm:self-center h-auto"
           >
             <UserPlus className="w-4 h-4 text-white" />
-            <span>Tambah Responden</span>
+            <span>Tambah Operator</span>
           </Button>
         </Link>
       </div>
@@ -202,7 +202,7 @@ export default function ManajemenAkunPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-              Daftar Responden Se-Kalimantan Timur
+              Daftar Operator Se-Kalimantan Timur
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Seluruh data sampel individu keolahragaan dari 10 Kabupaten/Kota se-Kaltim
@@ -214,7 +214,7 @@ export default function ManajemenAkunPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Filter responden..."
+              placeholder="Filter operator..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10 pr-4 py-2 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-[#0B3D2E]/20 focus:border-[#0B3D2E] w-48 sm:w-60 transition-all"
@@ -230,12 +230,12 @@ export default function ManajemenAkunPage() {
           </div>
         )}
 
-        {/* Tabel Data Responden */}
+        {/* Tabel Data Operator */}
         <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-600 tracking-wider">
-                <th className="py-4 px-6">NAMA RESPONDEN</th>
+                <th className="py-4 px-6">NAMA OPERATOR</th>
                 <th className="py-4 px-4">JABATAN</th>
                 <th className="py-4 px-4">INSTANSI</th>
                 <th className="py-4 px-4">KECAMATAN / KELURAHAN (WILAYAH)</th>
@@ -272,14 +272,14 @@ export default function ManajemenAkunPage() {
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-slate-400 text-xs sm:text-sm font-medium">
                     {search
-                      ? `Tidak ditemukan responden yang cocok dengan kata kunci "${search}".`
-                      : "Belum ada data responden terdaftar."}
+                      ? `Tidak ditemukan operator yang cocok dengan kata kunci "${search}".`
+                      : "Belum ada data operator terdaftar."}
                   </td>
                 </tr>
               ) : (
                 users.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
-                    {/* 1. NAMA RESPONDEN (Foto Profil Dihapus) */}
+                    {/* 1. NAMA OPERATOR */}
                     <td className="py-4 px-6">
                       <div>
                         <div className="font-extrabold text-slate-900 text-sm">{user.nama}</div>
@@ -341,7 +341,7 @@ export default function ManajemenAkunPage() {
                         <Link href={`/dashboard/manajemen-akun/form?id=${user.id}`}>
                           <button
                             className="p-2 rounded-xl text-slate-500 hover:text-[#0B3D2E] hover:bg-slate-100 transition-colors"
-                            title="Edit Responden"
+                            title="Edit Operator"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
@@ -350,7 +350,7 @@ export default function ManajemenAkunPage() {
                         <button
                           onClick={() => setDeleteModalUser(user)}
                           className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
-                          title="Hapus Responden"
+                          title="Hapus Operator"
                           disabled={user.id === currentUser.id}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -364,12 +364,12 @@ export default function ManajemenAkunPage() {
           </table>
         </div>
 
-        {/* Pagination Controls (Pengaturan Halaman Tetap Digunakan) */}
+        {/* Pagination Controls */}
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-xs text-slate-500 font-medium">
             Menampilkan data halaman <span className="font-bold text-slate-900">{pagination.page}</span> dari{" "}
             <span className="font-bold text-slate-900">{pagination.totalPages}</span> (Total{" "}
-            <span className="font-bold text-slate-900">{pagination.total}</span> Responden)
+            <span className="font-bold text-slate-900">{pagination.total}</span> Operator)
           </div>
 
           <div className="flex items-center gap-2">

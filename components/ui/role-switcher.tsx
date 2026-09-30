@@ -11,7 +11,7 @@ export function RoleSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  const isResponden = role === "RESPONDEN";
+  const isOperator = role === "OPERATOR";
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
@@ -37,13 +37,13 @@ export function RoleSwitcher() {
           </p>
 
           <div className="space-y-2">
-            {/* Responden Option */}
+            {/* Operator Option */}
             <button
               onClick={() => {
-                setRole("RESPONDEN");
+                setRole("OPERATOR");
               }}
               className={`w-full text-left p-3 rounded-xl border transition-all flex items-start justify-between ${
-                isResponden
+                isOperator
                   ? "bg-brand-primary-light/60 border-brand-primary text-brand-primary"
                   : "bg-gray-50 border-gray-100 text-brand-text hover:bg-gray-100"
               }`}
@@ -51,13 +51,13 @@ export function RoleSwitcher() {
               <div>
                 <div className="flex items-center gap-1.5 font-bold text-xs">
                   <Users className="w-3.5 h-3.5" />
-                  <span>1. User / Responden</span>
+                  <span>1. User / Operator</span>
                 </div>
                 <p className="text-xs text-brand-text-secondary mt-1">
                   Melihat kuesioner, isi identitas, jawab 16 indikator bertahap, upload PDF sah.
                 </p>
               </div>
-              {isResponden && <Check className="w-4 h-4 shrink-0 text-brand-primary mt-0.5" />}
+              {isOperator && <Check className="w-4 h-4 shrink-0 text-brand-primary mt-0.5" />}
             </button>
 
             {/* Admin Option */}
@@ -66,7 +66,7 @@ export function RoleSwitcher() {
                 setRole("ADMIN");
               }}
               className={`w-full text-left p-3 rounded-xl border transition-all flex items-start justify-between ${
-                !isResponden
+                !isOperator
                   ? "bg-amber-50 border-brand-accent text-brand-accent-hover"
                   : "bg-gray-50 border-gray-100 text-brand-text hover:bg-gray-100"
               }`}
@@ -80,16 +80,16 @@ export function RoleSwitcher() {
                   Kelola kuesioner, audit respon daerah, preview PDF langsung, ekspor laporan.
                 </p>
               </div>
-              {!isResponden && <Check className="w-4 h-4 shrink-0 text-brand-accent-hover mt-0.5" />}
+              {!isOperator && <Check className="w-4 h-4 shrink-0 text-brand-accent-hover mt-0.5" />}
             </button>
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
             <Link
-              href={isResponden ? "/kuesioner" : "/statistik"}
+              href={isOperator ? "/kuesioner" : "/statistik"}
               className="font-bold text-brand-primary hover:underline flex items-center gap-1"
             >
-              Buka Halaman {isResponden ? "Kuesioner" : "Statistik"} →
+              Buka Halaman {isOperator ? "Kuesioner" : "Statistik"} →
             </Link>
           </div>
         </div>
@@ -99,14 +99,14 @@ export function RoleSwitcher() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-elevated transition-all border font-semibold text-xs ${
-          isResponden
+          isOperator
             ? "bg-brand-primary text-white border-emerald-700 hover:bg-brand-primary-hover"
             : "bg-brand-accent text-white border-amber-600 hover:bg-brand-accent-hover"
         }`}
       >
         <ArrowRightLeft className="w-3.5 h-3.5" />
         <span>
-          Peran: <strong>{isResponden ? "Responden" : "Admin"}</strong>
+          Peran: <strong>{isOperator ? "Operator" : "Admin"}</strong>
         </span>
         <span className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
       </button>

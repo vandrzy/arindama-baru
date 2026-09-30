@@ -120,7 +120,7 @@ export const FLOW_STEPS: FlowStepItem[] = [
 ];
 
 export const FULL_TEMPLATE_NAMES: Record<number, string> = {
-  0: "IdentitasResponden_Fixed.xlsx",
+  0: "IdentitasOperator_Fixed.xlsx",
   1: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx",
   2: "Indikator 2_Peningkatan Mutu SDM Olahraga.xlsx",
   3: "Indikator 3_Pelatih Cabor Membawa Tim Tingkat Nasional Internasional.xlsx",
@@ -132,7 +132,7 @@ export const FULL_TEMPLATE_NAMES: Record<number, string> = {
 };
 
 export const EXPECTED_FILE_NAMES: Record<number, string[]> = {
-  0: ["IdentitasResponden"],
+  0: ["IdentitasOperator"],
   1: ["Indikator 1"],
   2: ["Indikator 2"],
   3: ["Indikator 3"],

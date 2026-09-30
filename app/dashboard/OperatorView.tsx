@@ -23,7 +23,7 @@ interface DashboardStats {
   status8Indikator: { code: string; title: string; count: number; sah: number }[];
 }
 
-export function RespondenView() {
+export function OperatorView() {
   const { currentUser } = useApp();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +31,7 @@ export function RespondenView() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("/api/dashboard/responden");
+        const res = await fetch("/api/dashboard/operator");
         if (res.ok) {
           const data = await res.json();
           setStats(data);
@@ -68,10 +68,10 @@ export function RespondenView() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">WORKSPACE KERJA RESPONDEN</span>
+            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">WORKSPACE KERJA OPERATOR</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Pemantauan &amp; Penginputan Data Responden
+            Pemantauan &amp; Penginputan Data Operator
           </h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
             Monitoring data entri kegiatan, unggah berkas, dan verifikasi dokumen fisik
@@ -111,7 +111,7 @@ export function RespondenView() {
             <p className="text-xs font-medium text-slate-400 mt-1">Data Anda yang terinput</p>
           </div>
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-600">Responden: {currentUser?.nama}</span>
+            <span className="text-xs font-bold text-blue-600">Operator: {currentUser?.nama}</span>
           </div>
         </Card>
 

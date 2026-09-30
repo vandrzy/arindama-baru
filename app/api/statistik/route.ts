@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Prepare Admin UI Filter Options dynamically using SQL pushdown
     const adminFiltersData = currentUser.role === "ADMIN"
       ? await getAdminFiltersData(paramKota, paramInstansi)
-      : { listKota: [], listInstansi: [], listResponden: [] };
+      : { listKota: [], listInstansi: [], listOperator: [] };
 
     // Process user's submissions data via service
     const data = await getStatistikData({

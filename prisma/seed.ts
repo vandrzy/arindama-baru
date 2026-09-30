@@ -46,7 +46,7 @@ async function main() {
       email: "responden@arindama.id",
       password: userPassword,
       nama: "Bambang Pamungkas, S.Pd.",
-      role: "RESPONDEN",
+      role: "OPERATOR",
       jabatan: "Pelatih & Pengurus Cabang Atletik",
       instansi: "Pengcab PASI Kabupaten Kutai Kartanegara",
     },

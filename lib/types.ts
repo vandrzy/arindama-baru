@@ -1,4 +1,4 @@
-export type UserRole = "RESPONDEN" | "ADMIN";
+export type UserRole = "OPERATOR" | "ADMIN";
 
 export interface AuthUser {
   id: string;
@@ -10,7 +10,7 @@ export interface AuthUser {
   kabupatenKota?: string;
 }
 
-export interface RespondentIdentity {
+export interface OperatortIdentity {
   namaLengkap: string;
   umur: number | string;
   jenisKelamin: "Laki-laki" | "Perempuan" | "";
@@ -50,7 +50,7 @@ export interface SurveySubmission {
   noRegistrasi: string;
   createdAt: string;
   tahunSurvei: number;
-  responden: RespondentIdentity;
+  operator: OperatortIdentity;
   user?: {
     nama?: string;
     instansi?: string;

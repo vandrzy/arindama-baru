@@ -254,10 +254,10 @@ export default function KuesionerPage() {
   // Aggregate all records for active indicator across submissions
   const allRecords = useMemo(() => {
     const list: any[] = [];
-    const isUserRole = currentUser?.role === "RESPONDEN";
+    const isUserRole = currentUser?.role === "OPERATOR";
 
     submissionsList.forEach((sub) => {
-      // If user is RESPONDEN, only include their own submissions
+      // If user is OPERATOR, only include their own submissions
       if (isUserRole && sub.userId !== currentUser?.id) {
         return;
       }
@@ -273,7 +273,7 @@ export default function KuesionerPage() {
               ...rec,
               submissionId: sub.id,
               submissionNo: sub.noRegistrasi || sub.id,
-              userNama: sub.user?.nama || "Responden",
+              userNama: sub.user?.nama || "Operator",
               userEmail: sub.user?.email || "",
               userKabKota: sub.user?.kabupatenKota || sub.user?.instansi || "Kalimantan Timur",
               recordIndex: idx,
@@ -516,7 +516,7 @@ export default function KuesionerPage() {
     };
 
     const targetSubmissions = submissionsList.filter((sub) => {
-      if (currentUser?.role === "RESPONDEN") {
+      if (currentUser?.role === "OPERATOR") {
         return sub.userId === currentUser.id;
       }
       return true;
@@ -798,7 +798,7 @@ export default function KuesionerPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Cari nama responden, cabor, atau kegiatan..."
+              placeholder="Cari nama operator, cabor, atau kegiatan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50/50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
@@ -935,7 +935,7 @@ export default function KuesionerPage() {
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
-                  <th className="py-3.5 px-4">RESPONDEN</th>
+                  <th className="py-3.5 px-4">OPERATOR</th>
                   <th className="py-3.5 px-4">WILAYAH (KALTIM)</th>
                   <th className="py-3.5 px-4">CABOR &amp; KEGIATAN</th>
                   <th className="py-3.5 px-4">TINGKAT &amp; CAPAIAN</th>
@@ -957,7 +957,7 @@ export default function KuesionerPage() {
 
                   return (
                     <tr key={rec.id || index} className="hover:bg-slate-50/80 transition-colors">
-                      {/* RESPONDEN */}
+                      {/* OPERATOR */}
                       <td className="py-3.5 px-4">
                         <div>
                           <div className="font-bold text-slate-900">{rec.userNama}</div>
@@ -1226,7 +1226,7 @@ export default function KuesionerPage() {
           </div>
 
           <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200/80 self-start sm:self-center">
-            {currentUser?.role === "ADMIN" ? "Seluruh Kalimantan Timur" : `Responden: ${currentUser?.nama || "User"}`}
+            {currentUser?.role === "ADMIN" ? "Seluruh Kalimantan Timur" : `Operator: ${currentUser?.nama || "User"}`}
           </span>
         </div>
 
@@ -1327,7 +1327,7 @@ export default function KuesionerPage() {
                 <AlertCircle className="w-12 h-12 text-rose-500" />
                 <h4 className="font-extrabold text-slate-800 text-sm">Belum Ada Berkas PDF Terunggah</h4>
                 <p className="text-xs text-slate-500 max-w-md">
-                  Responden belum mengunggah dokumen bukti PDF untuk kegiatan ini. Anda dapat menetapkan status verifikasi di bawah ini.
+                  Operator belum mengunggah dokumen bukti PDF untuk kegiatan ini. Anda dapat menetapkan status verifikasi di bawah ini.
                 </p>
               </div>
             )}
