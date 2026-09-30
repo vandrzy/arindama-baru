@@ -36,7 +36,7 @@ export default function RespondenPage() {
     nik: "",
     jenisKelamin: "Laki-laki",
     tanggalLahir: "",
-    kabupatenKota: currentUser?.kabupatenKota || "",
+    kabupatenKota: "",
     kecamatan: "",
     cabangOlahraga: "",
     nomorTelepon: "",
