@@ -142,12 +142,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             onClick={onClose}
             className="flex items-center gap-3 group shrink-0"
           >
-            <div className="w-12 h-12 bg-[#0f766e] rounded-2xl flex items-center justify-center shadow-sm">
-              <Activity className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-[#0e1726] rounded-xl flex items-center justify-center shadow-sm">
+              <Activity className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-black tracking-tight text-slate-900">
-                IPO Arindama
+              <span className="text-lg font-black tracking-tight text-slate-900 leading-tight">
+                ARINDAMA
               </span>
               <span className="text-[11px] font-semibold text-slate-400">
                 Pemerintah Provinsi Kaltim
@@ -176,7 +176,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               placeholder="Cari data, menu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm font-medium rounded-full border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
+              className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm font-medium rounded-full border border-slate-200 bg-slate-50/70 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
             />
           </div>
         </div>
@@ -200,31 +200,29 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
         {/* Menu Navigasi (Tengah - Scrollable) */}
         <div className="flex-1 overflow-y-auto px-3 mt-2 pb-4 space-y-6">
-          
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="text-[10px] font-bold text-slate-400 tracking-widest uppercase px-3 mb-1">
-              {isAdmin ? "Menu Utama Admin" : "Menu Utama"}
+              MENU UTAMA
             </div>
             {renderLinks(mainNavLinks)}
           </div>
 
           {configLinks.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="text-[10px] font-bold text-slate-400 tracking-widest uppercase px-3 mb-1">
-                Konfigurasi Sistem
+                KONFIGURASI SISTEM
               </div>
               {renderLinks(configLinks)}
             </div>
           )}
-
         </div>
 
         {/* Bottom Section */}
-        <div className="px-5 pb-6 bg-white pt-2 border-t border-slate-50">
-          <div className="bg-slate-50/80 border border-slate-100 rounded-2xl p-4 mb-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span className="text-sm font-extrabold text-slate-900">Dispora Kaltim</span>
+        <div className="px-5 pb-6 bg-white pt-2 border-t border-slate-100">
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-extrabold text-slate-900">Dispora Kaltim v2.4</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
             <p className="text-[11px] font-semibold text-slate-500 leading-snug">
               Standar 9 Kategori Kemenpora RI Tahun 2026
@@ -234,25 +232,25 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           {currentUser ? (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors group"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors group"
             >
               <div className="flex items-center gap-3">
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4 text-slate-500 group-hover:text-slate-700" />
                 <span>Keluar Sistem</span>
               </div>
-              <ChevronRight className="w-4 h-4 opacity-50" />
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
             </button>
           ) : (
             <Link
               href="/login"
               onClick={onClose}
-              className="w-full flex items-center justify-between px-2 py-2 text-sm font-bold text-emerald-600 hover:text-emerald-800 transition-colors group"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-colors group"
             >
               <div className="flex items-center gap-3">
-                <Users className="w-4 h-4" />
+                <Users className="w-4 h-4 text-emerald-600" />
                 <span>Masuk Sistem</span>
               </div>
-              <ChevronRight className="w-4 h-4 opacity-50" />
+              <ChevronRight className="w-4 h-4 text-emerald-600" />
             </Link>
           )}
         </div>
