@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useApp } from "@/lib/context/app-context";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   BarChart3, 
@@ -12,11 +11,23 @@ import {
   Medal, 
   Trophy, 
   Loader2, 
-  Download, 
   Printer,
-  Activity
+  Activity,
+  X,
+  Building2,
+  FileText,
+  ChevronRight,
+  ShieldCheck,
+  CheckCircle2,
+  Globe
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+function getKategoriFromSkor(skor: number) {
+  if (skor > 600) return { label: "Tinggi", color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
+  if (skor > 400) return { label: "Menengah", color: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" };
+  return { label: "Rendah", color: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" };
+}
 
 export default function RekapitulasiWilayahPage() {
   const { currentUser, isLoading: isSessionLoading } = useApp();
@@ -24,13 +35,12 @@ export default function RekapitulasiWilayahPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Filters
-  const [selectedTingkat, setSelectedTingkat] = useState("Tingkat 2");
   const [selectedPilar, setSelectedPilar] = useState("Semua");
 
   const pilarOptions = ["Semua", "Prestasi (KONI)", "Disabilitas (NPC)", "Masyarakat (KORMI)", "Dispora"];
-  const tingkatOptions = ["Tingkat 2", "Tingkat 3"];
 
   useEffect(() => {
     if (!isSessionLoading && currentUser?.role !== "ADMIN") {
@@ -42,12 +52,12 @@ export default function RekapitulasiWilayahPage() {
     if (currentUser?.role === "ADMIN") {
       fetchData();
     }
-  }, [selectedTingkat, selectedPilar, currentUser]);
+  }, [selectedPilar, currentUser]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admin/rekapitulasi-wilayah?tingkat=${selectedTingkat}&pilar=${selectedPilar}`);
+      const res = await fetch(`/api/admin/rekapitulasi-wilayah?tingkat=Tingkat 2&pilar=${selectedPilar}`);
       const json = await res.json();
       if (json.success) {
         setData(json);
@@ -61,6 +71,10 @@ export default function RekapitulasiWilayahPage() {
     }
   };
 
+  const handlePrintPdf = () => {
+    window.print();
+  };
+
   if (isSessionLoading || !currentUser || currentUser.role !== "ADMIN") {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -69,54 +83,92 @@ export default function RekapitulasiWilayahPage() {
     );
   }
 
-  // Calculate some aggregate values for cards
-  const pctVerified = data?.totalDataMasuk > 0 
-    ? ((data.totalDataTerverifikasi / data.totalDataMasuk) * 100).toFixed(1) 
-    : 0;
-
   const pemimpin = data?.peringkatWilayah?.[0];
 
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
-      {/* HEADER */}
-      <div className="mb-2">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Rekapitulasi Indeks Berjenjang &amp; Validasi
-        </h1>
-        <p className="text-sm sm:text-base text-slate-500 mt-1">
-          Pemantauan berjenjang: Kecamatan → Kabupaten/Kota → Provinsi Kalimantan Timur
-        </p>
+    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 pb-12">
+      {/* 1. HEADER HALAMAN & ACTION BUTTON */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+        <div className="space-y-1">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            PROVINSI KALIMANTAN TIMUR
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Rekapitulasi Wilayah &amp; Indeks IPO
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            Pemantauan berjenjang peringkat Kabupaten/Kota se-Kalimantan Timur bersumber langsung dari Database
+          </p>
+        </div>
+
+        {/* Tombol Cetak Berita Acara (Membuka Modal PDF) */}
+        <button
+          onClick={() => setIsPdfModalOpen(true)}
+          className="inline-flex items-center justify-center gap-2 bg-[#0e1726] hover:bg-slate-800 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all shadow-sm hover:shadow self-start sm:self-auto cursor-pointer"
+        >
+          <Printer className="w-4 h-4 text-emerald-400" />
+          <span>Cetak Berita Acara</span>
+        </button>
       </div>
 
-      {/* CARDS RINGKASAN */}
+      {/* 2. CARDS RINGKASAN REKAPITULASI (4 CARDS) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Status Validasi Berkas */}
-        <Card className="p-5 border border-slate-200 shadow-sm rounded-3xl bg-white flex flex-col gap-3 relative overflow-hidden">
-          <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase tracking-wider">
-            <FileCheck className="w-4 h-4" />
-            <span>Status Validasi Berkas</span>
-          </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900">
-              {data ? data.totalDataMasuk : 0} <span className="text-sm text-slate-500 font-medium">Dokumen</span>
-            </div>
-            <div className="text-sm font-bold text-emerald-600 mt-1">
-              {pctVerified}% Terverifikasi Sah
+        {/* Card 1: KEPATUHAN KUOTA RESPONDEN (Disederhanakan: Cukup tampilkan Jumlah Responden saat ini) */}
+        <div className="p-5 rounded-2xl bg-[#f4f7ff] border border-[#e0e7ff] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
+              KEPATUHAN KUOTA RESPONDEN
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#e0e7ff] flex items-center justify-center text-[#4f46e5] shrink-0">
+              <Users className="w-5 h-5" />
             </div>
           </div>
-        </Card>
+          <div className="mt-4 space-y-1">
+            <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              {isLoading ? "-" : (data?.totalResponden || 0).toLocaleString("id-ID")}
+            </div>
+            <p className="text-xs font-semibold text-indigo-600">
+              Responden saat ini
+            </p>
+          </div>
+        </div>
 
-        {/* Total Medali Sah */}
-        <Card className="p-5 border border-slate-200 shadow-sm rounded-3xl bg-white flex flex-col gap-3 relative overflow-hidden">
-          <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
-            <Medal className="w-4 h-4" />
-            <span>Total Medali Sah</span>
-          </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900">
-              {data ? data.medaliSah?.total : 0} <span className="text-sm text-slate-500 font-medium">Medali</span>
+        {/* Card 2: STATUS VALIDASI BERKAS */}
+        <div className="p-5 rounded-2xl bg-[#f0fdf4] border border-[#dcfce7] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
+              STATUS VALIDASI BERKAS
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#dcfce7] flex items-center justify-center text-[#16a34a] shrink-0">
+              <FileCheck className="w-5 h-5" />
             </div>
-            <div className="text-[11px] font-semibold text-slate-500 mt-1.5 flex items-center gap-1.5">
+          </div>
+          <div className="mt-4 space-y-1">
+            <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              {isLoading ? "-" : (data?.totalDataTerverifikasi || 0).toLocaleString("id-ID")}
+            </div>
+            <p className="text-xs font-semibold text-emerald-700">
+              Dokumen Terverifikasi Sah
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: TOTAL MEDALI SAH */}
+        <div className="p-5 rounded-2xl bg-[#fffdf2] border border-[#fef08a] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
+              TOTAL MEDALI SAH
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#d97706] shrink-0">
+              <Medal className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 space-y-1">
+            <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              {isLoading ? "-" : (data?.medaliSah?.total || 0).toLocaleString("id-ID")}
+            </div>
+            <div className="text-[11px] font-semibold text-amber-800 flex items-center gap-1.5 flex-wrap">
               <span>{data?.medaliSah?.emas || 0} Emas</span>
               <span>•</span>
               <span>{data?.medaliSah?.perak || 0} Perak</span>
@@ -124,182 +176,303 @@ export default function RekapitulasiWilayahPage() {
               <span>{data?.medaliSah?.perunggu || 0} Perunggu</span>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* Kepatuhan Kuota Responden */}
-        <Card className="p-5 border border-slate-200 shadow-sm rounded-3xl bg-white flex flex-col gap-3 relative overflow-hidden">
-          <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-wider">
-            <Users className="w-4 h-4" />
-            <span>Kepatuhan Kuota Responden</span>
-          </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900">
-              {data ? data.totalResponden : 0} <span className="text-sm text-slate-500 font-medium">Total</span>
-            </div>
-            <div className="text-sm font-bold text-blue-600 mt-1">
-              Data Responden Saat Ini
+        {/* Card 4: PEMIMPIN PERINGKAT */}
+        <div className="p-5 rounded-2xl bg-[#fff5f5] border border-[#ffe4e6] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
+              PEMIMPIN PERINGKAT
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center text-[#e11d48] shrink-0">
+              <Trophy className="w-5 h-5" />
             </div>
           </div>
-        </Card>
-
-        {/* Pemimpin Peringkat */}
-        <Card className="p-5 border border-slate-200 shadow-sm rounded-3xl bg-white flex flex-col gap-3 relative overflow-hidden">
-          <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase tracking-wider">
-            <Trophy className="w-4 h-4" />
-            <span>Pemimpin Peringkat</span>
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 truncate" title={pemimpin?.namaWilayah || "-"}>
+          <div className="mt-3 space-y-1">
+            <div className="text-xl sm:text-2xl font-black text-slate-900 truncate" title={pemimpin?.namaWilayah || "-"}>
               {pemimpin ? pemimpin.namaWilayah : "-"}
             </div>
-            <div className="text-sm font-bold text-slate-500 mt-1">
-              Skor IPO: <span className="text-emerald-700">{pemimpin ? Math.round(pemimpin.skor) : "0"}</span>
-            </div>
+            <p className="text-xs font-semibold text-rose-600">
+              Skor IPO: <span className="font-extrabold text-slate-900">{pemimpin ? Math.round(pemimpin.skor) : 0} Poin</span>
+            </p>
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* FILTER BERJENJANG */}
-      <Card className="p-6 border border-slate-200 shadow-sm rounded-3xl bg-white mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+      {/* 3. TERGABUNG: FILTER BERJENJANG & TABEL PERINGKAT INDEKS IPO */}
+      <Card className="border border-slate-100 shadow-sm rounded-2xl bg-white overflow-hidden">
+        {/* Unified Card Header */}
+        <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Filter Berjenjang</h3>
-            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Pilih Skala Wilayah &amp; Kategori Olahraga</h2>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-1 sm:gap-2 bg-slate-50 p-1.5 rounded-full border border-slate-100 overflow-x-auto">
-            {pilarOptions.map(opt => {
-              const isSelected = selectedPilar === opt;
-              let icon = null;
-              if (opt === "Prestasi (KONI)") icon = <Trophy className="w-4 h-4" />;
-              else if (opt === "Disabilitas (NPC)") icon = <Activity className="w-4 h-4" />;
-              else if (opt === "Masyarakat (KORMI)") icon = <Users className="w-4 h-4" />;
-              
-              return (
-                <button
-                  key={opt}
-                  onClick={() => setSelectedPilar(opt)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-bold rounded-full transition-all whitespace-nowrap ${
-                    isSelected
-                    ? "bg-[#0f172a] text-white shadow-sm"
-                    : "bg-transparent text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-                  }`}
-                >
-                  {icon}
-                  <span>{opt}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            className={`p-5 rounded-2xl border transition-all relative overflow-hidden bg-slate-50/50 border-slate-200 hover:bg-slate-100/50`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-extrabold text-slate-900 text-sm truncate max-w-[70%]" title={pemimpin ? `${pemimpin.namaWilayah} • Juara 1` : "Kabupaten / Kota"}>
-                {pemimpin ? `${pemimpin.namaWilayah} • Juara 1` : "Kabupaten / Kota"}
-              </div>
-              <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-slate-200 text-slate-600`}>
-                10 Kab / Kota
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 leading-relaxed mb-3 h-[36px]">
-              Validasi berkas oleh tim daerah dan verifikasi piagam kejuaraan.
-            </p>
-            <div className={`text-xs font-bold text-slate-700`}>
-              Indeks: {pemimpin ? Math.round(pemimpin.skor) : "0"} • Kategori Tinggi
-            </div>
+            <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">
+              FILTER BERJENJANG
+            </h3>
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+              Pilih Skala Wilayah &amp; Kategori Olahraga
+            </h2>
           </div>
 
-          <div
-            className={`p-5 rounded-2xl border transition-all relative overflow-hidden bg-slate-50/50 border-slate-200 hover:bg-slate-100/50`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-extrabold text-slate-900 text-sm">
-                Provinsi Kalimantan Timur
-              </div>
-              <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold bg-slate-200 text-slate-600`}>
-                1 Provinsi
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 leading-relaxed mb-3 h-[36px]">
-              Agregasi menyeluruh 9 kategori untuk perumusan kebijakan pembangunan olahraga.
-            </p>
-            <div className={`text-xs font-bold text-slate-700`}>
-              Indeks Gabungan: {pemimpin ? Math.round(pemimpin.skor * 0.95) : "0"} • Kategori Tinggi
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filter Pilar Buttons */}
+            <div className="flex items-center gap-1.5 overflow-x-auto bg-slate-50/80 p-1 rounded-full border border-slate-100">
+              {pilarOptions.map(opt => {
+                const isSelected = selectedPilar === opt;
+                let icon = null;
+                if (opt === "Prestasi (KONI)") icon = <Trophy className="w-3.5 h-3.5" />;
+                else if (opt === "Disabilitas (NPC)") icon = <Activity className="w-3.5 h-3.5" />;
+                else if (opt === "Masyarakat (KORMI)") icon = <Users className="w-3.5 h-3.5" />;
+                else if (opt === "Dispora") icon = <Globe className="w-3.5 h-3.5" />;
+
+                const displayLabel = opt === "Semua" ? "Semua Pilar" : opt;
+
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => setSelectedPilar(opt)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full transition-all whitespace-nowrap cursor-pointer ${
+                      isSelected
+                        ? "bg-[#0e1726] text-white shadow-sm"
+                        : "bg-transparent text-slate-600 hover:bg-slate-200/70 hover:text-slate-900"
+                    }`}
+                  >
+                    {icon}
+                    <span>{displayLabel}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
-      </Card>
 
-      {/* TABEL PERINGKAT INDEKS */}
-      <Card className="border border-slate-200 shadow-sm rounded-3xl bg-white overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
-            Tabel Peringkat Indeks IPO Antar-Wilayah
-          </h2>
-        </div>
-
+        {/* Unified Table Content */}
         <div className="overflow-x-auto">
           {isLoading ? (
             <div className="py-16 flex flex-col items-center justify-center space-y-3">
               <Loader2 className="w-8 h-8 animate-spin text-emerald-700" />
-              <p className="text-sm font-medium text-slate-500">Memuat data peringkat...</p>
+              <p className="text-xs font-bold text-slate-500">Memuat data peringkat wilayah dari database...</p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse min-w-[800px]">
+            <table className="w-full text-left border-collapse min-w-[750px]">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
-                  <th className="py-4 px-6 w-16">Peringkat</th>
-                  <th className="py-4 px-6">Kabupaten / Kota</th>
-                  <th className="py-4 px-6 text-center">Kecamatan Selesai</th>
-                  <th className="py-4 px-6 text-center">Total Responden</th>
-                  <th className="py-4 px-6 text-center">Capaian Medali</th>
-                  <th className="py-4 px-6 text-center">Skor Indeks IPO</th>
+                <tr className="bg-slate-50/60 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                  <th className="py-3.5 px-6 pl-8 w-24">PERINGKAT</th>
+                  <th className="py-3.5 px-6">KABUPATEN / KOTA</th>
+                  <th className="py-3.5 px-6 text-center">SKOR INDEKS CAPAIAN</th>
+                  <th className="py-3.5 px-6 text-center">RESPONDEN TERISI</th>
+                  <th className="py-3.5 px-6 text-center">MEDALI SAH</th>
+                  <th className="py-3.5 px-6 text-center pr-8">KLASIFIKASI KINERJA</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
                 {data?.peringkatWilayah?.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
-                      Tidak ada data untuk filter yang dipilih.
+                    <td colSpan={6} className="py-12 text-center text-slate-500 font-medium">
+                      Tidak ada data peringkat wilayah untuk filter yang dipilih.
                     </td>
                   </tr>
                 ) : (
-                  data?.peringkatWilayah?.map((wilayah: any, index: number) => (
-                    <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-6 font-extrabold text-slate-400">
-                        #{index + 1}
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-slate-900">{wilayah.namaWilayah}</div>
-                      </td>
-                      <td className="py-4 px-6 text-center text-slate-500 font-medium">
-                        -
-                      </td>
-                      <td className="py-4 px-6 text-center font-bold text-slate-700">
-                        {wilayah.jumlahResponden}
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                          {wilayah.jumlahMedaliSah} Medali
+                  data?.peringkatWilayah?.map((wilayah: any, index: number) => {
+                    const statusKategori = getKategoriFromSkor(wilayah.skor);
+                    const rankNum = index + 1;
+                    let rankBadge = (
+                      <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-extrabold text-xs flex items-center justify-center">
+                        #{rankNum}
+                      </span>
+                    );
+                    if (rankNum === 1) {
+                      rankBadge = (
+                        <span className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-black text-xs flex items-center justify-center border border-amber-200">
+                          🥇
                         </span>
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        <span className="font-extrabold text-slate-900">
-                          {Math.round(wilayah.skor)}
+                      );
+                    } else if (rankNum === 2) {
+                      rankBadge = (
+                        <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-black text-xs flex items-center justify-center border border-slate-300">
+                          🥈
                         </span>
-                      </td>
-                    </tr>
-                  ))
+                      );
+                    } else if (rankNum === 3) {
+                      rankBadge = (
+                        <span className="w-7 h-7 rounded-full bg-orange-100 text-orange-800 font-black text-xs flex items-center justify-center border border-orange-200">
+                          🥉
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <tr key={wilayah.namaWilayah || index} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-4 px-6 pl-8">
+                          {rankBadge}
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="font-extrabold text-slate-900">{wilayah.namaWilayah}</div>
+                          <div className="text-[11px] font-semibold text-slate-400">Kalimantan Timur</div>
+                        </td>
+                        <td className="py-4 px-6 text-center">
+                          <span className="text-base font-black text-slate-900">
+                            {Math.round(wilayah.skor)} Poin
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-center font-bold text-slate-700">
+                          {wilayah.jumlahResponden} Responden
+                        </td>
+                        <td className="py-4 px-6 text-center">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <Medal className="w-3.5 h-3.5 text-amber-600" />
+                            {wilayah.jumlahMedaliSah} Medali
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-center pr-8">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${statusKategori.color}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusKategori.dot}`}></span>
+                            {statusKategori.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           )}
         </div>
       </Card>
+
+      {/* 5. MODAL DIALOG PREVIEW PDF BERITA ACARA */}
+      {isPdfModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Pratinjau Dokumen Berita Acara</h3>
+                  <p className="text-xs text-slate-500 font-medium">Laporan Resmi Peringkat Kabupaten/Kota &amp; Skor Indeks Status</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrintPdf}
+                  className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-sm cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak / Print PDF</span>
+                </button>
+
+                <button
+                  onClick={() => setIsPdfModalOpen(false)}
+                  className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Content Preview PDF (Printable Container) */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 bg-slate-100/60 print:bg-white print:p-0 print:overflow-visible">
+              <div id="printable-pdf-document" className="bg-white p-8 sm:p-10 rounded-2xl border border-slate-200/80 shadow-sm space-y-6 text-slate-800">
+                {/* Kop Berita Acara */}
+                <div className="text-center border-b-2 border-slate-900 pb-5 space-y-1">
+                  <h4 className="text-xs font-bold tracking-widest text-slate-500 uppercase">PEMERINTAH PROVINSI KALIMANTAN TIMUR</h4>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tight">BERITA ACARA REKAPITULASI INDEKS IPO</h2>
+                  <p className="text-xs text-slate-600 font-semibold">
+                    Hasil Evaluasi Indeks Capaian Pembangunan Olahraga Daerah Tingkat Kabupaten/Kota
+                  </p>
+                  <div className="text-[11px] text-slate-400 pt-1 font-medium">
+                    Tanggal Dicetak: {new Date().toLocaleDateString("id-ID", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
+                </div>
+
+                {/* Filter Meta Info */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-medium block">Skala Wilayah:</span>
+                    <span className="font-extrabold text-slate-800">Kabupaten / Kota</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Pilar Keolahragaan:</span>
+                    <span className="font-extrabold text-slate-800">{selectedPilar}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Total Responden DB:</span>
+                    <span className="font-extrabold text-slate-800">{data?.totalResponden || 0} Orang</span>
+                  </div>
+                </div>
+
+                {/* Tabel Peringkat PDF */}
+                <div className="space-y-2">
+                  <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+                    I. DAFTAR PERINGKAT KABUPATEN / KOTA &amp; SKOR INDEKS
+                  </h5>
+                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-700">
+                          <th className="py-2.5 px-4 text-center w-14">PERINGKAT</th>
+                          <th className="py-2.5 px-4">KABUPATEN / KOTA</th>
+                          <th className="py-2.5 px-4 text-center">TOTAL RESPONDEN</th>
+                          <th className="py-2.5 px-4 text-center">MEDALI SAH</th>
+                          <th className="py-2.5 px-4 text-center">SKOR INDEKS</th>
+                          <th className="py-2.5 px-4 text-center">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 font-medium">
+                        {data?.peringkatWilayah?.map((wilayah: any, idx: number) => {
+                          const status = getKategoriFromSkor(wilayah.skor);
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50">
+                              <td className="py-2.5 px-4 text-center font-extrabold text-slate-900">#{idx + 1}</td>
+                              <td className="py-2.5 px-4 font-bold text-slate-900">{wilayah.namaWilayah}</td>
+                              <td className="py-2.5 px-4 text-center text-slate-700">{wilayah.jumlahResponden}</td>
+                              <td className="py-2.5 px-4 text-center text-slate-700">{wilayah.jumlahMedaliSah}</td>
+                              <td className="py-2.5 px-4 text-center font-extrabold text-slate-900">{Math.round(wilayah.skor)}</td>
+                              <td className="py-2.5 px-4 text-center font-bold">{status.label}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Catatan Keabsahan */}
+                <div className="pt-6 border-t border-slate-200 flex justify-between items-end text-xs">
+                  <div className="space-y-1 text-slate-500 text-[11px]">
+                    <p className="font-semibold text-slate-700">Dokumen ini secara resmi dihasilkan oleh Sistem ARINDAMA.</p>
+                    <p>Seluruh skor indeks dihitung berdasarkan akumulasi indikator sah di Database.</p>
+                  </div>
+
+                  <div className="text-center space-y-12 pr-4">
+                    <p className="font-bold text-slate-800">Tim Evaluator IPO Kaltim</p>
+                    <div className="border-b border-slate-400 w-36 mx-auto"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50">
+              <button
+                onClick={() => setIsPdfModalOpen(false)}
+                className="px-5 py-2 rounded-full text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+              <button
+                onClick={handlePrintPdf}
+                className="inline-flex items-center gap-1.5 bg-[#0e1726] hover:bg-slate-800 text-white px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-emerald-400" />
+                <span>Cetak Berita Acara</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
