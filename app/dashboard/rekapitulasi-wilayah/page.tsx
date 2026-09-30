@@ -112,89 +112,85 @@ export default function RekapitulasiWilayahPage() {
         </button>
       </div>
 
-      {/* 2. CARDS RINGKASAN REKAPITULASI (4 CARDS) */}
+      {/* 2. CARDS RINGKASAN REKAPITULASI (4 CARDS MATCHING DESIGN) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: KEPATUHAN KUOTA RESPONDEN (Disederhanakan: Cukup tampilkan Jumlah Responden saat ini) */}
-        <div className="p-5 rounded-2xl bg-[#f4f7ff] border border-[#e0e7ff] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
-              KEPATUHAN KUOTA RESPONDEN
-            </span>
-            <div className="w-9 h-9 rounded-full bg-[#e0e7ff] flex items-center justify-center text-[#4f46e5] shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4 space-y-1">
-            <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-              {isLoading ? "-" : (data?.totalResponden || 0).toLocaleString("id-ID")}
-            </div>
-            <p className="text-xs font-semibold text-indigo-600">
-              Responden saat ini
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: STATUS VALIDASI BERKAS */}
-        <div className="p-5 rounded-2xl bg-[#f0fdf4] border border-[#dcfce7] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
+        {/* Card 1: STATUS VALIDASI BERKAS */}
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-all space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-[11px] font-extrabold tracking-wider uppercase text-slate-400">
               STATUS VALIDASI BERKAS
             </span>
-            <div className="w-9 h-9 rounded-full bg-[#dcfce7] flex items-center justify-center text-[#16a34a] shrink-0">
-              <FileCheck className="w-5 h-5" />
-            </div>
           </div>
-          <div className="mt-4 space-y-1">
-            <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-              {isLoading ? "-" : (data?.totalDataTerverifikasi || 0).toLocaleString("id-ID")}
+          <div className="space-y-1">
+            <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              {isLoading ? "-" : `${(data?.totalDataTerverifikasi || 0).toLocaleString("id-ID")} Dokumen`}
             </div>
-            <p className="text-xs font-semibold text-emerald-700">
-              Dokumen Terverifikasi Sah
-            </p>
+            <div className="text-xs font-bold text-emerald-600">
+              {data?.persentaseTerverifikasi || "0.0"}% Terverifikasi Sah
+            </div>
           </div>
         </div>
 
-        {/* Card 3: TOTAL MEDALI SAH */}
-        <div className="p-5 rounded-2xl bg-[#fffdf2] border border-[#fef08a] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
+        {/* Card 2: TOTAL MEDALI SAH */}
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-all space-y-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-[11px] font-extrabold tracking-wider uppercase text-slate-400">
               TOTAL MEDALI SAH
             </span>
-            <div className="w-9 h-9 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#d97706] shrink-0">
-              <Medal className="w-5 h-5" />
+          </div>
+          <div className="space-y-2">
+            <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              {isLoading ? "-" : `${(data?.medaliSah?.total || 0).toLocaleString("id-ID")} Medali`}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200/80">
+                🥇 {data?.medaliSah?.emas || 0} Emas
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200/80">
+                🥈 {data?.medaliSah?.perak || 0} Perak
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-orange-50 text-orange-800 border border-orange-200/80">
+                🥉 {data?.medaliSah?.perunggu || 0} Perunggu
+              </span>
             </div>
           </div>
-          <div className="mt-3 space-y-1">
-            <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-              {isLoading ? "-" : (data?.medaliSah?.total || 0).toLocaleString("id-ID")}
+        </div>
+
+        {/* Card 3: KEPATUHAN KUOTA RESPONDEN */}
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-all space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-blue-600 shrink-0" />
+            <span className="text-[11px] font-extrabold tracking-wider uppercase text-slate-400">
+              KEPATUHAN KUOTA RESPONDEN
+            </span>
+          </div>
+          <div className="space-y-1">
+            <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              {isLoading ? "-" : (data?.totalResponden || 0).toLocaleString("id-ID")}
             </div>
-            <div className="text-[11px] font-semibold text-amber-800 flex items-center gap-1.5 flex-wrap">
-              <span>{data?.medaliSah?.emas || 0} Emas</span>
-              <span>•</span>
-              <span>{data?.medaliSah?.perak || 0} Perak</span>
-              <span>•</span>
-              <span>{data?.medaliSah?.perunggu || 0} Perunggu</span>
+            <div className="text-xs font-bold text-blue-600">
+              Cakupan 105 Kecamatan se-Kaltim
             </div>
           </div>
         </div>
 
         {/* Card 4: PEMIMPIN PERINGKAT */}
-        <div className="p-5 rounded-2xl bg-[#fff5f5] border border-[#ffe4e6] shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700">
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-all space-y-3">
+          <div className="flex items-center gap-2">
+            <Medal className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-[11px] font-extrabold tracking-wider uppercase text-slate-400">
               PEMIMPIN PERINGKAT
             </span>
-            <div className="w-9 h-9 rounded-full bg-[#ffe4e6] flex items-center justify-center text-[#e11d48] shrink-0">
-              <Trophy className="w-5 h-5" />
-            </div>
           </div>
-          <div className="mt-3 space-y-1">
-            <div className="text-xl sm:text-2xl font-black text-slate-900 truncate" title={pemimpin?.namaWilayah || "-"}>
+          <div className="space-y-1">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title={pemimpin?.namaWilayah || "-"}>
               {pemimpin ? pemimpin.namaWilayah : "-"}
             </div>
-            <p className="text-xs font-semibold text-rose-600">
-              Skor IPO: <span className="font-extrabold text-slate-900">{pemimpin ? Math.round(pemimpin.skor) : 0} Poin</span>
-            </p>
+            <div className="text-xs font-bold text-emerald-600">
+              Skor Capaian: {pemimpin ? Math.round(pemimpin.skor) : 0} ({getKategoriFromSkor(pemimpin?.skor || 0).label})
+            </div>
           </div>
         </div>
       </div>

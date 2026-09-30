@@ -100,6 +100,9 @@ export async function GET(request: NextRequest) {
     const totalDataMasuk = allRecords.length;
     const verifiedStatuses = ["Sah & Terverifikasi", "Sah", "Disetujui"];
     const totalDataTerverifikasi = allRecords.filter(r => verifiedStatuses.includes(r.status)).length;
+    const persentaseTerverifikasi = totalDataMasuk > 0 
+      ? ((totalDataTerverifikasi / totalDataMasuk) * 100).toFixed(1) 
+      : "0.0";
 
     let medaliSah = { emas: 0, perak: 0, perunggu: 0, total: 0 };
     
@@ -146,6 +149,18 @@ export async function GET(request: NextRequest) {
     });
 
     allRecords.forEach(rec => {
+      const medaliStr = (rec.medali || rec.uraianCapaian || "").toLowerCase();
+      if (medaliStr.includes("emas")) {
+        medaliSah.emas++;
+        medaliSah.total++;
+      } else if (medaliStr.includes("perak")) {
+        medaliSah.perak++;
+        medaliSah.total++;
+      } else if (medaliStr.includes("perunggu")) {
+        medaliSah.perunggu++;
+        medaliSah.total++;
+      }
+
       const isVerified = verifiedStatuses.includes(rec.status);
       const isMedalIndicator = rec.indicatorId === 1 || rec.indicatorId === 6;
       
@@ -167,34 +182,23 @@ export async function GET(request: NextRequest) {
       }
       wData.jumlahResponden.add(user.id);
 
-      if (isVerified && isMedalIndicator) {
-        const medaliStr = (rec.medali || "").toLowerCase();
-        let addedMedal = false;
+      if (isVerified || isMedalIndicator) {
         if (medaliStr.includes("emas")) {
-          medaliSah.emas++;
-          medaliSah.total++;
           wData.medaliEmas++;
           wData.jumlahMedaliSah++;
-          addedMedal = true;
         } else if (medaliStr.includes("perak")) {
-          medaliSah.perak++;
-          medaliSah.total++;
           wData.medaliPerak++;
           wData.jumlahMedaliSah++;
-          addedMedal = true;
         } else if (medaliStr.includes("perunggu")) {
-          medaliSah.perunggu++;
-          medaliSah.total++;
           wData.medaliPerunggu++;
           wData.jumlahMedaliSah++;
-          addedMedal = true;
         } else if (medaliStr.includes("partisipan")) {
-          // not counting partisipan as medal in the top card, but it contributes to score
           wData.jumlahMedaliSah++; 
         }
         
-        // Add score for all verified indicator 1 & 6 records
-        wData.skor += calculateRecordPoints(rec, weights);
+        if (isVerified) {
+          wData.skor += calculateRecordPoints(rec, weights);
+        }
       }
     });
 
@@ -212,6 +216,7 @@ export async function GET(request: NextRequest) {
       success: true,
       totalDataMasuk,
       totalDataTerverifikasi,
+      persentaseTerverifikasi,
       medaliSah,
       totalResponden,
       peringkatWilayah
