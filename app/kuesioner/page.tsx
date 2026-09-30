@@ -155,6 +155,80 @@ export default function KuesionerPage() {
   const [respondensList, setRespondensList] = useState<any[]>([]);
   const [selectedUploadResponden, setSelectedUploadResponden] = useState<string>("");
 
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+  const [manualFormData, setManualFormData] = useState({
+    id: "",
+    respondenNik: "",
+    namaKegiatan: "",
+    cabangOlahraga: "",
+    tingkatPenyelenggaraan: "",
+    medali: "",
+    sumberPendanaan: "",
+    uraianCapaian: "",
+  });
+
+  const handleDeleteRecord = async (recordId: string) => {
+    if (!confirm("Yakin ingin menghapus entri kegiatan ini?")) return;
+    try {
+      const res = await fetch(`/api/records/manual?id=${recordId}`, { method: "DELETE" });
+      if (res.ok) {
+        setNotification("Entri berhasil dihapus.");
+        setTimeout(() => setNotification(null), 4000);
+        await loadSubmissions();
+      } else {
+        alert("Gagal menghapus entri.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan sistem saat menghapus.");
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    if (!manualFormData.respondenNik || !manualFormData.namaKegiatan || !manualFormData.cabangOlahraga || !manualFormData.tingkatPenyelenggaraan) {
+      setUploadError("Mohon isi semua kolom yang bertanda bintang (*).");
+      setTimeout(() => setUploadError(null), 4000);
+      return;
+    }
+    setIsSubmittingManual(true);
+    try {
+      const res = await fetch("/api/records/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...manualFormData,
+          indicatorId: activeIndicatorId
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setNotification("Berhasil menambahkan entri kegiatan manual.");
+        setTimeout(() => setNotification(null), 4000);
+        setShowManualModal(false);
+        setManualFormData({
+          id: "",
+          respondenNik: "",
+          namaKegiatan: "",
+          cabangOlahraga: "",
+          tingkatPenyelenggaraan: "",
+          medali: "",
+          sumberPendanaan: "",
+          uraianCapaian: "",
+        });
+        await loadSubmissions();
+      } else {
+        setUploadError(data.error || "Gagal menyimpan entri kegiatan.");
+        setTimeout(() => setUploadError(null), 4000);
+      }
+    } catch (err: any) {
+      console.error("Gagal simpan manual:", err);
+      setUploadError("Terjadi kesalahan sistem saat menyimpan data.");
+      setTimeout(() => setUploadError(null), 4000);
+    } finally {
+      setIsSubmittingManual(false);
+    }
+  };
+
   // Admin Verification Status Update Handler
   const handleUpdateVerificationStatus = async (recordId: string, newStatus: string) => {
     setUpdatingStatusId(recordId);
@@ -192,18 +266,13 @@ export default function KuesionerPage() {
   const [isUploadingExcel, setIsUploadingExcel] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
-  const [showReuploadWarningModal, setShowReuploadWarningModal] = useState<boolean>(false);
 
   // Re-upload Excel Input Ref
   const excelFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Trigger Excel Upload Handler (Shows Warning Modal if data already exists)
+  // Trigger Excel Upload Handler
   const handleTriggerExcelUpload = () => {
-    if (allRecords && allRecords.length > 0) {
-      setShowReuploadWarningModal(true);
-    } else {
-      setShowUploadExcelModal(true);
-    }
+    setShowUploadExcelModal(true);
   };
 
   // Fetch all submissions from backend
@@ -296,7 +365,7 @@ export default function KuesionerPage() {
               submissionNo: sub.noRegistrasi || sub.id,
               userNama: sub.user?.nama || "Operator",
               userEmail: sub.user?.email || "",
-              userKabKota: sub.user?.kabupatenKota || sub.user?.instansi || "Kalimantan Timur",
+              userKabKota: rec.responden?.kabupatenKota || sub.user?.kabupatenKota || sub.user?.instansi || "Kalimantan Timur",
               recordIndex: idx,
               evidenceKey: key,
               evidence: evidence || null,
@@ -305,6 +374,9 @@ export default function KuesionerPage() {
           });
       }
     });
+
+    // Sort by createdAt descending (newest first)
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return list;
   }, [submissionsList, activeIndicatorId, rowValidationFiles, currentUser]);
@@ -1102,30 +1174,68 @@ export default function KuesionerPage() {
                         </Button>
 
                         {/* Edit Button */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                             // Nanti disambungkan ke state untuk edit
-                          }}
-                          className="h-8 w-8 p-0 rounded-xl border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all shadow-xs"
-                          title="Edit Entri"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-                        </Button>
+                        {!isAdmin && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setManualFormData({
+                                  id: rec.id,
+                                  respondenNik: rec.respondenNik || "",
+                                  namaKegiatan: rec.namaKegiatan || "",
+                                  cabangOlahraga: rec.cabangOlahraga || "",
+                                  tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan || "",
+                                  medali: rec.medali || "",
+                                  sumberPendanaan: rec.sumberPendanaan || "",
+                                  uraianCapaian: rec.uraianCapaian || "",
+                                });
+                                setShowManualModal(true);
+                              }}
+                              className="h-8 w-8 p-0 rounded-xl border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all shadow-xs"
+                              title="Edit Entri"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                            </Button>
 
-                        {/* Hapus Button */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                             // Nanti disambungkan ke fungsi hapus
-                          }}
-                          className="h-8 w-8 p-0 rounded-xl border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-all shadow-xs"
-                          title="Hapus Entri"
-                        >
-                          <Trash2 className="w-4 h-4 text-rose-700" />
-                        </Button>
+                            {/* Hapus Button */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteRecord(rec.id)}
+                              className="h-8 w-8 p-0 rounded-xl border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-all shadow-xs"
+                              title="Hapus Entri"
+                            >
+                              <Trash2 className="w-4 h-4 text-rose-700" />
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Admin Action: Verifikasi */}
+                        {isAdmin && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={rec.status === "Sah & Terverifikasi" || rec.status === "Sah" || rec.status === "Disetujui" || updatingStatusId === rec.id}
+                              onClick={() => handleUpdateVerificationStatus(rec.id, "Sah & Terverifikasi")}
+                              className="h-8 w-8 p-0 rounded-xl border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Tandai Sah & Terverifikasi"
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={rec.status === "Revisi" || updatingStatusId === rec.id}
+                              onClick={() => handleUpdateVerificationStatus(rec.id, "Revisi")}
+                              className="h-8 w-8 p-0 rounded-xl border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Tandai Revisi"
+                            >
+                              <AlertTriangle className="w-4 h-4 text-rose-700" />
+                            </Button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1300,8 +1410,23 @@ export default function KuesionerPage() {
                     <span>Sah &amp; Terverifikasi</span>
                   </Button>
                 </div>
-              ) : (
-                <div />
+              ) : selectedRecordForVerification && (
+                <div className="flex items-center">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf, application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handlePdfUpload(selectedRecordForVerification, file);
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                    />
+                    <UploadCloud className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Ganti File PDF</span>
+                  </label>
+                </div>
               )}
 
               <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -1356,16 +1481,24 @@ export default function KuesionerPage() {
               </button>
             </div>
             
-            <div className="p-6 pt-2 space-y-4 overflow-y-auto custom-scrollbar">
+              <div className="p-6 pt-2 space-y-4 overflow-y-auto custom-scrollbar">
+              {uploadError && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs font-medium flex gap-2 items-start mt-2 pb-2">
+                  <div className="break-words w-full">
+                    <p className="opacity-90">{uploadError}</p>
+                  </div>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700">Pilih Responden *</label>
                 <select
-                  defaultValue=""
+                  value={manualFormData.respondenNik}
+                  onChange={(e) => setManualFormData({ ...manualFormData, respondenNik: e.target.value })}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
                 >
                   <option value="" disabled>Pilih Responden...</option>
                   {respondensList.map((r) => (
-                    <option key={r.id} value={r.id}>
+                    <option key={r.nik} value={r.nik}>
                       {r.nama} - NIK: {r.nik}
                     </option>
                   ))}
@@ -1374,17 +1507,32 @@ export default function KuesionerPage() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700">Nama Kegiatan / Ajang Kejuaraan *</label>
-                <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+                <input 
+                  type="text" 
+                  value={manualFormData.namaKegiatan}
+                  onChange={(e) => setManualFormData({ ...manualFormData, namaKegiatan: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Cabang Olahraga *</label>
-                  <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+                  <input 
+                    type="text" 
+                    value={manualFormData.cabangOlahraga}
+                    onChange={(e) => setManualFormData({ ...manualFormData, cabangOlahraga: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Tingkat Penyelenggara *</label>
-                  <select defaultValue="Provinsi" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+                  <select 
+                    value={manualFormData.tingkatPenyelenggaraan}
+                    onChange={(e) => setManualFormData({ ...manualFormData, tingkatPenyelenggaraan: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                  >
+                    <option value="" disabled>Pilih Opsi...</option>
                     <option value="Provinsi">Provinsi</option>
                     <option value="Nasional">Nasional</option>
                     <option value="Internasional">Internasional</option>
@@ -1396,7 +1544,12 @@ export default function KuesionerPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">Capaian Medali *</label>
-                    <select defaultValue="Emas" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+                    <select 
+                      value={manualFormData.medali}
+                      onChange={(e) => setManualFormData({ ...manualFormData, medali: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                    >
+                      <option value="" disabled>Pilih Opsi...</option>
                       <option value="Emas">Emas</option>
                       <option value="Perak">Perak</option>
                       <option value="Perunggu">Perunggu</option>
@@ -1405,7 +1558,12 @@ export default function KuesionerPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">Sumber Pendanaan *</label>
-                    <select defaultValue="APBD (Daerah)" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none">
+                    <select 
+                      value={manualFormData.sumberPendanaan}
+                      onChange={(e) => setManualFormData({ ...manualFormData, sumberPendanaan: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                    >
+                      <option value="" disabled>Pilih Opsi...</option>
                       <option value="APBD (Daerah)">APBD (Daerah)</option>
                       <option value="APBN (Pusat/Kemenpora)">APBN (Pusat/Kemenpora)</option>
                       <option value="Swasta / Sponsorship">Swasta / Sponsorship</option>
@@ -1418,7 +1576,13 @@ export default function KuesionerPage() {
 
               <div className="space-y-1.5">
                  <label className="text-xs font-bold text-slate-700">Uraian Capaian</label>
-                 <textarea rows={3} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" placeholder="Masukkan detail capaian..."></textarea>
+                 <textarea 
+                    rows={3} 
+                    value={manualFormData.uraianCapaian}
+                    onChange={(e) => setManualFormData({ ...manualFormData, uraianCapaian: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
+                    placeholder="Masukkan detail capaian..."
+                 ></textarea>
               </div>
 
               <div className="space-y-1.5 pb-2">
@@ -1429,52 +1593,19 @@ export default function KuesionerPage() {
             
             <div className="p-6 pt-4 border-t border-slate-100 shrink-0 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowManualModal(false)}>Batal</Button>
-              <Button className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold">Simpan Entri Kegiatan</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 8. MODAL PERINGATAN UNGGAH ULANG EXCEL */}
-      {showReuploadWarningModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-slate-200 relative text-center">
-            <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto ring-4 ring-amber-50">
-              <AlertTriangle className="w-7 h-7 text-amber-600" />
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-base font-extrabold text-slate-900">
-                Peringatan Unggah Ulang Excel
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Anda sudah memiliki data yang terunggah pada <strong className="text-slate-900">Indikator-{String(activeIndicatorId).padStart(2, "0")}</strong>. Mengunggah berkas Excel baru akan <strong className="text-rose-600 font-bold">menghapus dan menggantikan seluruh data lama</strong> pada indikator ini.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowReuploadWarningModal(false)}
-                className="w-1/2 rounded-xl text-xs font-semibold py-2.5 h-10 border-slate-200"
+              <Button 
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold disabled:opacity-70"
+                disabled={isSubmittingManual}
+                onClick={handleManualSubmit}
               >
-                Batal
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  setShowReuploadWarningModal(false);
-                  setShowUploadExcelModal(true);
-                }}
-                className="w-1/2 rounded-xl text-xs font-bold py-2.5 h-10 bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
-              >
-                Lanjutkan Unggah
+                {isSubmittingManual ? "Menyimpan..." : "Simpan Entri Kegiatan"}
               </Button>
             </div>
           </div>
         </div>
       )}
+
+
       {/* 9. MODAL UNGGAH EXCEL */}
       {showUploadExcelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">

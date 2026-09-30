@@ -111,32 +111,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ambil bukti validasi (evidence) lama untuk dihapus filenya setelah DB transaction berhasil
-    const oldEvidences = await prisma.validationEvidence.findMany({
-      where: {
-        submissionId,
-        formType,
-      },
-    });
-
     // Run DATABASE TRANSACTION
     await prisma.$transaction(async (tx) => {
-      // 1. Hapus metadata bukti validasi lama di database
-      await tx.validationEvidence.deleteMany({
-        where: {
-          submissionId,
-          formType,
-        },
-      });
-
-      // 2. Hapus data record lama & Simpan data record baru
-      await tx.indicatorRecord.deleteMany({
-        where: {
-          submissionId,
-          indicatorId: stepNum,
-        },
-      });
-
       const recordsToInsert = (validationResult.indicatorRecords || []).map((rec: ParsedIndicatorRecordData) => ({
         submissionId,
         indicatorId: stepNum,
@@ -169,23 +145,6 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    // 4. HAPUS FILE EVIDEN FISIK DARI STORAGE SETELAH DB TRANSACTION SUKSES
-    for (const ev of oldEvidences) {
-      let physicalPath: string | null = null;
-      if (ev.fileName) {
-        physicalPath = path.join(process.cwd(), "uploads", submissionId, ev.fileName);
-      } else if (ev.fileUrl && ev.fileUrl.startsWith("/uploads/")) {
-        const sanitized = ev.fileUrl.startsWith("/") ? ev.fileUrl.substring(1) : ev.fileUrl;
-        physicalPath = path.join(process.cwd(), sanitized);
-      }
-
-      if (physicalPath) {
-        await fs.unlink(physicalPath).catch((err) => {
-          console.warn("[Reupload] Gagal menghapus file fisiknya:", err?.message || err);
-        });
-      }
-    }
-
     // Ambil data terbaru yang tersimpan untuk dikembalikan langsung ke client
     const dbRecords = await prisma.indicatorRecord.findMany({
       where: { submissionId, indicatorId: stepNum },
@@ -208,7 +167,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Berhasil mengunggah ulang file Excel. Data lama dan bukti fisik terkait telah diperbarui.",
+      message: "Berhasil menambahkan data dari file Excel.",
       records: latestRecords,
     });
   } catch (error: any) {

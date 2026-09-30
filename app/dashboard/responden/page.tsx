@@ -147,7 +147,7 @@ export default function RespondenPage() {
               </span>
             </div>
             <h2 className="text-xl font-bold text-slate-900">
-              Basisdata Responden {currentUser?.kabupatenKota || "Kutai Kartanegara"}
+              Basisdata Responden {currentUser?.kabupatenKota || "Kalimantan Timur"}
             </h2>
             <p className="text-sm text-slate-500 mt-1">
               Sesuai standar operasional Kemenpora RI, pastikan data responden valid dan aktual.
@@ -163,8 +163,9 @@ export default function RespondenPage() {
       </div>
 
       {/* Form Section */}
-      <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
+      {currentUser?.role !== "ADMIN" && (
+        <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-bold text-slate-900">Formulir Pendaftaran Responden Baru</h3>
             <p className="text-xs text-slate-500 mt-1">Kalkulasi usia otomatis berdasarkan tanggal lahir responden</p>
@@ -329,6 +330,7 @@ export default function RespondenPage() {
           </div>
         </form>
       </div>
+      )}
 
       {/* Table Section */}
       <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm overflow-hidden">
