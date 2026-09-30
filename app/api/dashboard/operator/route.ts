@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
 
     const userId = decoded.id;
 
+    // 2. Fetch total respondents for user
+    const totalResponden = await prisma.responden.count({
+      where: { userId: userId }
+    });
+
     // 3. Fetch submissions for user
     const submissions = await prisma.submission.findMany({
       where: { userId: userId },
@@ -126,13 +131,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const recentSubmissions = await prisma.indicatorRecord.findMany({
+      where: { submissionId: { in: submissionIds } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: {
+        responden: { select: { nama: true } }
+      }
+    });
+
     return NextResponse.json({
+      totalResponden,
       totalDataInput,
       totalBerkasPdf,
       totalDisetujui,
       menungguReview,
       indikatorStats,
-      status8Indikator
+      status8Indikator,
+      recentSubmissions
     });
   } catch (error) {
     console.error("Dashboard operator error:", error);
