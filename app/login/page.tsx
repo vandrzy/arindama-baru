@@ -3,19 +3,15 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BrandLogo } from "@/components/brand-logo";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { useApp } from "@/lib/context/app-context";
 import {
   Lock,
-  User,
+  Mail,
   Eye,
   EyeOff,
   ArrowRight,
   AlertCircle,
-  CheckCircle2,
-  ShieldCheck,
-  Building,
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -28,7 +24,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Pengecekan autentikasi: Jika pengguna sudah login, langsung arahkan ke dasbor (/dashboard) setelah rehidrasi selesai
   React.useEffect(() => {
     if (!isLoading && currentUser) {
       router.push("/dashboard");
@@ -40,7 +35,7 @@ export default function LoginPage() {
     setError(null);
 
     if (!identifier.trim() || !password.trim()) {
-      setError("Email/Username dan Password wajib diisi.");
+      setError("Email/NIP dan Kata Sandi wajib diisi.");
       return;
     }
 
@@ -51,7 +46,7 @@ export default function LoginPage() {
       setLoading(false);
 
       if (!success) {
-        setError("Email/Username atau Password salah. Silakan coba lagi.");
+        setError("Email/NIP atau Kata Sandi salah. Silakan coba lagi.");
         return;
       }
 
@@ -68,116 +63,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-6 sm:py-10 px-4">
-      <div className="w-full max-w-5xl bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
-        {/* Left Panel - Branding & Highlights */}
-        <div className="lg:col-span-5 bg-gradient-to-br from-[#0B3D2E] via-[#0D4837] to-[#125440] text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
-          {/* Subtle Light Effects */}
-          <div className="absolute -right-16 -bottom-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -top-16 w-64 h-64 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Top Section */}
-          <div className="relative z-10 space-y-6">
-            {/* Brand Logo & Name */}
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="w-full max-w-5xl bg-white rounded-[32px] border border-slate-100/80 shadow-md overflow-hidden grid grid-cols-1 lg:grid-cols-2 min-h-[600px]">
+        {/* Left Column: Login Form */}
+        <div className="p-8 sm:p-12 lg:p-14 flex flex-col justify-between">
+          <div>
+            {/* Logo & Header */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md p-2 flex items-center justify-center border border-white/20">
-                <BrandLogo className="w-7 h-7" />
+              <div className="relative w-9 h-9 shrink-0">
+                <Image
+                  src="/logo/logo.png"
+                  alt="ARINDAMA Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
               <div>
-                <span className="text-lg font-black tracking-wider block leading-none">ARINDAMA</span>
-                <span className="text-[10px] font-bold text-emerald-300 tracking-widest uppercase">Sport Survey</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-extrabold text-[#0f172a] tracking-tight leading-none">
+                    ARINDAMA
+                  </span>
+
+                </div>
+                <span className="text-[11px] font-medium text-[#8898aa] block mt-0.5">
+                  Dispora Pemerintah Provinsi Kalimantan Timur
+                </span>
               </div>
             </div>
 
-            {/* Pill Badge */}
-            <div>
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/10 border border-white/20 text-emerald-100 backdrop-blur-sm">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Portal Resmi Layanan Survei
-              </span>
-            </div>
-
-            {/* Headline & Description */}
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
-                Survei Kebugaran &amp; Pembinaan Olahraga Kalimantan Timur
+            {/* Greeting & Title */}
+            <div className="mt-12 mb-8">
+              <h1 className="text-3xl font-extrabold text-[#0f172a] tracking-tight">
+                Selamat Datang
               </h1>
-              <p className="text-xs sm:text-sm text-emerald-100/80 mt-3 leading-relaxed">
-                Platform terpadu Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur dalam mengumpulkan, memverifikasi, dan menganalisis indikator keolahragaan daerah guna perumusan kebijakan pembangunan olahraga Kalimantan Timur yang presisi dan transparan.
+              <p className="text-xs sm:text-sm text-[#718096] mt-2 leading-relaxed max-w-sm">
+                Silakan masukkan detail akun Anda untuk mengakses sistem evaluasi keolahragaan.
               </p>
             </div>
 
-            {/* Assessment Feature Points */}
-            <div className="space-y-3.5 text-xs text-emerald-50 pt-1">
-              <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="font-bold text-white">Akses Data &amp; Evaluasi Terpusat</p>
-                  <p className="text-[11px] text-emerald-100/70 mt-0.5">
-                    Instrumen asesmen terstandardisasi bagi 10 Kabupaten/Kota se-Kalimantan Timur.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="font-bold text-white">Terhubung ke Satu Data Kalimantan Timur &amp; Satu Data Indonesia</p>
-                  <p className="text-[11px] text-emerald-100/70 mt-0.5">
-                    Interoperabilitas data statistik sektoral nasional secara otomatis dan tervalidasi.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-emerald-400/20 border border-emerald-400/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="font-bold text-white">Standar Keamanan Enkripsi BSSN</p>
-                  <p className="text-[11px] text-emerald-100/70 mt-0.5">
-                    Audit integritas data berbasis kriptografi dan perlindungan kerahasiaan identitas responden.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Left Footer */}
-          <div className="relative z-10 pt-6 mt-6 border-t border-white/10 flex items-start gap-3">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-semibold text-white">
-                Standar Enkripsi &amp; Audit BSSN Terverifikasi
-              </p>
-              <p className="text-[11px] text-emerald-200/70 mt-0.5">
-                Data dilindungi sesuai regulasi UU PDP No. 27 Tahun 2022
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Login Form */}
-        <div className="lg:col-span-7 p-8 sm:p-10 flex flex-col justify-between bg-white">
-          <div>
-            {/* Top Security Badge */}
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#0B3D2E] uppercase tracking-wider mb-2">
-              <Lock className="w-4 h-4 text-[#0B3D2E]" />
-              <span>Autentikasi Aman</span>
-            </div>
-
-            {/* Header Form */}
-            <div className="mb-6 text-left">
-              <h2 className="text-2xl font-bold text-gray-900">Masuk ke Akun Anda</h2>
-              <p className="text-xs text-gray-500 mt-1">
-                Masukkan identitas akun untuk mengakses instrumen survei.
-              </p>
-            </div>
-
+            {/* Error Notification */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center gap-2 mb-6">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -185,20 +110,21 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              {/* Email / Username */}
+            {/* Form */}
+            <form onSubmit={handleLoginSubmit} className="space-y-5">
+              {/* Email / NIP */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                  USERNAME ATAU EMAIL <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-[#2d3748] mb-1.5">
+                  Email / Username
                 </label>
                 <div className="relative flex items-center">
-                  <User className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-4 pointer-events-none" />
                   <input
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="Masukkan username atau email Anda"
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 text-sm focus:border-[#0B3D2E] focus:ring-1 focus:ring-[#0B3D2E] outline-none transition-all"
+                    placeholder="nama@dispora.kaltimprov.go.id / NIP"
+                    className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#f7f9fc] border border-slate-200/80 text-sm text-[#1a202c] focus:border-[#00684a] focus:bg-white focus:ring-2 focus:ring-[#00684a]/10 outline-none transition-all placeholder:text-slate-400/80"
                   />
                 </div>
               </div>
@@ -206,26 +132,29 @@ export default function LoginPage() {
               {/* Password */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    PASSWORD <span className="text-red-500">*</span>
+                  <label className="block text-xs font-bold text-[#2d3748]">
+                    Kata Sandi
                   </label>
-                  <Link href="#" className="text-xs font-semibold text-[#0B3D2E] hover:underline">
-                    Lupa Password?
+                  <Link
+                    href="#"
+                    className="text-xs font-bold text-[#00684a] hover:underline"
+                  >
+                    Lupa Kata Sandi?
                   </Link>
                 </div>
                 <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 pointer-events-none" />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Masukkan kata sandi Anda"
-                    className="w-full h-11 pl-10 pr-10 rounded-xl border border-gray-200 text-sm focus:border-[#0B3D2E] focus:ring-1 focus:ring-[#0B3D2E] outline-none transition-all"
+                    placeholder="Masukkan kata sandi akun"
+                    className="w-full h-11 pl-11 pr-11 rounded-xl bg-[#f7f9fc] border border-slate-200/80 text-sm text-[#1a202c] focus:border-[#00684a] focus:bg-white focus:ring-2 focus:ring-[#00684a]/10 outline-none transition-all placeholder:text-slate-400/80"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-gray-400 hover:text-gray-600 p-1"
+                    className="absolute right-4 text-slate-400 hover:text-slate-600 p-1"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -233,35 +162,49 @@ export default function LoginPage() {
               </div>
 
               {/* Submit Button */}
-              <div className="pt-2">
-                <Button
+              <div className="pt-3">
+                <button
                   type="submit"
-                  variant="primary"
-                  size="lg"
-                  isLoading={loading}
-                  className="w-full bg-[#0B3D2E] hover:bg-[#07291F] text-white shadow-md font-bold text-base h-12 flex items-center justify-center gap-2 rounded-xl transition-all"
+                  disabled={loading}
+                  className="w-full h-12 bg-[#00684a] hover:bg-[#00543c] text-white font-bold text-sm rounded-full flex items-center justify-center gap-2 shadow-sm hover:shadow transition-all disabled:opacity-70"
                 >
-                  <span>Masuk ke Portal Survei</span>
+                  <span>{loading ? "Memproses..." : "Masuk ke Sistem"}</span>
                   <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="text-center pt-2">
-                <span className="text-xs text-gray-500">
-                  Belum punya akun? Hubungi Administrator Dispora Kaltim untuk pembuatan akun.
-                </span>
+                </button>
               </div>
             </form>
           </div>
 
-          {/* Right Footer */}
-          <div className="pt-6 mt-6 border-t border-gray-100 flex items-center justify-center gap-2 text-xs text-gray-400">
-            <Building className="w-4 h-4 text-gray-400 shrink-0" />
-            <span>Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur</span>
+          {/* Left Footer */}
+          <div className="pt-10 mt-6 flex items-center justify-between text-[11px] text-[#a0aec0] font-medium">
+            <span>© 2026 Dispora Prov. Kaltim</span>
+            <span>ARINDAMA v2.5</span>
           </div>
+        </div>
+
+        {/* Right Column: Illustration & Slogan */}
+        <div className="hidden lg:flex flex-col items-center justify-center p-8 sm:p-12 lg:p-14 border-l border-slate-100 text-center bg-white">
+          <div className="w-full max-w-[360px] aspect-square relative mb-8">
+            <Image
+              src="/login/login.png"
+              alt="Ilustrasi Olahraga ARINDAMA"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#0f172a] tracking-tight mb-2">
+            Membina Prestasi, Mengharumkan Banua
+          </h2>
+          <p className="text-xs text-[#718096] max-w-xs leading-relaxed">
+            Sistem Evaluasi Capaian Atlet &amp; Indeks Keolahragaan Terpadu 10 Kabupaten/Kota se-Kalimantan Timur
+          </p>
         </div>
       </div>
     </div>
   );
 }
+
+
 
