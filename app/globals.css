@@ -84,21 +84,22 @@ body {
 
 /* Custom Themed Scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f3;
+  background: transparent;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #a7f3d0;
-  border-radius: 4px;
+  background: #cbd5e1;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0d5c3a;
+  background: #94a3b8;
 }
 
 /* ============================================

@@ -51,12 +51,10 @@ function UserFormContent() {
   const [fetchingUser, setFetchingUser] = useState(isEditMode);
   const [error, setError] = useState<string | null>(null);
 
-  // Authorization check
+  // Direct redirect to modal dialog on main page
   useEffect(() => {
-    if (!isAuthLoading && currentUser && currentUser.role !== "ADMIN") {
-      router.push("/dashboard");
-    }
-  }, [isAuthLoading, currentUser, router]);
+    router.replace("/dashboard/manajemen-akun");
+  }, [router]);
 
   // Fetch user data if in edit mode
   useEffect(() => {
