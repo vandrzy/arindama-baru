@@ -260,7 +260,7 @@ export async function DELETE(
   }
 }
 
-// PATCH /api/users/[id] - Update user role directly
+// PATCH /api/users/[id] - Update user role or password directly
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -276,14 +276,6 @@ export async function PATCH(
 
     const { id } = params;
     const body = await request.json();
-    const newRole = body.role;
-
-    if (!newRole || !["ADMIN", "OPERATOR"].includes(newRole)) {
-      return NextResponse.json(
-        { error: "Role tidak valid (harus ADMIN atau OPERATOR)." },
-        { status: 400 }
-      );
-    }
 
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
@@ -293,32 +285,78 @@ export async function PATCH(
       );
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { role: newRole },
-      select: {
-        id: true,
-        nip: true,
-        email: true,
-        nama: true,
-        role: true,
-        jabatan: true,
-        kabupatenKota: true,
-        instansi: true,
-        nomorTelepon: true,
-        updatedAt: true,
-      },
-    });
+    if (body.password) {
+      if (typeof body.password !== "string" || body.password.length < 8) {
+        return NextResponse.json(
+          { error: "Password minimal 8 karakter." },
+          { status: 400 }
+        );
+      }
+      const hashedPassword = await hashPassword(body.password);
+      await prisma.user.update({
+        where: { id },
+        data: { password: hashedPassword },
+      });
 
-    return NextResponse.json({
-      success: true,
-      message: `Role pengguna "${updatedUser.nama}" berhasil diperbarui menjadi ${updatedUser.role}.`,
-      user: updatedUser,
-    });
+      // Audit log
+      await prisma.auditLog.create({
+        data: {
+          userId: admin.id,
+          action: "RESET_PASSWORD",
+          entity: "User",
+          entityId: id,
+          ipAddress: request.headers.get("x-forwarded-for") || "unknown",
+          userAgent: request.headers.get("user-agent") || "unknown",
+          details: { resetUser: user.nip },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Password pengguna "${user.nama}" berhasil diperbarui.`,
+      });
+    }
+
+    if (body.role) {
+      if (!["ADMIN", "OPERATOR"].includes(body.role)) {
+        return NextResponse.json(
+          { error: "Role tidak valid (harus ADMIN atau OPERATOR)." },
+          { status: 400 }
+        );
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: { role: body.role },
+        select: {
+          id: true,
+          nip: true,
+          email: true,
+          nama: true,
+          role: true,
+          jabatan: true,
+          kabupatenKota: true,
+          instansi: true,
+          nomorTelepon: true,
+          updatedAt: true,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Role pengguna "${updatedUser.nama}" berhasil diperbarui menjadi ${updatedUser.role}.`,
+        user: updatedUser,
+      });
+    }
+
+    return NextResponse.json(
+      { error: "Payload tidak valid. Sediakan 'password' atau 'role'." },
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error("PATCH /api/users/[id] error:", error);
     return NextResponse.json(
-      { error: error?.message || "Gagal memperbarui role akun." },
+      { error: error?.message || "Gagal memperbarui akun." },
       { status: 500 }
     );
   }

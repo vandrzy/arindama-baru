@@ -49,24 +49,31 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "10", 10)));
     const search = searchParams.get("search")?.trim() || "";
+    const roleParam = searchParams.get("role")?.trim() || "";
 
     const skip = (page - 1) * limit;
 
-    const whereCondition = search
-      ? {
-          OR: [
-            { nama: { contains: search } },
-            { nip: { contains: search } },
-            { email: { contains: search } },
-            { jabatan: { contains: search } },
-            { instansi: { contains: search } },
-            { kabupatenKota: { contains: search } },
-            { nomorTelepon: { contains: search } },
-          ],
-        }
-      : {};
+    const whereConditions: any[] = [];
+    if (search) {
+      whereConditions.push({
+        OR: [
+          { nama: { contains: search } },
+          { nip: { contains: search } },
+          { email: { contains: search } },
+          { jabatan: { contains: search } },
+          { instansi: { contains: search } },
+          { kabupatenKota: { contains: search } },
+          { nomorTelepon: { contains: search } },
+        ],
+      });
+    }
+    if (roleParam && (roleParam === "ADMIN" || roleParam === "OPERATOR")) {
+      whereConditions.push({ role: roleParam });
+    }
 
-    const [users, total] = await Promise.all([
+    const whereCondition = whereConditions.length > 0 ? { AND: whereConditions } : {};
+
+    const [users, total, totalAll, adminCount, operatorCount] = await Promise.all([
       prisma.user.findMany({
         where: whereCondition,
         select: {
@@ -88,6 +95,9 @@ export async function GET(request: NextRequest) {
         take: limit,
       }),
       prisma.user.count({ where: whereCondition }),
+      prisma.user.count(),
+      prisma.user.count({ where: { role: "ADMIN" } }),
+      prisma.user.count({ where: { role: "OPERATOR" } }),
     ]);
 
     const totalPages = Math.ceil(total / limit) || 1;
@@ -95,6 +105,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       users,
+      stats: {
+        total: totalAll,
+        admin: adminCount,
+        operator: operatorCount,
+      },
       pagination: {
         page,
         limit,
