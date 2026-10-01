@@ -96,14 +96,14 @@ export async function GET(request: NextRequest) {
     });
 
     const verifiedStatuses = ["Sah & Terverifikasi", "Sah", "Disetujui"];
-    const totalDataTerverifikasi = allRecords.filter(r => verifiedStatuses.includes(r.status)).length;
+    const totalDataTerverifikasi = allRecords.filter(r => verifiedStatuses.includes(r.status as string)).length;
     
     // Antrean Validasi (Menunggu Review, Revisi) - but wait, the prompt says:
     // Tampilkan jumlah berkas berstatus "Menunggu Review" atau "Revisi".
     // Is it based on submission status or record status?
     // IndicatorRecord status uses "Menunggu Validasi" and "Perlu Revisi" ?
     // Let's check status used:
-    const antreanValidasi = allRecords.filter(r => r.status === "Menunggu Validasi" || r.status === "Perlu Revisi" || r.status === "Menunggu Review" || r.status === "Revisi").length;
+    const antreanValidasi = allRecords.filter(r => (r.status as string) === "Menunggu Validasi" || (r.status as string) === "Perlu Revisi" || (r.status as string) === "Menunggu Review" || (r.status as string) === "Revisi").length;
 
     let medaliSah = { emas: 0, perak: 0, perunggu: 0, total: 0 };
     
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
         medaliSah.total++;
       }
 
-      const isVerified = verifiedStatuses.includes(rec.status);
+      const isVerified = verifiedStatuses.includes(rec.status as string);
       const isMedalIndicator = rec.indicatorId === 1 || rec.indicatorId === 6;
       const user = rec.submission.user;
       

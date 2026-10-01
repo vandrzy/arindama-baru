@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJwtToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { RecordStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
           medali: medali || "",
           sumberPendanaan: sumberPendanaan || "APBD (Daerah)",
           uraianCapaian: uraianCapaian || "",
-          status: "Menunggu Review"
+          status: RecordStatus.MENUNGGU_REVIEW
         }
       });
       return NextResponse.json({ success: true, data: newRecord });

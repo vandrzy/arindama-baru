@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       data: {
         nik: data.nik,
         nama: data.nama,
-        jenisKelamin: data.jenisKelamin,
+        jenisKelamin: data.jenisKelamin as any,
         tanggalLahir: new Date(data.tanggalLahir),
         kabupatenKota: data.kabupatenKota,
         kecamatan: data.kecamatan,

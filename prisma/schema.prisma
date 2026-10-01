@@ -16,12 +16,12 @@ datasource db {
 // ============================================
 
 model User {
-  id          String   @id @default(cuid())
-  nip         String   @unique
-  email       String   @unique
-  password    String   // Hashed with bcrypt
-  nama        String
-  role        UserRole @default(OPERATOR)
+  id            String   @id @default(cuid())
+  nip           String   @unique
+  email         String   @unique
+  password      String   // Hashed with bcrypt
+  nama          String
+  role          UserRole @default(OPERATOR)
   jabatan       String   @default("")
   kabupatenKota String   @default("")
   instansi      String   @default("")
@@ -47,25 +47,39 @@ enum UserRole {
   OPERATOR
 }
 
+enum RecordStatus {
+  MENUNGGU_REVIEW   @map("Menunggu Review")
+  REVISI            @map("Revisi")
+  SAH_TERVERIFIKASI @map("Sah & Terverifikasi")
+  SAH               @map("Sah")
+  DISETUJUI         @map("Disetujui")
+}
+
+enum JenisKelamin {
+  LAKI_LAKI @map("Laki-laki")
+  PEREMPUAN @map("Perempuan")
+}
+
 // ============================================
 // SURVEY SUBMISSIONS
 // ============================================
 
 model Submission {
-  id                  String           @id @default(cuid())
-  noRegistrasi        String           @unique @default(uuid())
-  userId              String
-  tahunSurvei         Int              @default(2024)
-  totalIndikatorTerisi Int             @default(0)
+  id                   String               @id @default(cuid())
+  noRegistrasi         String               @unique @default(uuid())
+  userId               String
+  tahunSurvei          Int                  @default(2024)
+  totalIndikatorTerisi Int                  @default(0)
   
   // Relations
-  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  indicatorRecords    IndicatorRecord[]
-  validationEvidences ValidationEvidence[]
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  indicatorRecords     IndicatorRecord[]
+  validationEvidences  ValidationEvidence[]
+  fileAttachments      FileAttachment[]
 
   // Timestamps
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
   @@index([userId])
   @@index([tahunSurvei])
@@ -77,23 +91,23 @@ model Submission {
 // ============================================
 
 model IndicatorRecord {
-  id                      String     @id @default(cuid())
-  submissionId            String
-  indicatorId             Int        // 1 - 8
-  namaKegiatan            String
-  cabangOlahraga          String
-  tingkatPenyelenggaraan  String
-  sumberPendanaan         String
-  medali                  String?    // Atribut medali (opsional)
-  uraianCapaian           String
-  status                  String     @default("Menunggu Review")
+  id                     String       @id @default(cuid())
+  submissionId           String
+  indicatorId            Int          // 1 - 8
+  namaKegiatan           String
+  cabangOlahraga         String
+  tingkatPenyelenggaraan String
+  sumberPendanaan        String
+  medali                 String?      // Atribut medali (opsional)
+  uraianCapaian          String
+  status                 RecordStatus @default(MENUNGGU_REVIEW)
 
-  respondenNik            String?
-  responden               Responden? @relation(fields: [respondenNik], references: [nik], onDelete: SetNull)
+  respondenNik           String?
+  responden              Responden?   @relation(fields: [respondenNik], references: [nik], onDelete: SetNull)
 
-  submission              Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  createdAt               DateTime   @default(now())
-  updatedAt               DateTime   @updatedAt
+  submission             Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
 
   @@index([submissionId])
   @@index([indicatorId])
@@ -106,21 +120,19 @@ model IndicatorRecord {
 // ============================================
 
 model ValidationEvidence {
-  id              String     @id @default(cuid())
-  submissionId    String
-  formType        String
-  recordId        String
-  fileName        String
-  fileUrl         String
-  fileSize        String?
+  id           String     @id @default(cuid())
+  submissionId String
+  formType     String
+  recordId     String
+  fileName     String
+  fileUrl      String
+  fileSize     String?
   
-  submission      Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@unique([submissionId, formType, recordId])
-  @@index([submissionId])
-  @@index([submissionId, formType])
   @@map("validation_evidences")
 }
 
@@ -129,20 +141,20 @@ model ValidationEvidence {
 // ============================================
 
 model AuditLog {
-  id          String      @id @default(cuid())
-  userId      String?
-  action      String      // LOGIN, LOGOUT, CREATE_SUBMISSION, UPDATE_STATUS, etc.
-  entity      String?     // Submission, User, etc.
-  entityId    String?     // ID of affected entity
-  ipAddress   String?
-  userAgent   String?
-  details     Json?       // Additional metadata
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // LOGIN, LOGOUT, CREATE_SUBMISSION, UPDATE_STATUS, etc.
+  entity    String?  // Submission, User, etc.
+  entityId  String?  // ID of affected entity
+  ipAddress String?
+  userAgent String?
+  details   Json?    // Additional metadata
   
   // Relations
-  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // Timestamp
-  createdAt   DateTime    @default(now())
+  createdAt DateTime @default(now())
   
   @@index([userId])
   @@index([action])
@@ -155,16 +167,18 @@ model AuditLog {
 // ============================================
 
 model FileAttachment {
-  id              String   @id @default(cuid())
-  submissionId    String
-  fileName        String
-  filePath        String   // S3 path or local path
-  fileSize        Int
-  mimeType        String
-  fileHash        String   // SHA-256 for integrity
+  id           String     @id @default(cuid())
+  submissionId String
+  fileName     String
+  filePath     String     // S3 path or local path
+  fileSize     Int
+  mimeType     String
+  fileHash     String     // SHA-256 for integrity
   
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
   // Timestamps
-  createdAt       DateTime @default(now())
+  createdAt    DateTime   @default(now())
   
   @@index([submissionId])
   @@map("file_attachments")
@@ -175,14 +189,14 @@ model FileAttachment {
 // ============================================
 
 model DynamicWeight {
-  id           String   @id @default(cuid())
-  pilar        String   @default("PRESTASI") // "PRESTASI", "DISABILITAS", "REKREASI"
-  tingkat      String   // "Internasional", "Nasional", "Provinsi"
-  emas         Int      @default(100)
-  perak        Int      @default(75)
-  perunggu     Int      @default(50)
-  partisipasi  Int      @default(25)
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  pilar       String   @default("PRESTASI") // "PRESTASI", "DISABILITAS", "REKREASI"
+  tingkat     String   // "Internasional", "Nasional", "Provinsi"
+  emas        Int      @default(100)
+  perak       Int      @default(75)
+  perunggu    Int      @default(50)
+  partisipasi Int      @default(25)
+  updatedAt   DateTime @updatedAt
 
   @@unique([pilar, tingkat])
   @@map("dynamic_weights")
@@ -193,22 +207,23 @@ model DynamicWeight {
 // ============================================
 
 model Responden {
-  nik             String   @id @unique // NIK is the primary key
-  nama            String
-  jenisKelamin    String   @default("Laki-laki")
-  tanggalLahir    DateTime
-  kabupatenKota   String
-  kecamatan       String
-  cabangOlahraga  String
-  nomorTelepon    String
+  nik            String       @id // NIK is the primary key
+  nama           String
+  jenisKelamin   JenisKelamin @default(LAKI_LAKI)
+  tanggalLahir   DateTime
+  kabupatenKota  String
+  kecamatan      String
+  cabangOlahraga String
+  nomorTelepon   String
 
-  userId          String?
-  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   indicatorRecords IndicatorRecord[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@map("responden")
 }
+
