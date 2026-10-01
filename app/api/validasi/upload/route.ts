@@ -4,10 +4,11 @@ import { verifyJwtToken } from "@/lib/auth";
 import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
+import { compressPdfWithGhostscript } from "@/lib/services/pdfCompressor";
 
 export const dynamic = "force-dynamic";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB limit per file
+const MAX_UPLOAD_SIZE = 15 * 1024 * 1024; // 15 MB batas maksimal file mentah yang boleh di-upload
 
 const uploadParamsSchema = z.object({
   submissionId: z.string().min(1, "submissionId diperlukan"),
@@ -106,12 +107,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validasi maksimal ukuran file (2 MB)
-    if (file.size > MAX_FILE_SIZE) {
+    // Validasi maksimal ukuran file mentah yang diunggah (15 MB)
+    if (file.size > MAX_UPLOAD_SIZE) {
       const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      const maxMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0);
+      const maxMB = (MAX_UPLOAD_SIZE / (1024 * 1024)).toFixed(0);
       return NextResponse.json(
-        { error: `Ukuran file '${file.name}' (${fileSizeMB} MB) melebihi batas maksimum ${maxMB} MB.` },
+        { error: `Ukuran file '${file.name}' (${fileSizeMB} MB) melebihi batas maksimum awal ${maxMB} MB.` },
         { status: 400 }
       );
     }
@@ -154,13 +155,34 @@ export async function POST(request: NextRequest) {
       ext: fileExt,
     });
 
-    // Simpan file BARU ke local storage (asinkron): uploads/<submissionId>/<formattedFileName>
     const uploadDir = path.join(process.cwd(), "uploads", submissionId);
     await fs.mkdir(uploadDir, { recursive: true });
 
     const filePath = path.join(uploadDir, formattedFileName);
+    const tempRawPath = path.join(uploadDir, `raw_${timestamp}_${formattedFileName}`);
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, fileBuffer);
+
+    // Tulis file mentah sementara
+    await fs.writeFile(tempRawPath, fileBuffer);
+
+    // Proses Kompresi Ghostscript PDF (Target maksimal 1 MB)
+    const compressResult = await compressPdfWithGhostscript(
+      tempRawPath,
+      filePath,
+      1 * 1024 * 1024
+    );
+
+    // Hapus file mentah sementara setelah selesai kompresi
+    await fs.unlink(tempRawPath).catch(() => {});
+
+    if (!compressResult.success) {
+      // Hapus file jika terbentuk namun gagal secara kualitas/size
+      await fs.unlink(filePath).catch(() => {});
+      return NextResponse.json(
+        { error: compressResult.error || "Kompresi file PDF gagal." },
+        { status: 400 }
+      );
+    }
 
     // Hapus file LAMA secara asinkron jika ada
     if (existingEvidence) {
@@ -182,7 +204,8 @@ export async function POST(request: NextRequest) {
     }
 
     const localFileUrl = `/uploads/${submissionId}/${formattedFileName}`;
-    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+    const finalBytes = compressResult.finalSize || file.size;
+    const sizeInMB = (finalBytes / (1024 * 1024)).toFixed(2) + " MB";
 
     // Upsert database record
     const evidence = await prisma.validationEvidence.upsert({

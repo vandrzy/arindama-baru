@@ -521,8 +521,8 @@ export default function KuesionerPage() {
       alert("Hanya berkas berekstensi .pdf yang diperbolehkan untuk bukti validasi.");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Ukuran file PDF melebihi batas maksimum 2 MB.");
+    if (file.size > 15 * 1024 * 1024) {
+      alert("Ukuran file PDF melebihi batas maksimum 15 MB.");
       return;
     }
 
@@ -530,6 +530,9 @@ export default function KuesionerPage() {
     const key = record.evidenceKey;
 
     setUploadingEvidences((prev) => ({ ...prev, [key]: true }));
+    if (file.size > 1024 * 1024) {
+      setNotification("Sedang mengompresi dokumen PDF menggunakan Ghostscript...");
+    }
 
     try {
       const formData = new FormData();

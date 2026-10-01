@@ -22,6 +22,7 @@ export function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
     if (path.startsWith("/dashboard/bobot-dinamis")) return "Bobot Dinamis";
     if (path.startsWith("/dashboard/notifikasi")) return "Pusat Notifikasi & Informasi Penting";
     if (path.startsWith("/dashboard/log-aktivitas")) return "Log Aktivitas Sistem";
+    if (path.startsWith("/dashboard/peraihan-medali")) return "Peraihan Medali";
     if (path.startsWith("/kuesioner")) return "Detail Kategori";
     if (path.startsWith("/statistik")) return "Statistik";
     if (path.startsWith("/login")) return "Masuk Sistem";
