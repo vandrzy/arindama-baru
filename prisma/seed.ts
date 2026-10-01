@@ -16,7 +16,7 @@ async function main() {
 
   // Create admin account
   const admin = await prisma.user.upsert({
-    where: { username: "admin" },
+    where: { nip: "198001012010011001" },
     update: {
       email: "admin@arindama.id",
       nama: "Drs. H. Hendra Wijaya, M.Si.",
@@ -25,7 +25,7 @@ async function main() {
       instansi: "Dinas Pemuda dan Olahraga Provinsi Kalimantan Timur",
     },
     create: {
-      username: "admin",
+      nip: "198001012010011001",
       email: "admin@arindama.id",
       password: adminPassword,
       nama: "Drs. H. Hendra Wijaya, M.Si.",
@@ -35,14 +35,14 @@ async function main() {
     },
   });
 
-  console.log(`✅ Admin created: ${admin.username} (${admin.email})`);
+  console.log(`✅ Admin created: ${admin.nip} (${admin.email})`);
 
   // Create default responden account
   const responden = await prisma.user.upsert({
-    where: { username: "responden" },
+    where: { nip: "198502022015021002" },
     update: {},
     create: {
-      username: "responden",
+      nip: "198502022015021002",
       email: "responden@arindama.id",
       password: userPassword,
       nama: "Bambang Pamungkas, S.Pd.",
@@ -52,7 +52,7 @@ async function main() {
     },
   });
 
-  console.log(`✅ Responden created: ${responden.username} (${responden.email})`);
+  console.log(`✅ Responden created: ${responden.nip} (${responden.email})`);
 
   console.log("🎉 Seeding completed!");
   console.log("\n⚠️  Default passwords were set via ADMIN_DEFAULT_PASSWORD / USER_DEFAULT_PASSWORD env vars.");

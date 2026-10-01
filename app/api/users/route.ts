@@ -23,7 +23,7 @@ async function verifyAdmin(request: NextRequest) {
 }
 
 const createUserSchema = z.object({
-  username: z.string().min(3, "Username minimal 3 karakter").max(30),
+  nip: z.string().length(18, "NIP harus terdiri dari 18 digit"),
   email: z.string().email("Email tidak valid"),
   password: z.string().min(8, "Password minimal 8 karakter"),
   nama: z.string().min(3, "Nama wajib diisi"),
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       ? {
           OR: [
             { nama: { contains: search } },
-            { username: { contains: search } },
+            { nip: { contains: search } },
             { email: { contains: search } },
             { jabatan: { contains: search } },
             { instansi: { contains: search } },
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         where: whereCondition,
         select: {
           id: true,
-          username: true,
+          nip: true,
           email: true,
           nama: true,
           role: true,
@@ -131,12 +131,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, email, password, nama, role, jabatan, kabupatenKota, instansi, nomorTelepon } = validation.data;
+    const { nip, email, password, nama, role, jabatan, kabupatenKota, instansi, nomorTelepon } = validation.data;
 
     // Check if username or email already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [{ username }, { email }],
+        OR: [{ nip }, { email }],
       },
     });
 
@@ -144,8 +144,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            existingUser.username.toLowerCase() === username.toLowerCase()
-              ? "Username sudah terdaftar."
+            existingUser.nip === nip
+              ? "NIP sudah terdaftar."
               : "Email sudah terdaftar.",
         },
         { status: 409 }
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
 
     const newUser = await prisma.user.create({
       data: {
-        username,
+        nip,
         email,
         password: hashedPassword,
         nama,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       },
       select: {
         id: true,
-        username: true,
+        nip: true,
         email: true,
         nama: true,
         role: true,
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
         entityId: newUser.id,
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
-        details: { createdUser: newUser.username, role: newUser.role },
+        details: { createdUser: newUser.nip, role: newUser.role },
       },
     });
 

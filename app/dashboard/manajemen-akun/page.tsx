@@ -28,7 +28,7 @@ import {
 
 interface UserItem {
   id: string;
-  username: string;
+  nip: string;
   email: string;
   nama: string;
   role: "ADMIN" | "OPERATOR";
@@ -284,7 +284,7 @@ export default function ManajemenAkunPage() {
                       <div>
                         <div className="font-extrabold text-slate-900 text-sm">{user.nama}</div>
                         <div className="text-slate-500 text-xs flex items-center gap-2 mt-0.5">
-                          <span>@{user.username}</span>
+                          <span>NIP. {user.nip}</span>
                           <span>•</span>
                           <span className="flex items-center gap-1">
                             <Mail className="w-3 h-3 text-slate-400" />
@@ -405,8 +405,8 @@ export default function ManajemenAkunPage() {
               <h3 className="text-lg font-bold text-slate-900">Konfirmasi Hapus Akun</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                 Apakah Anda yakin ingin menghapus akun{" "}
-                <span className="font-bold text-slate-900">&quot;{deleteModalUser.nama}&quot;</span> (@
-                {deleteModalUser.username})? Tindakan ini tidak dapat dibatalkan.
+                <span className="font-bold text-slate-900">&quot;{deleteModalUser.nama}&quot;</span> (NIP. 
+                {deleteModalUser.nip})? Tindakan ini tidak dapat dibatalkan.
               </p>
             </div>
 

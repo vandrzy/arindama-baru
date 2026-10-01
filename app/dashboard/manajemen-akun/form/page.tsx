@@ -32,7 +32,7 @@ function UserFormContent() {
   const { currentUser, isLoading: isAuthLoading } = useApp();
 
   const [formData, setFormData] = useState({
-    username: "",
+    nip: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -72,7 +72,7 @@ function UserFormContent() {
           }
           const u = data.user;
           setFormData({
-            username: u.username || "",
+            nip: u.nip || "",
             email: u.email || "",
             password: "",
             confirmPassword: "",
@@ -108,7 +108,7 @@ function UserFormContent() {
 
     // Basic Validation
     if (
-      !formData.username.trim() ||
+      !formData.nip.trim() ||
       !formData.email.trim() ||
       !formData.nama.trim() ||
       !formData.jabatan.trim() ||
@@ -142,7 +142,7 @@ function UserFormContent() {
       const method = isEditMode ? "PUT" : "POST";
 
       const payload: any = {
-        username: formData.username.trim(),
+        nip: formData.nip.trim(),
         email: formData.email.trim(),
         nama: formData.nama.trim(),
         role: formData.role,
@@ -235,16 +235,16 @@ function UserFormContent() {
               {/* Username */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Username <span className="text-red-500">*</span>
+                  NIP <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                   <input
                     type="text"
-                    name="username"
-                    value={formData.username}
+                    name="nip"
+                    value={formData.nip}
                     onChange={handleChange}
-                    placeholder="Masukkan username"
+                    placeholder="Masukkan 18 digit NIP"
                     className="w-full h-11 pl-10 pr-4 rounded-2xl border border-slate-200 text-sm focus:border-[#0B3D2E] focus:ring-2 focus:ring-[#0B3D2E]/20 outline-none transition-all"
                   />
                 </div>

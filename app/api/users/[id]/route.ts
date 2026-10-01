@@ -23,7 +23,7 @@ async function verifyAdmin(request: NextRequest) {
 }
 
 const updateUserSchema = z.object({
-  username: z.string().min(3, "Username minimal 3 karakter").max(30),
+  nip: z.string().length(18, "NIP harus terdiri dari 18 digit"),
   email: z.string().email("Email tidak valid"),
   password: z.string().optional().or(z.literal("")),
   nama: z.string().min(3, "Nama wajib diisi"),
@@ -53,7 +53,7 @@ export async function GET(
       where: { id },
       select: {
         id: true,
-        username: true,
+        nip: true,
         email: true,
         nama: true,
         role: true,
@@ -116,14 +116,14 @@ export async function PUT(
       );
     }
 
-    const { username, email, password, nama, role, jabatan, kabupatenKota, instansi, nomorTelepon } = validation.data;
+    const { nip, email, password, nama, role, jabatan, kabupatenKota, instansi, nomorTelepon } = validation.data;
 
     // Check duplicate username/email among other users
     const duplicate = await prisma.user.findFirst({
       where: {
         AND: [
           { id: { not: id } },
-          { OR: [{ username }, { email }] },
+          { OR: [{ nip }, { email }] },
         ],
       },
     });
@@ -132,8 +132,8 @@ export async function PUT(
       return NextResponse.json(
         {
           error:
-            duplicate.username.toLowerCase() === username.toLowerCase()
-              ? "Username sudah digunakan oleh akun lain."
+            duplicate.nip === nip
+              ? "NIP sudah digunakan oleh akun lain."
               : "Email sudah digunakan oleh akun lain.",
         },
         { status: 409 }
@@ -141,7 +141,7 @@ export async function PUT(
     }
 
     const updateData: any = {
-      username,
+      nip,
       email,
       nama,
       role,
@@ -166,7 +166,7 @@ export async function PUT(
       data: updateData,
       select: {
         id: true,
-        username: true,
+        nip: true,
         email: true,
         nama: true,
         role: true,
@@ -187,7 +187,7 @@ export async function PUT(
         entityId: id,
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
-        details: { updatedUser: updatedUser.username },
+        details: { updatedUser: updatedUser.nip },
       },
     });
 
@@ -243,7 +243,7 @@ export async function DELETE(
         entityId: id,
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
-        details: { deletedUser: existingUser.username },
+        details: { deletedUser: existingUser.nip },
       },
     });
 
@@ -298,7 +298,7 @@ export async function PATCH(
       data: { role: newRole },
       select: {
         id: true,
-        username: true,
+        nip: true,
         email: true,
         nama: true,
         role: true,

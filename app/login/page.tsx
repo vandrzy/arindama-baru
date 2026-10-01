@@ -115,7 +115,7 @@ export default function LoginPage() {
               {/* Email / NIP */}
               <div>
                 <label className="block text-xs font-bold text-[#2d3748] mb-1.5">
-                  Email / Username
+                  Email / NIP
                 </label>
                 <div className="relative flex items-center">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-4 pointer-events-none" />

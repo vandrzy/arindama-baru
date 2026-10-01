@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       where: { id: payload.id },
       select: {
         id: true,
-        username: true,
+        nip: true,
         email: true,
         nama: true,
         role: true,

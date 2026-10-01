@@ -17,7 +17,7 @@ datasource db {
 
 model User {
   id          String   @id @default(cuid())
-  username    String   @unique
+  nip         String   @unique
   email       String   @unique
   password    String   // Hashed with bcrypt
   nama        String
@@ -38,7 +38,7 @@ model User {
   lastLoginAt DateTime?
   
   @@index([email])
-  @@index([username])
+  @@index([nip])
   @@map("users")
 }
 
