@@ -475,7 +475,7 @@ export default function BobotDinamisPage() {
   };
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-6 pb-8">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-800 text-white text-xs sm:text-sm font-semibold px-4 py-3 rounded-2xl shadow-elevated flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -484,14 +484,9 @@ export default function BobotDinamisPage() {
         </div>
       )}
 
-      {/* Top Header & Breadcrumb & Action Buttons */}
+      {/* Top Header & Action Buttons */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-            <span>ARINDAMA</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-            <span className="text-slate-700 font-bold">Matriks Bobot Dinamis</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Matriks Perkalian Bobot (Tingkat Kejuaraan × Capaian)
           </h1>

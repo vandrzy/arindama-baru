@@ -193,7 +193,7 @@ export default function NotifikasiPage() {
       ];
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-10">
+    <div className="space-y-6 pb-8">
       {/* HERO SECTION */}
       <Card className="bg-[#0f1f1a] rounded-3xl p-8 sm:p-10 text-white relative overflow-hidden border-0 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-4 z-10 max-w-2xl">

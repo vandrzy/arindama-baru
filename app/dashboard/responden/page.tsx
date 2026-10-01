@@ -135,7 +135,7 @@ export default function RespondenPage() {
           </div>
         </div>
       )}
-      <div className="max-w-6xl mx-auto space-y-6 pb-20 p-4">
+      <div className="space-y-6 pb-8">
 
       {/* Header Info */}
       <div className="bg-white border border-emerald-100 rounded-2xl p-6 shadow-sm">
