@@ -18,7 +18,8 @@ import {
   ChevronRight,
   UserCheck,
   LogIn,
-  FileText
+  FileText,
+  Award
 } from "lucide-react";
 
 interface SidebarProps {
@@ -51,6 +52,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       label: "Detail Kategori",
       icon: Layers,
       match: (p: string) => p.startsWith("/kuesioner") || p.startsWith("/detail-kategori"),
+    },
+    {
+      href: "/dashboard/peraihan-medali",
+      label: "Peraihan Medali",
+      icon: Award,
+      match: (p: string) => p.startsWith("/dashboard/peraihan-medali"),
     },
     ...(isAdmin
       ? [
