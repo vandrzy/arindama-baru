@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
 import { useApp } from "@/lib/context/app-context";
 import { SURVEY_INDICATORS } from "@/lib/constants/survey-data";
 import { KABUPATEN_KOTA_OPTIONS } from "@/lib/constants/survey-data";
@@ -1331,9 +1332,8 @@ export default function KuesionerPage() {
 
 
       {/* 7. MODAL PRATINJAU PDF & VERIFIKASI */}
-      {(previewPdfUrl || selectedRecordForVerification) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-4 border border-slate-200 relative">
+      <Modal isOpen={Boolean(previewPdfUrl || selectedRecordForVerification)}>
+        <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-4 border border-slate-200 relative">
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 overflow-hidden">
@@ -1459,12 +1459,10 @@ export default function KuesionerPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </Modal>
       {/* 9. MODAL FORM MANUAL TAMBAH/EDIT ENTRI */}
-      {showManualModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden">
+      <Modal isOpen={showManualModal} onClose={() => setShowManualModal(false)}>
+        <div className="bg-white rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden">
             
             <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
               <div className="flex items-center gap-3">
@@ -1605,14 +1603,12 @@ export default function KuesionerPage() {
               </Button>
             </div>
           </div>
-        </div>
-      )}
+      </Modal>
 
 
       {/* 9. MODAL UNGGAH EXCEL */}
-      {showUploadExcelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden">
+      <Modal isOpen={showUploadExcelModal} onClose={() => setShowUploadExcelModal(false)}>
+        <div className="bg-white rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700">
@@ -1695,8 +1691,7 @@ export default function KuesionerPage() {
               <Button variant="outline" onClick={() => setShowUploadExcelModal(false)}>Tutup</Button>
             </div>
           </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

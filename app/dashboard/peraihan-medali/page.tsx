@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "@/lib/context/app-context";
+import { Modal } from "@/components/ui/modal";
 import {
   Award,
   Users,
@@ -560,7 +561,7 @@ export default function PeraihanMedaliPage() {
 
       {/* MODAL LIHAT BERKAS BUKTI FISIK */}
       {activeEvidenceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+        <Modal isOpen={true} onClose={() => setActiveEvidenceModal(null)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
             {/* Header Modal */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -655,7 +656,7 @@ export default function PeraihanMedaliPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

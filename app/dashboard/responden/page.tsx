@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/context/app-context";
+import { Modal } from "@/components/ui/modal";
 import { UserCheck, Calendar, ChevronDown, Save, Search, CheckCircle2 } from "lucide-react";
 
 // Mock Data Kaltim
@@ -118,23 +119,21 @@ export default function RespondenPage() {
 
   return (
     <>
-      {showSuccessPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-all duration-300">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 shadow-xl border border-emerald-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">Berhasil!</h3>
-            <p className="text-slate-500 text-sm mb-6">Data responden berhasil disimpan ke dalam sistem.</p>
-            <button 
-              onClick={() => setShowSuccessPopup(false)}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors"
-            >
-              Tutup
-            </button>
+      <Modal isOpen={showSuccessPopup} onClose={() => setShowSuccessPopup(false)}>
+        <div className="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 shadow-xl border border-emerald-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle2 className="w-8 h-8" />
           </div>
+          <h3 className="text-xl font-black text-slate-900 mb-2">Berhasil!</h3>
+          <p className="text-slate-500 text-sm mb-6">Data responden berhasil disimpan ke dalam sistem.</p>
+          <button 
+            onClick={() => setShowSuccessPopup(false)}
+            className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors"
+          >
+            Tutup
+          </button>
         </div>
-      )}
+      </Modal>
       <div className="space-y-6 pb-8">
 
       {/* Header Info */}

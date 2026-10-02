@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/context/app-context";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { INSTANSI_OPTIONS } from "@/lib/constants/survey-data";
 import {
   Users,
@@ -726,9 +727,8 @@ export default function ManajemenAkunPage() {
       </div>
 
       {/* Modal Form Tambah / Edit Pengguna */}
-      {isUserFormModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-2xl w-full my-8 animate-in fade-in zoom-in-95 duration-150 relative max-h-[90vh] flex flex-col overflow-hidden">
+      <Modal isOpen={isUserFormModalOpen} onClose={() => setIsUserFormModalOpen(false)}>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-2xl w-full my-8 animate-in fade-in zoom-in-95 duration-150 relative max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header (Fixed at top) */}
             <div className="p-5 sm:px-8 sm:py-6 border-b border-slate-100 flex items-start justify-between shrink-0 bg-white">
               <div className="flex items-center gap-3">
@@ -981,13 +981,12 @@ export default function ManajemenAkunPage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Modal Konfirmasi Hapus */}
       {deleteModalUser && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-5 animate-in fade-in zoom-in-95 duration-150">
+        <Modal isOpen={true} onClose={() => setDeleteModalUser(null)}>
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
               <UserMinus className="w-6 h-6" />
             </div>
@@ -1026,16 +1025,16 @@ export default function ManajemenAkunPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal Reset / Ganti Password */}
       {resetPasswordUser && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <form
-            onSubmit={handleResetPasswordSubmit}
-            className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-5 animate-in fade-in zoom-in-95 duration-150"
-          >
+        <Modal isOpen={true} onClose={() => setResetPasswordUser(null)}>
+        <form
+          onSubmit={handleResetPasswordSubmit}
+          className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-5 animate-in fade-in zoom-in-95 duration-150"
+        >
             <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
               <KeyRound className="w-6 h-6" />
             </div>
@@ -1124,7 +1123,7 @@ export default function ManajemenAkunPage() {
               </Button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useApp } from "@/lib/context/app-context";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
 import { 
   BarChart3, 
   FileCheck, 
@@ -335,9 +336,8 @@ export default function RekapitulasiWilayahPage() {
       </Card>
 
       {/* 5. MODAL DIALOG PREVIEW PDF BERITA ACARA */}
-      {isPdfModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <Modal isOpen={isPdfModalOpen} onClose={() => setIsPdfModalOpen(false)}>
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
               <div className="flex items-center gap-3">
@@ -467,8 +467,7 @@ export default function RekapitulasiWilayahPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

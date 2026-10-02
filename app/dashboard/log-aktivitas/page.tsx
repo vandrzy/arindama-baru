@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useApp } from "@/lib/context/app-context";
+import { Modal } from "@/components/ui/modal";
 import {
   Search,
   Calendar,
@@ -605,7 +606,7 @@ export default function LogAktivitasPage() {
 
       {/* MODAL DETAIL LOG */}
       {activeDetailLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <Modal isOpen={true} onClose={() => setActiveDetailLog(null)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
             {/* Header Modal */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -718,13 +719,12 @@ export default function LogAktivitasPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* MODAL BERSIHKAN LOG > 90 HARI */}
-      {isPurgeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5 border border-slate-100 animate-in zoom-in-95 duration-200">
+      <Modal isOpen={isPurgeModalOpen} onClose={() => setIsPurgeModalOpen(false)}>
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5 border border-slate-100 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="p-3 bg-rose-50 rounded-2xl">
                 <AlertTriangle className="w-6 h-6" />
@@ -768,8 +768,7 @@ export default function LogAktivitasPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }
