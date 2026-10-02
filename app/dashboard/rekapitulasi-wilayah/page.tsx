@@ -254,7 +254,7 @@ export default function RekapitulasiWilayahPage() {
                   <th className="py-3.5 px-6 pl-8 w-24">PERINGKAT</th>
                   <th className="py-3.5 px-6">KABUPATEN / KOTA</th>
                   <th className="py-3.5 px-6 text-center">SKOR INDEKS CAPAIAN</th>
-                  <th className="py-3.5 px-6 text-center">OPERATOR TERISI</th>
+                  <th className="py-3.5 px-6 text-center">RESPONDEN TERISI</th>
                   <th className="py-3.5 px-6 text-center">MEDALI SAH</th>
                   <th className="py-3.5 px-6 text-center pr-8">KLASIFIKASI KINERJA</th>
                 </tr>
@@ -310,7 +310,7 @@ export default function RekapitulasiWilayahPage() {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-center font-bold text-slate-700">
-                          {wilayah.jumlahOperator} Operator
+                          {wilayah.jumlahResponden ?? wilayah.jumlahOperator} Responden
                         </td>
                         <td className="py-4 px-6 text-center">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
@@ -410,7 +410,7 @@ export default function RekapitulasiWilayahPage() {
                         <tr className="bg-slate-100 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-700">
                           <th className="py-2.5 px-4 text-center w-14">PERINGKAT</th>
                           <th className="py-2.5 px-4">KABUPATEN / KOTA</th>
-                          <th className="py-2.5 px-4 text-center">TOTAL OPERATOR</th>
+                          <th className="py-2.5 px-4 text-center">TOTAL RESPONDEN</th>
                           <th className="py-2.5 px-4 text-center">MEDALI SAH</th>
                           <th className="py-2.5 px-4 text-center">SKOR INDEKS</th>
                           <th className="py-2.5 px-4 text-center">STATUS</th>
@@ -423,7 +423,7 @@ export default function RekapitulasiWilayahPage() {
                             <tr key={idx} className="hover:bg-slate-50">
                               <td className="py-2.5 px-4 text-center font-extrabold text-slate-900">#{idx + 1}</td>
                               <td className="py-2.5 px-4 font-bold text-slate-900">{wilayah.namaWilayah}</td>
-                              <td className="py-2.5 px-4 text-center text-slate-700">{wilayah.jumlahOperator}</td>
+                              <td className="py-2.5 px-4 text-center text-slate-700">{wilayah.jumlahResponden ?? wilayah.jumlahOperator}</td>
                               <td className="py-2.5 px-4 text-center text-slate-700">{wilayah.jumlahMedaliSah}</td>
                               <td className="py-2.5 px-4 text-center font-extrabold text-slate-900">{Math.round(wilayah.skor)}</td>
                               <td className="py-2.5 px-4 text-center font-bold">{status.label}</td>

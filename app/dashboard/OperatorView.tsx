@@ -190,8 +190,8 @@ export function OperatorView() {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50/50 text-xs uppercase font-extrabold text-slate-500 border-b border-slate-100">
               <tr>
-                <th className="px-6 py-4 rounded-tl-2xl">NAMA KEGIATAN & CABOR</th>
-                <th className="px-6 py-4">PESERTA / ATLET</th>
+                <th className="px-6 py-4 rounded-tl-2xl">NAMA KEGIATAN &amp; CABOR</th>
+                <th className="px-6 py-4">ATLET / RESPONDEN</th>
                 <th className="px-6 py-4">TINGKAT</th>
                 <th className="px-6 py-4">STATUS</th>
                 <th className="px-6 py-4 text-center rounded-tr-2xl">AKSI</th>

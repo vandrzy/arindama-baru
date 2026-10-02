@@ -71,6 +71,7 @@ export default function ManajemenAkunPage() {
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [kabupatenKotaFilter, setKabupatenKotaFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,7 +120,7 @@ export default function ManajemenAkunPage() {
   }, [isAuthLoading, currentUser, router]);
 
   const fetchUsers = useCallback(
-    async (pageNum: number, search: string, role: string) => {
+    async (pageNum: number, search: string, role: string, kabupatenKota: string) => {
       setLoading(true);
       setError(null);
       try {
@@ -130,6 +131,9 @@ export default function ManajemenAkunPage() {
         });
         if (role) {
           queryParams.append("role", role);
+        }
+        if (kabupatenKota) {
+          queryParams.append("kabupatenKota", kabupatenKota);
         }
 
         const res = await fetch(`/api/users?${queryParams.toString()}`);
@@ -157,9 +161,9 @@ export default function ManajemenAkunPage() {
 
   useEffect(() => {
     if (currentUser && currentUser.role === "ADMIN") {
-      fetchUsers(pagination.page, searchQuery, roleFilter);
+      fetchUsers(pagination.page, searchQuery, roleFilter, kabupatenKotaFilter);
     }
-  }, [currentUser, pagination.page, searchQuery, roleFilter, fetchUsers]);
+  }, [currentUser, pagination.page, searchQuery, roleFilter, kabupatenKotaFilter, fetchUsers]);
 
   // Handle live search / submit search
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -170,6 +174,11 @@ export default function ManajemenAkunPage() {
 
   const handleRoleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setRoleFilter(e.target.value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleKabupatenKotaFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setKabupatenKotaFilter(e.target.value);
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
@@ -198,7 +207,7 @@ export default function ManajemenAkunPage() {
       setDeleteModalUser(null);
       setSuccessToast(`Akun "${deleteModalUser.nama}" berhasil dihapus.`);
       setTimeout(() => setSuccessToast(null), 4000);
-      fetchUsers(pagination.page, searchQuery, roleFilter);
+      fetchUsers(pagination.page, searchQuery, roleFilter, kabupatenKotaFilter);
     } catch (err: any) {
       setDeleteError(err.message || "Terjadi kesalahan saat menghapus akun.");
     } finally {
@@ -325,7 +334,7 @@ export default function ManajemenAkunPage() {
           : `Profil akun "${userFormData.nama}" berhasil diperbarui.`
       );
       setTimeout(() => setSuccessToast(null), 4000);
-      fetchUsers(pagination.page, searchQuery, roleFilter);
+      fetchUsers(pagination.page, searchQuery, roleFilter, kabupatenKotaFilter);
     } catch (err: any) {
       setUserFormError(err.message || "Terjadi kesalahan saat menyimpan akun.");
     } finally {
@@ -456,18 +465,42 @@ export default function ManajemenAkunPage() {
           />
         </form>
 
-        {/* Filter Dropdown Role */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <label className="text-xs font-semibold text-slate-500 shrink-0">Filter Role:</label>
-          <select
-            value={roleFilter}
-            onChange={handleRoleFilterChange}
-            className="px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0B3D2E]/20 focus:border-[#0B3D2E] transition-all w-full sm:w-auto"
-          >
-            <option value="">Semua Role</option>
-            <option value="ADMIN">Admin</option>
-            <option value="OPERATOR">Operator</option>
-          </select>
+        {/* Filter Dropdown Role & Wilayah */}
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs font-semibold text-slate-500 shrink-0">Filter Role:</label>
+            <select
+              value={roleFilter}
+              onChange={handleRoleFilterChange}
+              className="px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0B3D2E]/20 focus:border-[#0B3D2E] transition-all w-full sm:w-auto"
+            >
+              <option value="">Semua Role</option>
+              <option value="ADMIN">Admin</option>
+              <option value="OPERATOR">Operator</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs font-semibold text-slate-500 shrink-0">Filter Wilayah:</label>
+            <select
+              value={kabupatenKotaFilter}
+              onChange={handleKabupatenKotaFilterChange}
+              className="px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0B3D2E]/20 focus:border-[#0B3D2E] transition-all w-full sm:w-auto"
+            >
+              <option value="">Semua Wilayah</option>
+              <option value="Provinsi Kalimantan Timur">Provinsi Kalimantan Timur</option>
+              <option value="Kota Balikpapan">Kota Balikpapan</option>
+              <option value="Kota Bontang">Kota Bontang</option>
+              <option value="Kota Samarinda">Kota Samarinda</option>
+              <option value="Kabupaten Berau">Kabupaten Berau</option>
+              <option value="Kabupaten Kutai Barat">Kabupaten Kutai Barat</option>
+              <option value="Kabupaten Kutai Kartanegara">Kabupaten Kutai Kartanegara</option>
+              <option value="Kabupaten Kutai Timur">Kabupaten Kutai Timur</option>
+              <option value="Kabupaten Mahakam Ulu">Kabupaten Mahakam Ulu</option>
+              <option value="Kabupaten Paser">Kabupaten Paser</option>
+              <option value="Kabupaten Penajam Paser Utara">Kabupaten Penajam Paser Utara</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -848,7 +881,9 @@ export default function ManajemenAkunPage() {
                       className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0B3D2E]/20 focus:border-[#0B3D2E] transition-all bg-white text-slate-900 font-medium"
                     >
                       <option value="">-- Pilih Wilayah --</option>
-                      <option value="Provinsi Kalimantan Timur">Provinsi Kalimantan Timur</option>
+                      {userFormData.role === "ADMIN" && (
+                        <option value="Provinsi Kalimantan Timur">Provinsi Kalimantan Timur</option>
+                      )}
                       <option value="Kota Balikpapan">Kota Balikpapan</option>
                       <option value="Kota Bontang">Kota Bontang</option>
                       <option value="Kota Samarinda">Kota Samarinda</option>

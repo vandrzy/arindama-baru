@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
     const allRecords = await prisma.indicatorRecord.findMany({
       where: instansiFilter,
       include: {
+        responden: true,
         submission: {
           include: {
             user: true
@@ -98,16 +99,11 @@ export async function GET(request: NextRequest) {
     const verifiedStatuses = ["Sah & Terverifikasi", "Sah", "Disetujui"];
     const totalDataTerverifikasi = allRecords.filter(r => verifiedStatuses.includes(r.status as string)).length;
     
-    // Antrean Validasi (Menunggu Review, Revisi) - but wait, the prompt says:
-    // Tampilkan jumlah berkas berstatus "Menunggu Review" atau "Revisi".
-    // Is it based on submission status or record status?
-    // IndicatorRecord status uses "Menunggu Validasi" and "Perlu Revisi" ?
-    // Let's check status used:
     const antreanValidasi = allRecords.filter(r => (r.status as string) === "Menunggu Validasi" || (r.status as string) === "Perlu Revisi" || (r.status as string) === "Menunggu Review" || (r.status as string) === "Revisi").length;
 
     let medaliSah = { emas: 0, perak: 0, perunggu: 0, total: 0 };
     
-    // Total Operator
+    // Total Operator & Responden
     const allUsers = await prisma.user.findMany({
       where: {
         role: "OPERATOR",
@@ -120,6 +116,7 @@ export async function GET(request: NextRequest) {
       }
     });
     const totalOperator = allUsers.length;
+    const totalResponden = await prisma.responden.count();
 
     // Pilar Scores and Composite Score
     const pilarScores = {
@@ -208,7 +205,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 10)
       .map(r => ({
         id: r.id,
-        operator: r.submission.user.nama || "Tanpa Nama",
+        operator: r.responden?.nama || r.submission.user.nama || "Tanpa Nama",
         instansi: r.submission.user.instansi || "-",
         indikator: r.indicatorId === 1 ? "1 (Capaian Prestasi Nasional/Internasional)" : "6 (Capaian Prestasi Daerah)",
         kejuaraan: r.namaKegiatan || "-",
@@ -221,6 +218,7 @@ export async function GET(request: NextRequest) {
       success: true,
       totalKomposit: Math.round(totalKomposit),
       totalOperator,
+      totalResponden,
       medaliSah,
       antreanValidasi,
       totalDataTerverifikasi,

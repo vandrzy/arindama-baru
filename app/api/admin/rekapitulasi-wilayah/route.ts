@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
     const wilayahMap = new Map<string, {
       namaWilayah: string,
       jumlahOperator: Set<string>,
+      jumlahResponden: number,
       medaliEmas: number,
       medaliPerak: number,
       medaliPerunggu: number,
@@ -117,7 +118,17 @@ export async function GET(request: NextRequest) {
       skor: number
     }>();
 
-    // Init map with all OPERATOR users to ensure they are counted even with 0 records
+    // Fetch respondens from database
+    const allRespondens = await prisma.responden.findMany({
+      select: {
+        nik: true,
+        kabupatenKota: true
+      }
+    });
+
+    const totalResponden = allRespondens.length;
+
+    // Init map with all OPERATOR users to ensure regions exist
     const allUsers = await prisma.user.findMany({
       where: {
         role: "OPERATOR",
@@ -138,6 +149,7 @@ export async function GET(request: NextRequest) {
         wilayahMap.set(namaWilayah, {
           namaWilayah,
           jumlahOperator: new Set(),
+          jumlahResponden: 0,
           medaliEmas: 0,
           medaliPerak: 0,
           medaliPerunggu: 0,
@@ -146,6 +158,26 @@ export async function GET(request: NextRequest) {
         });
       }
       wilayahMap.get(namaWilayah)!.jumlahOperator.add(u.id);
+    });
+
+    // Populate respondens count per region
+    allRespondens.forEach(r => {
+      const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (r.kabupatenKota || "Lainnya");
+      let wData = wilayahMap.get(namaWilayah);
+      if (!wData) {
+        wData = {
+          namaWilayah,
+          jumlahOperator: new Set(),
+          jumlahResponden: 0,
+          medaliEmas: 0,
+          medaliPerak: 0,
+          medaliPerunggu: 0,
+          jumlahMedaliSah: 0,
+          skor: 0
+        };
+        wilayahMap.set(namaWilayah, wData);
+      }
+      wData.jumlahResponden++;
     });
 
     allRecords.forEach(rec => {
@@ -172,6 +204,7 @@ export async function GET(request: NextRequest) {
         wData = {
           namaWilayah,
           jumlahOperator: new Set(),
+          jumlahResponden: 0,
           medaliEmas: 0,
           medaliPerak: 0,
           medaliPerunggu: 0,
@@ -205,6 +238,7 @@ export async function GET(request: NextRequest) {
     const peringkatWilayah = Array.from(wilayahMap.values()).map(w => ({
       namaWilayah: w.namaWilayah,
       jumlahOperator: w.jumlahOperator.size,
+      jumlahResponden: w.jumlahResponden,
       medaliEmas: w.medaliEmas,
       medaliPerak: w.medaliPerak,
       medaliPerunggu: w.medaliPerunggu,
@@ -219,6 +253,7 @@ export async function GET(request: NextRequest) {
       persentaseTerverifikasi,
       medaliSah,
       totalOperator,
+      totalResponden,
       peringkatWilayah
     });
 

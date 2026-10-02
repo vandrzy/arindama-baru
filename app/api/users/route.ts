@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "10", 10)));
     const search = searchParams.get("search")?.trim() || "";
     const roleParam = searchParams.get("role")?.trim() || "";
+    const kabupatenKotaParam = searchParams.get("kabupatenKota")?.trim() || "";
 
     const skip = (page - 1) * limit;
 
@@ -69,6 +70,9 @@ export async function GET(request: NextRequest) {
     }
     if (roleParam && (roleParam === "ADMIN" || roleParam === "OPERATOR")) {
       whereConditions.push({ role: roleParam });
+    }
+    if (kabupatenKotaParam) {
+      whereConditions.push({ kabupatenKota: { contains: kabupatenKotaParam } });
     }
 
     const whereCondition = whereConditions.length > 0 ? { AND: whereConditions } : {};
