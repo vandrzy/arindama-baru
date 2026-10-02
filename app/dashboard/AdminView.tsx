@@ -54,12 +54,12 @@ export function AdminView() {
 
   useEffect(() => {
     fetchData();
-  }, [selectedPilar]);
+  }, [selectedPilar, currentPage, pageSize, searchQuery]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admin/dashboard?pilar=${selectedPilar}`);
+      const res = await fetch(`/api/admin/dashboard?pilar=${selectedPilar}&page=${currentPage}&limit=${pageSize}&search=${encodeURIComponent(searchQuery)}`);
       const json = await res.json();
       if (json.success) {
         setData(json);
@@ -84,23 +84,13 @@ export function AdminView() {
   const kompositSkor = data?.totalKomposit || 0;
   const kompositStatus = getKategoriFromSkor(kompositSkor);
 
-  // Table search filtering & pagination logic
-  const filteredSubmissions = (data?.recentSubmissions || []).filter((sub: any) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      (sub.namaKegiatan || sub.kejuaraan || "").toLowerCase().includes(q) ||
-      (sub.peserta || sub.operator || "").toLowerCase().includes(q) ||
-      (sub.cabangOlahraga || sub.cabor || "").toLowerCase().includes(q)
-    );
-  });
-
-  const totalItems = filteredSubmissions.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  // Table search filtering & pagination logic (now server-side)
+  const paginatedSubmissions = data?.recentSubmissions || [];
+  const totalItems = data?.pagination?.total || 0;
+  const totalPages = data?.pagination?.totalPages || 1;
   const validCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (validCurrentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalItems);
-  const paginatedSubmissions = filteredSubmissions.slice(startIndex, endIndex);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);

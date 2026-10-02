@@ -197,20 +197,43 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.skor - a.skor);
 
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const search = url.searchParams.get("search") || "";
+    
     // Recent Submissions (Indikator 1 & 6)
-    // Ordered by createdAt desc, max 5 or 10
-    const recentSubmissions = allRecords
-      .filter(r => r.indicatorId === 1 || r.indicatorId === 6)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 10)
+    // Filtered by search and paginated
+    let filteredRecent = allRecords.filter(r => r.indicatorId === 1 || r.indicatorId === 6);
+    
+    if (search) {
+      const lowerSearch = search.toLowerCase();
+      filteredRecent = filteredRecent.filter(r => {
+        const kejuaraan = (r.namaKegiatan || "").toLowerCase();
+        const peserta = (r.responden?.nama || r.submission.user.nama || "").toLowerCase();
+        const cabor = (r.cabangOlahraga || "").toLowerCase();
+        return kejuaraan.includes(lowerSearch) || peserta.includes(lowerSearch) || cabor.includes(lowerSearch);
+      });
+    }
+
+    filteredRecent.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    const totalRecentSubmissions = filteredRecent.length;
+    const totalPages = Math.ceil(totalRecentSubmissions / limit);
+    const startIndex = (page - 1) * limit;
+    
+    const recentSubmissions = filteredRecent
+      .slice(startIndex, startIndex + limit)
       .map(r => ({
         id: r.id,
         operator: r.responden?.nama || r.submission.user.nama || "Tanpa Nama",
+        peserta: r.responden?.nama || r.submission.user.nama || "Tanpa Nama",
         instansi: r.submission.user.instansi || "-",
         indikator: r.indicatorId === 1 ? "1 (Capaian Prestasi Nasional/Internasional)" : "6 (Capaian Prestasi Daerah)",
         kejuaraan: r.namaKegiatan || "-",
+        cabor: r.cabangOlahraga || "-",
         medali: r.medali || "-",
         status: r.status,
+        tingkat: r.tingkatPenyelenggaraan || "-",
         createdAt: r.createdAt
       }));
 
@@ -229,7 +252,13 @@ export async function GET(request: NextRequest) {
         Dispora: Math.round(pilarScores.Dispora)
       },
       chartWilayah,
-      recentSubmissions
+      recentSubmissions,
+      pagination: {
+        page,
+        limit,
+        total: totalRecentSubmissions,
+        totalPages: totalPages === 0 ? 1 : totalPages
+      }
     });
 
   } catch (error: any) {
