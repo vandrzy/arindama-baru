@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { JenisKelamin } from "@prisma/client";
 import { z } from "zod";
 import { verifyJwtToken } from "@/lib/auth";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 const createRespondenSchema = z.object({
   nama: z.string().min(1, "Nama lengkap wajib diisi"),
   nik: z.string().min(16, "NIK wajib 16 digit"),
-  jenisKelamin: z.enum(["Laki-laki", "Perempuan"]),
+  jenisKelamin: z.enum(["Laki-laki", "Perempuan", "LAKI_LAKI", "PEREMPUAN"]),
   tanggalLahir: z.string(),
   kabupatenKota: z.string().min(1, "Kabupaten/Kota wajib diisi"),
   kecamatan: z.string().min(1, "Kecamatan wajib diisi"),
@@ -119,11 +120,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const jenisKelaminEnum =
+      data.jenisKelamin === "Perempuan" || data.jenisKelamin === "PEREMPUAN"
+        ? JenisKelamin.PEREMPUAN
+        : JenisKelamin.LAKI_LAKI;
+
     const newResponden = await prisma.responden.create({
       data: {
         nik: data.nik,
         nama: data.nama,
-        jenisKelamin: data.jenisKelamin as any,
+        jenisKelamin: jenisKelaminEnum,
         tanggalLahir: new Date(data.tanggalLahir),
         kabupatenKota: data.kabupatenKota,
         kecamatan: data.kecamatan,
