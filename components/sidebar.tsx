@@ -19,7 +19,8 @@ import {
   UserCheck,
   LogIn,
   FileText,
-  Award
+  Award,
+  CalendarClock
 } from "lucide-react";
 
 interface SidebarProps {
@@ -79,6 +80,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
   const configLinks = isAdmin
     ? [
+        {
+          href: "/dashboard/batas-waktu",
+          label: "Batas Waktu (Cut-Off)",
+          icon: CalendarClock,
+          match: (p: string) => p.startsWith("/dashboard/batas-waktu"),
+        },
         {
           href: "/dashboard/bobot-dinamis",
           label: "Bobot Dinamis",

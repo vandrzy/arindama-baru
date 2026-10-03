@@ -16,6 +16,7 @@ export function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
   // Route title mapper for breadcrumbs
   const getBreadcrumbTitle = (path: string) => {
     if (path === "/" || path === "/dashboard") return "Dashboard Utama ARINDAMA";
+    if (path.startsWith("/dashboard/batas-waktu")) return "Batas Waktu & Periode Survei";
     if (path.startsWith("/dashboard/responden")) return "Responden";
     if (path.startsWith("/dashboard/manajemen-akun")) return "Manajemen Pengguna";
     if (path.startsWith("/dashboard/rekapitulasi-wilayah")) return "Rekapitulasi Wilayah";
