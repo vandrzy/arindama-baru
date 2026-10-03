@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 const MAX_UPLOAD_SIZE = 15 * 1024 * 1024; // 15 MB batas maksimal file mentah yang boleh di-upload
 
 const uploadParamsSchema = z.object({
-  submissionId: z.string().min(1, "submissionId diperlukan"),
+  respondenId: z.string().optional(),
+  submissionId: z.string().optional(), // Tambahan toleransi parameter legacy
   formType: z.string().min(1, "formType diperlukan"),
   recordId: z.string().min(1, "recordId diperlukan"),
   namaForm: z.string().optional(),
@@ -19,30 +20,9 @@ const uploadParamsSchema = z.object({
 
 function sanitizePart(part: string): string {
   return part
-    .replace(/[:\/\\?%*:|"<>]/g, "") // Hapus karakter ilegal untuk nama file
-    .replace(/\s+/g, "-")            // Ubah spasi menjadi hyphen
-    .replace(/[^a-zA-Z0-9_-]/g, ""); // Pertahankan alphanumeric, hyphen, dan underscore
-}
-
-function generateValidationFileName({
-  noRegistrasi,
-  namaForm,
-  identifierBaris,
-  timestamp,
-  ext = ".pdf",
-}: {
-  noRegistrasi: string;
-  namaForm: string;
-  identifierBaris: string;
-  timestamp: number | string;
-  ext?: string;
-}): string {
-  const cleanNoReg = sanitizePart(noRegistrasi) || "NoReg";
-  const cleanForm = sanitizePart(namaForm) || "Form";
-  const cleanBaris = sanitizePart(identifierBaris) || "Baris";
-  const cleanExt = ext.startsWith(".") ? ext.toLowerCase() : `.${ext.toLowerCase()}`;
-
-  return `${cleanNoReg}_${cleanForm}_${cleanBaris}_${timestamp}${cleanExt}`;
+    .replace(/[:\/\\?%*:|"<>]/g, "") // Hapus karakter ilegal untuk nama file/direktori
+    .replace(/\s+/g, " ")            // Pertahankan spasi tunggal
+    .trim();
 }
 
 export async function POST(request: NextRequest) {
@@ -65,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const submissionIdRaw = formData.get("submissionId") as string | null;
+    const respondenIdRaw = (formData.get("respondenId") as string | null) || (formData.get("submissionId") as string | null);
     const formTypeRaw = formData.get("formType") as string | null;
     const recordIdRaw = formData.get("recordId") as string | null;
     const namaFormRaw = (formData.get("namaForm") as string | null) || undefined;
@@ -79,21 +59,21 @@ export async function POST(request: NextRequest) {
 
     // Validasi parameter request dengan Zod
     const paramsValidation = uploadParamsSchema.safeParse({
-      submissionId: submissionIdRaw,
+      respondenId: respondenIdRaw,
       formType: formTypeRaw,
       recordId: recordIdRaw,
       namaForm: namaFormRaw,
     });
 
-    if (!paramsValidation.success) {
+    if (!paramsValidation.success || (!respondenIdRaw)) {
       return NextResponse.json(
-        { error: "Parameter request tidak valid", details: paramsValidation.error.errors },
+        { error: "Parameter request tidak valid (respondenId wajib diisi)", details: paramsValidation.error?.errors },
         { status: 400 }
       );
     }
 
-    const { submissionId, formType, recordId, namaForm } = paramsValidation.data;
-    const effectiveNamaForm = namaForm || `Indikator ${formType}`;
+    const { respondenId: rawId, formType, recordId } = paramsValidation.data;
+    const targetRespondenId = rawId || respondenIdRaw!;
 
     // Validasi ekstensi file harus PDF
     const fileNameLower = file.name.toLowerCase();
@@ -117,10 +97,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Keamanan IDOR + Optimasi DB (Gabungkan cek submission & existing evidence dalam 1 query)
-    const submission = await prisma.submission.findFirst({
+    // Cari responden dan bukti validasi eksis
+    const responden = await prisma.responden.findFirst({
       where: {
-        id: submissionId,
+        OR: [{ id: targetRespondenId }, { nik: targetRespondenId }],
         ...(payload.role !== "ADMIN" && { userId: payload.id }),
       },
       include: {
@@ -133,32 +113,27 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!submission) {
+    if (!responden) {
       return NextResponse.json(
-        { error: "Kuesioner/submisi tidak ditemukan atau Anda tidak memiliki akses ke submisi ini." },
+        { error: "Responden tidak ditemukan atau Anda tidak memiliki akses." },
         { status: 404 }
       );
     }
 
-    const existingEvidence = submission.validationEvidences[0] || null;
-
-    // Penamaan file terstruktur
-    const noRegistrasi = submission.noRegistrasi || submission.id;
-    const timestamp = Date.now();
+    const existingEvidence = responden.validationEvidences[0] || null;
+    const trimmedNamaResponden = sanitizePart(responden.nama.trim());
     const fileExt = file.name.includes(".") ? `.${file.name.split(".").pop()}` : ".pdf";
 
-    const formattedFileName = generateValidationFileName({
-      noRegistrasi,
-      namaForm: effectiveNamaForm,
-      identifierBaris: recordId,
-      timestamp,
-      ext: fileExt,
-    });
+    // Format direktori: "id responden_nama responden"
+    const folderName = `${responden.id}_${trimmedNamaResponden}`;
+    // Format nama file: "id indikator_nama responden"
+    const formattedFileName = `${recordId}_${trimmedNamaResponden}${fileExt}`;
 
-    const uploadDir = path.join(process.cwd(), "uploads", submissionId);
+    const uploadDir = path.join(process.cwd(), "uploads", folderName);
     await fs.mkdir(uploadDir, { recursive: true });
 
     const filePath = path.join(uploadDir, formattedFileName);
+    const timestamp = Date.now();
     const tempRawPath = path.join(uploadDir, `raw_${timestamp}_${formattedFileName}`);
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
@@ -176,7 +151,6 @@ export async function POST(request: NextRequest) {
     await fs.unlink(tempRawPath).catch(() => {});
 
     if (!compressResult.success) {
-      // Hapus file jika terbentuk namun gagal secara kualitas/size
       await fs.unlink(filePath).catch(() => {});
       return NextResponse.json(
         { error: compressResult.error || "Kompresi file PDF gagal." },
@@ -184,7 +158,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hapus file LAMA secara asinkron jika ada
+    // Hapus file LAMA jika ada
     if (existingEvidence) {
       let oldFilePath: string | null = null;
       if (existingEvidence.fileName) {
@@ -203,15 +177,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const localFileUrl = `/uploads/${submissionId}/${formattedFileName}`;
+    const localFileUrl = `/uploads/${folderName}/${formattedFileName}`;
     const finalBytes = compressResult.finalSize || file.size;
     const sizeInMB = (finalBytes / (1024 * 1024)).toFixed(2) + " MB";
 
     // Upsert database record
     const evidence = await prisma.validationEvidence.upsert({
       where: {
-        submissionId_formType_recordId: {
-          submissionId,
+        respondenId_formType_recordId: {
+          respondenId: responden.id,
           formType,
           recordId,
         },
@@ -222,7 +196,7 @@ export async function POST(request: NextRequest) {
         fileSize: sizeInMB,
       },
       create: {
-        submissionId,
+        respondenId: responden.id,
         formType,
         recordId,
         fileName: formattedFileName,
@@ -244,4 +218,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

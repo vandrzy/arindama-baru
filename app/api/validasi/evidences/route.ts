@@ -20,35 +20,35 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const submissionId = searchParams.get("submissionId");
+    const targetId = searchParams.get("respondenId") || searchParams.get("submissionId");
     const formType = searchParams.get("formType");
 
-    if (!submissionId || !formType) {
+    if (!targetId || !formType) {
       return NextResponse.json(
-        { error: "Parameter submissionId dan formType wajib diisi" },
+        { error: "Parameter respondenId dan formType wajib diisi" },
         { status: 400 }
       );
     }
 
-    // Keamanan IDOR: Pastikan submission milik user yang login (kecuali ADMIN)
-    const submission = await prisma.submission.findFirst({
+    // Keamanan IDOR: Pastikan responden milik user yang login (kecuali ADMIN)
+    const responden = await prisma.responden.findFirst({
       where: {
-        id: submissionId,
+        OR: [{ id: targetId }, { nik: targetId }],
         ...(payload.role !== "ADMIN" && { userId: payload.id }),
       },
       select: { id: true },
     });
 
-    if (!submission) {
+    if (!responden) {
       return NextResponse.json(
-        { error: "Kuesioner/submisi tidak ditemukan atau Anda tidak memiliki akses." },
+        { error: "Responden tidak ditemukan atau Anda tidak memiliki akses." },
         { status: 404 }
       );
     }
 
     const evidences = await prisma.validationEvidence.findMany({
       where: {
-        submissionId,
+        respondenId: responden.id,
         formType,
       },
       orderBy: {
@@ -68,4 +68,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 

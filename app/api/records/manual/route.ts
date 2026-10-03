@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       indicatorId,
+      respondenId,
       respondenNik,
       namaKegiatan,
       cabangOlahraga,
@@ -27,26 +28,21 @@ export async function POST(request: NextRequest) {
       uraianCapaian
     } = body;
 
-    if (!indicatorId || !respondenNik || !namaKegiatan || !cabangOlahraga || !tingkatPenyelenggaraan) {
+    if (!indicatorId || (!respondenId && !respondenNik) || !namaKegiatan || !cabangOlahraga || !tingkatPenyelenggaraan) {
       return NextResponse.json({ error: "Kolom wajib belum diisi." }, { status: 400 });
     }
 
-    // Cari submission aktif untuk user di tahun ini
-    const tahunSurvei = new Date().getFullYear();
-    let submission = await prisma.submission.findFirst({
-      where: {
-        userId: payload.id,
-        tahunSurvei
-      }
-    });
+    // Cari responden
+    let responden = null;
+    if (respondenId) {
+      responden = await prisma.responden.findUnique({ where: { id: respondenId } });
+    }
+    if (!responden && respondenNik) {
+      responden = await prisma.responden.findUnique({ where: { nik: respondenNik } });
+    }
 
-    if (!submission) {
-      submission = await prisma.submission.create({
-        data: {
-          userId: payload.id,
-          tahunSurvei,
-        }
-      });
+    if (!responden) {
+      return NextResponse.json({ error: "Responden tidak ditemukan." }, { status: 404 });
     }
 
     if (body.id) {
@@ -55,7 +51,7 @@ export async function POST(request: NextRequest) {
         where: { id: body.id },
         data: {
           indicatorId: parseInt(indicatorId, 10),
-          respondenNik,
+          respondenId: responden.id,
           namaKegiatan,
           cabangOlahraga,
           tingkatPenyelenggaraan,
@@ -69,9 +65,8 @@ export async function POST(request: NextRequest) {
       // Buat IndicatorRecord baru
       const newRecord = await prisma.indicatorRecord.create({
         data: {
-          submissionId: submission.id,
           indicatorId: parseInt(indicatorId, 10),
-          respondenNik,
+          respondenId: responden.id,
           namaKegiatan,
           cabangOlahraga,
           tingkatPenyelenggaraan,
@@ -110,3 +105,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Gagal menghapus entri." }, { status: 500 });
   }
 }
+

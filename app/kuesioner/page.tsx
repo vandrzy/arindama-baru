@@ -538,7 +538,8 @@ export default function KuesionerPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("submissionId", record.submissionId);
+      formData.append("respondenId", record.respondenId || record.submissionId);
+      formData.append("submissionId", record.respondenId || record.submissionId);
       formData.append("formType", String(activeIndicatorId));
       formData.append("recordId", recordId);
       formData.append("namaForm", `Indikator-${activeIndicatorId}`);
@@ -1008,7 +1009,7 @@ export default function KuesionerPage() {
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
-                  <th className="py-3.5 px-4">RESPONDEN</th>
+                  <th className="py-3.5 px-4">ATLET / RESPONDEN</th>
                   <th className="py-3.5 px-4">NAMA KEGIATAN</th>
                   <th className="py-3.5 px-4">{(activeIndicatorId === 1 || activeIndicatorId === 6) ? "JENJANG & CAPAIAN" : "JENJANG"}</th>
                   <th className="py-3.5 px-4">WILAYAH</th>
@@ -1025,7 +1026,7 @@ export default function KuesionerPage() {
 
                   return (
                     <tr key={rec.id || index} className="hover:bg-slate-50/80 transition-colors">
-                      {/* RESPONDEN */}
+                      {/* ATLET / RESPONDEN */}
                       <td className="py-3.5 px-4">
                         <div>
                           <div className="font-bold text-slate-900">{rec.responden?.nama || rec.userNama}</div>
@@ -1055,7 +1056,7 @@ export default function KuesionerPage() {
 
                       {/* WILAYAH */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{rec.userKabKota || "-"}</div>
+                        <div className="font-bold text-slate-900">{rec.responden?.kabupatenKota || rec.userKabKota || "-"}</div>
                         <div className="text-[11px] text-slate-500">
                           {rec.responden?.kecamatan || "-"}
                         </div>

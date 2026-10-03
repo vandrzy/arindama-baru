@@ -23,15 +23,29 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const submissionId = searchParams.get("submissionId");
+    const targetId = searchParams.get("respondenId") || searchParams.get("submissionId");
     const formType = searchParams.get("formType");
     const pageStr = searchParams.get("page");
     const limitStr = searchParams.get("limit");
 
-    if (!submissionId || formType === null || formType === undefined) {
+    if (!targetId || formType === null || formType === undefined) {
       return NextResponse.json(
-        { error: "Parameter submissionId dan formType wajib diisi." },
+        { error: "Parameter respondenId dan formType wajib diisi." },
         { status: 400 }
+      );
+    }
+
+    const responden = await prisma.responden.findFirst({
+      where: {
+        OR: [{ id: targetId }, { nik: targetId }],
+      },
+      select: { id: true },
+    });
+
+    if (!responden) {
+      return NextResponse.json(
+        { error: "Responden tidak ditemukan." },
+        { status: 404 }
       );
     }
 
@@ -43,14 +57,14 @@ export async function GET(request: NextRequest) {
 
     const totalCount = await prisma.indicatorRecord.count({
       where: {
-        submissionId,
+        respondenId: responden.id,
         indicatorId: indicatorIdNum,
       },
     });
 
     const queryOpts: any = {
       where: {
-        submissionId,
+        respondenId: responden.id,
         indicatorId: indicatorIdNum,
       },
       orderBy: {
@@ -58,38 +72,38 @@ export async function GET(request: NextRequest) {
       },
     };
 
-      if (limit > 0) {
-        queryOpts.take = limit;
-        queryOpts.skip = skip;
+    if (limit > 0) {
+      queryOpts.take = limit;
+      queryOpts.skip = skip;
+    }
+
+    // Fetch Indicator Records
+    const records = await prisma.indicatorRecord.findMany(queryOpts);
+
+    const formattedRecords = records.map((rec) => {
+      const item: Record<string, any> = {
+        "Nama Kegiatan/ Kejuaraan Olahraga": rec.namaKegiatan,
+        "Cabang Olahraga": rec.cabangOlahraga,
+        "Tingkat Penyelenggaraan": rec.tingkatPenyelenggaraan,
+        "Sumber Pendanaan": rec.sumberPendanaan,
+      };
+
+      if (indicatorIdNum === 1 || indicatorIdNum === 6) {
+        item["Medali"] = rec.medali || "-";
       }
 
-      // Fetch Indicator Records
-      const records = await prisma.indicatorRecord.findMany(queryOpts);
+      item["Uraian Capaian"] = rec.uraianCapaian;
+      item["Status"] = rec.status;
+      return item;
+    });
 
-      const formattedRecords = records.map((rec) => {
-        const item: Record<string, any> = {
-          "Nama Kegiatan/ Kejuaraan Olahraga": rec.namaKegiatan,
-          "Cabang Olahraga": rec.cabangOlahraga,
-          "Tingkat Penyelenggaraan": rec.tingkatPenyelenggaraan,
-          "Sumber Pendanaan": rec.sumberPendanaan,
-        };
-
-        if (indicatorIdNum === 1 || indicatorIdNum === 6) {
-          item["Medali"] = rec.medali || "-";
-        }
-
-        item["Uraian Capaian"] = rec.uraianCapaian;
-        item["Status"] = rec.status;
-        return item;
-      });
-
-      return NextResponse.json({
-        success: true,
-        records: formattedRecords,
-        totalRecords: totalCount,
-        currentPage: page,
-        totalPages: limit > 0 ? Math.ceil(totalCount / limit) : 1,
-      });
+    return NextResponse.json({
+      success: true,
+      records: formattedRecords,
+      totalRecords: totalCount,
+      currentPage: page,
+      totalPages: limit > 0 ? Math.ceil(totalCount / limit) : 1,
+    });
   } catch (error) {
     console.error("Get records error:", error);
     return NextResponse.json(
@@ -98,3 +112,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

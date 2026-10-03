@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwtToken } from "@/lib/auth";
 import { parseAndValidateExcelFile, ParsedIndicatorRecordData } from "@/lib/services/excelService";
-import fs from "fs/promises";
-import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -42,13 +40,13 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const submissionId = formData.get("submissionId") as string | null;
+    const targetId = (formData.get("respondenId") as string | null) || (formData.get("submissionId") as string | null);
     const formType = formData.get("formType") as string | null;
     const respondenNik = formData.get("respondenNik") as string | null;
 
-    if (!file || !submissionId || formType === null || formType === undefined) {
+    if (!file || !targetId || formType === null || formType === undefined) {
       return NextResponse.json(
-        { error: "File Excel, submissionId, dan formType wajib diisi." },
+        { error: "File Excel, respondenId, dan formType wajib diisi." },
         { status: 400 }
       );
     }
@@ -67,17 +65,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pastikan submisi ada dan user berhak mengakses
-    const submission = await prisma.submission.findFirst({
+    // Pastikan responden ada dan user berhak mengakses
+    const responden = await prisma.responden.findFirst({
       where: {
-        id: submissionId,
+        OR: [{ id: targetId }, { nik: targetId }, ...(respondenNik ? [{ nik: respondenNik }] : [])],
         ...(payload.role !== "ADMIN" && { userId: payload.id }),
       },
     });
 
-    if (!submission) {
+    if (!responden) {
       return NextResponse.json(
-        { error: "Submisi kuesioner tidak ditemukan atau Anda tidak memiliki hak akses." },
+        { error: "Responden tidak ditemukan atau Anda tidak memiliki hak akses." },
         { status: 404 }
       );
     }
@@ -111,43 +109,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run DATABASE TRANSACTION
-    await prisma.$transaction(async (tx) => {
-      const recordsToInsert = (validationResult.indicatorRecords || []).map((rec: ParsedIndicatorRecordData) => ({
-        submissionId,
-        indicatorId: stepNum,
-        namaKegiatan: rec.namaKegiatan,
-        cabangOlahraga: rec.cabangOlahraga,
-        tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan,
-        sumberPendanaan: rec.sumberPendanaan,
-        medali: rec.medali || null,
-        uraianCapaian: rec.uraianCapaian,
-        ...(respondenNik && { respondenNik }),
-      }));
+    const recordsToInsert = (validationResult.indicatorRecords || []).map((rec: ParsedIndicatorRecordData) => ({
+      respondenId: responden.id,
+      indicatorId: stepNum,
+      namaKegiatan: rec.namaKegiatan,
+      cabangOlahraga: rec.cabangOlahraga,
+      tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan,
+      sumberPendanaan: rec.sumberPendanaan,
+      medali: rec.medali || null,
+      uraianCapaian: rec.uraianCapaian,
+    }));
 
-      if (recordsToInsert.length > 0) {
-        await tx.indicatorRecord.createMany({
-          data: recordsToInsert,
-        });
-      }
-
-      // 3. Update total indikator terisi pada submission
-      const filledIndicators = await tx.indicatorRecord.groupBy({
-        by: ["indicatorId"],
-        where: { submissionId },
+    if (recordsToInsert.length > 0) {
+      await prisma.indicatorRecord.createMany({
+        data: recordsToInsert,
       });
-
-      await tx.submission.update({
-        where: { id: submissionId },
-        data: {
-          totalIndikatorTerisi: filledIndicators.length,
-        },
-      });
-    });
+    }
 
     // Ambil data terbaru yang tersimpan untuk dikembalikan langsung ke client
     const dbRecords = await prisma.indicatorRecord.findMany({
-      where: { submissionId, indicatorId: stepNum },
+      where: { respondenId: responden.id, indicatorId: stepNum },
       orderBy: { createdAt: "asc" },
     });
     const latestRecords = dbRecords.map((rec) => {
@@ -178,3 +159,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

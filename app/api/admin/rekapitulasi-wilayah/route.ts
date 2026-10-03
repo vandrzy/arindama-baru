@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     if (pilarFilter !== "Semua") {
       // mapping instansi filter
       instansiFilter = {
-        submission: {
+        responden: {
           user: {
             instansi: pilarFilter === "Prestasi (KONI)" ? "KONI" :
                      pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     const allRecords = await prisma.indicatorRecord.findMany({
       where: instansiFilter,
       include: {
-        submission: {
+        responden: {
           include: {
             user: true
           }
@@ -121,6 +121,7 @@ export async function GET(request: NextRequest) {
     // Fetch respondens from database
     const allRespondens = await prisma.responden.findMany({
       select: {
+        id: true,
         nik: true,
         kabupatenKota: true
       }
@@ -196,8 +197,8 @@ export async function GET(request: NextRequest) {
       const isVerified = verifiedStatuses.includes(rec.status);
       const isMedalIndicator = rec.indicatorId === 1 || rec.indicatorId === 6;
       
-      const user = rec.submission.user;
-      const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (user.kabupatenKota || "Lainnya");
+      const user = rec.responden?.user;
+      const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (user?.kabupatenKota || "Lainnya");
 
       let wData = wilayahMap.get(namaWilayah);
       if (!wData) {
@@ -213,7 +214,9 @@ export async function GET(request: NextRequest) {
         };
         wilayahMap.set(namaWilayah, wData);
       }
-      wData.jumlahOperator.add(user.id);
+      if (user) {
+        wData.jumlahOperator.add(user.id);
+      }
 
       if (isVerified || isMedalIndicator) {
         if (medaliStr.includes("emas")) {

@@ -118,27 +118,27 @@ export async function getStatistikData({
   paramInstansi,
   paramUserId,
 }: GetStatistikParams) {
-  // 1. Build Submission filter condition
-  const submissionWhere: any = {};
+  // 1. Build Responden filter condition
+  const respondenWhere: any = {};
 
   if (currentUser.role === "OPERATOR") {
-    submissionWhere.userId = currentUser.id;
+    respondenWhere.userId = currentUser.id;
   } else if (currentUser.role === "ADMIN") {
     if (paramUserId) {
-      submissionWhere.userId = paramUserId;
+      respondenWhere.userId = paramUserId;
     } else {
       const userWhere: any = {};
       if (paramKota) userWhere.kabupatenKota = paramKota;
       if (paramInstansi) userWhere.instansi = paramInstansi;
       if (Object.keys(userWhere).length > 0) {
-        submissionWhere.user = userWhere;
+        respondenWhere.user = userWhere;
       }
     }
   }
 
-  // Fetch submissions with select
-  const matchingSubmissions = await prisma.submission.findMany({
-    where: submissionWhere,
+  // Fetch respondens with select
+  const matchingRespondens = await prisma.responden.findMany({
+    where: respondenWhere,
     select: {
       id: true,
       indicatorRecords: true,
@@ -148,7 +148,7 @@ export async function getStatistikData({
 
   // Build O(1) Evidence Lookup Map with comprehensive alias keys
   const evidenceMap = new Map<string, any>();
-  matchingSubmissions.forEach((s) => {
+  matchingRespondens.forEach((s) => {
     s.validationEvidences.forEach((ev) => {
       if (ev.recordId) {
         evidenceMap.set(`${s.id}:${ev.recordId}`, ev);
@@ -174,7 +174,7 @@ export async function getStatistikData({
   });
 
   const getEvidenceForRecord = (
-    submissionId: string,
+    respondenId: string,
     recordId: string,
     indicatorId: number,
     rowIndex: number
@@ -184,31 +184,31 @@ export async function getStatistikData({
     const rowKey = `row_${rowIndex}`;
 
     return (
-      evidenceMap.get(`${submissionId}:${recordId}`) ||
-      evidenceMap.get(`${submissionId}:${indStr}:${rowKey}`) ||
-      evidenceMap.get(`${submissionId}:${indAlias}:${rowKey}`) ||
-      evidenceMap.get(`${submissionId}:${indStr}:${recordId}`) ||
-      evidenceMap.get(`${submissionId}:${indAlias}:${recordId}`) ||
+      evidenceMap.get(`${respondenId}:${recordId}`) ||
+      evidenceMap.get(`${respondenId}:${indStr}:${rowKey}`) ||
+      evidenceMap.get(`${respondenId}:${indAlias}:${rowKey}`) ||
+      evidenceMap.get(`${respondenId}:${indStr}:${recordId}`) ||
+      evidenceMap.get(`${respondenId}:${indAlias}:${recordId}`) ||
       null
     );
   };
 
   // B. Indicators Processing
-  const allIndicatorRecords = matchingSubmissions.flatMap((s) => s.indicatorRecords);
+  const allIndicatorRecords = matchingRespondens.flatMap((s) => s.indicatorRecords);
 
-  // Index row positions per submission and indicatorId
-  const submissionIndicatorRowMap = new Map<string, number>();
+  // Index row positions per responden and indicatorId
+  const respondenIndicatorRowMap = new Map<string, number>();
 
   const attachEvidenceToRecords = (records: any[]) => {
     return records.map((r) => {
-      const key = `${r.submissionId}:${r.indicatorId}`;
-      const rowIndex = submissionIndicatorRowMap.get(key) || 0;
-      submissionIndicatorRowMap.set(key, rowIndex + 1);
+      const key = `${r.respondenId}:${r.indicatorId}`;
+      const rowIndex = respondenIndicatorRowMap.get(key) || 0;
+      respondenIndicatorRowMap.set(key, rowIndex + 1);
 
       return {
         ...r,
         validationEvidence: getEvidenceForRecord(
-          r.submissionId,
+          r.respondenId,
           r.id,
           r.indicatorId,
           rowIndex

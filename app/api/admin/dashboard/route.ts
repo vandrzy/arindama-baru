@@ -71,13 +71,14 @@ export async function GET(request: NextRequest) {
     // 2. Base filter for IndicatorRecords
     let instansiFilter = {};
     if (pilarFilter !== "Semua") {
-      instansiFilter = {
-        submission: {
-          user: {
-            instansi: pilarFilter === "Prestasi (KONI)" ? "KONI" :
+      const targetInstansi = pilarFilter === "Prestasi (KONI)" ? "KONI" :
                      pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
                      pilarFilter === "Disabilitas (NPC)" ? "NPC" :
-                     pilarFilter === "Dispora" ? "Dispora" : pilarFilter
+                     pilarFilter === "Dispora" ? "Dispora" : pilarFilter;
+      instansiFilter = {
+        responden: {
+          user: {
+            instansi: targetInstansi
           }
         }
       };
@@ -87,8 +88,7 @@ export async function GET(request: NextRequest) {
     const allRecords = await prisma.indicatorRecord.findMany({
       where: instansiFilter,
       include: {
-        responden: true,
-        submission: {
+        responden: {
           include: {
             user: true
           }
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
 
       const isVerified = verifiedStatuses.includes(rec.status as string);
       const isMedalIndicator = rec.indicatorId === 1 || rec.indicatorId === 6;
-      const user = rec.submission.user;
+      const user = rec.responden?.user;
       
       if (isVerified || isMedalIndicator) {
         const score = calculateRecordPoints(rec, weights);
@@ -175,16 +175,18 @@ export async function GET(request: NextRequest) {
           totalKomposit += score;
         }
         
-        const instansi = user.instansi;
-        if (instansi === "KONI") pilarScores.KONI += score;
-        else if (instansi === "NPC") pilarScores.NPC += score;
-        else if (instansi === "KORMI") pilarScores.KORMI += score;
-        else if (instansi === "Dispora") pilarScores.Dispora += score;
+        if (user) {
+          const instansi = user.instansi;
+          if (instansi === "KONI") pilarScores.KONI += score;
+          else if (instansi === "NPC") pilarScores.NPC += score;
+          else if (instansi === "KORMI") pilarScores.KORMI += score;
+          else if (instansi === "Dispora") pilarScores.Dispora += score;
 
-        const namaWilayah = user.kabupatenKota || "Lainnya";
-        let wData = wilayahMap.get(namaWilayah);
-        if (wData && isVerified) {
-          wData.skor += score;
+          const namaWilayah = user.kabupatenKota || "Lainnya";
+          let wData = wilayahMap.get(namaWilayah);
+          if (wData && isVerified) {
+            wData.skor += score;
+          }
         }
       }
     });
@@ -209,7 +211,7 @@ export async function GET(request: NextRequest) {
       const lowerSearch = search.toLowerCase();
       filteredRecent = filteredRecent.filter(r => {
         const kejuaraan = (r.namaKegiatan || "").toLowerCase();
-        const peserta = (r.responden?.nama || r.submission.user.nama || "").toLowerCase();
+        const peserta = (r.responden?.nama || r.responden?.user?.nama || "").toLowerCase();
         const cabor = (r.cabangOlahraga || "").toLowerCase();
         return kejuaraan.includes(lowerSearch) || peserta.includes(lowerSearch) || cabor.includes(lowerSearch);
       });
@@ -225,9 +227,9 @@ export async function GET(request: NextRequest) {
       .slice(startIndex, startIndex + limit)
       .map(r => ({
         id: r.id,
-        operator: r.responden?.nama || r.submission.user.nama || "Tanpa Nama",
-        peserta: r.responden?.nama || r.submission.user.nama || "Tanpa Nama",
-        instansi: r.submission.user.instansi || "-",
+        operator: r.responden?.nama || r.responden?.user?.nama || "Tanpa Nama",
+        peserta: r.responden?.nama || r.responden?.user?.nama || "Tanpa Nama",
+        instansi: r.responden?.user?.instansi || "-",
         indikator: r.indicatorId === 1 ? "1 (Capaian Prestasi Nasional/Internasional)" : "6 (Capaian Prestasi Daerah)",
         kejuaraan: r.namaKegiatan || "-",
         cabor: r.cabangOlahraga || "-",

@@ -147,15 +147,15 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Ambil bukti fisik / berkas validasi yang terkait dengan recordId atau submissionId
+    // Ambil bukti fisik / berkas validasi yang terkait dengan recordId atau respondenId
     const recordIds = records.map((r) => r.id);
-    const submissionIds = Array.from(new Set(records.map((r) => r.submissionId)));
+    const respondenIds = Array.from(new Set(records.map((r) => r.respondenId).filter(Boolean))) as string[];
 
     const evidences = await prisma.validationEvidence.findMany({
       where: {
         OR: [
           { recordId: { in: recordIds } },
-          { submissionId: { in: submissionIds } },
+          ...(respondenIds.length > 0 ? [{ respondenId: { in: respondenIds } }] : []),
         ],
       },
     });
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
     // Petakan bukti fisik ke record masing-masing
     const formattedRecords = records.map((rec) => {
       const recordEvidences = evidences.filter(
-        (e) => e.recordId === rec.id || e.submissionId === rec.submissionId
+        (e) => e.recordId === rec.id || (rec.respondenId && e.respondenId === rec.respondenId)
       );
       return {
         id: rec.id,
@@ -177,9 +177,11 @@ export async function GET(request: NextRequest) {
         uraianCapaian: rec.uraianCapaian,
         status: rec.status,
         createdAt: rec.createdAt,
-        submissionId: rec.submissionId,
+        respondenId: rec.respondenId,
+        submissionId: rec.respondenId,
         responden: rec.responden
           ? {
+              id: rec.responden.id,
               nik: rec.responden.nik,
               nama: rec.responden.nama,
               kabupatenKota: rec.responden.kabupatenKota,
@@ -188,7 +190,7 @@ export async function GET(request: NextRequest) {
               nomorTelepon: rec.responden.nomorTelepon,
             }
           : {
-              nik: rec.respondenNik || "-",
+              nik: rec.respondenId || "-",
               nama: "Responden Tidak Ditemukan",
               kabupatenKota: "-",
               kecamatan: "-",

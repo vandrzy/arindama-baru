@@ -45,21 +45,25 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // 2. IDOR Prevention: Ekstrak submissionId dari path "uploads/<submissionId>/<fileName>"
+      // 2. IDOR Prevention: Ekstrak id / folder responden dari path "uploads/<folderName>/<fileName>"
       const relativeFromUploads = path.relative(uploadsBaseDir, resolvedAbsolutePath);
       const pathSegments = relativeFromUploads.split(path.sep);
-      const targetSubmissionId = pathSegments[0];
+      const targetFolder = pathSegments[0];
+      const targetRespondenId = targetFolder ? targetFolder.split("_")[0] : "";
 
-      if (targetSubmissionId && payload.role !== "ADMIN") {
-        const submission = await prisma.submission.findFirst({
+      if (targetFolder && payload.role !== "ADMIN") {
+        const responden = await prisma.responden.findFirst({
           where: {
-            id: targetSubmissionId,
+            OR: [
+              { id: targetRespondenId },
+              { id: targetFolder }
+            ],
             userId: payload.id,
           },
           select: { id: true },
         });
 
-        if (!submission) {
+        if (!responden) {
           return NextResponse.json(
             { error: "Anda tidak memiliki akses ke berkas validasi ini." },
             { status: 403 }

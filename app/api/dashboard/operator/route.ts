@@ -18,18 +18,18 @@ export async function GET(request: NextRequest) {
 
     const userId = decoded.id;
 
-    // 2. Fetch total respondents for user
+    // Fetch total respondents for user
     const totalResponden = await prisma.responden.count({
       where: { userId: userId }
     });
 
-    // 3. Fetch submissions for user
-    const submissions = await prisma.submission.findMany({
+    // Fetch respondens for user
+    const respondens = await prisma.responden.findMany({
       where: { userId: userId },
       select: { id: true }
     });
 
-    const submissionIds = submissions.map((s: any) => s.id);
+    const respondenIds = respondens.map((r: any) => r.id);
 
     const indikatorNames = [
       "Biodata Operator",
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       "Organisasi Olahraga"
     ];
 
-    if (submissionIds.length === 0) {
+    if (respondenIds.length === 0) {
       return NextResponse.json({
         totalDataInput: 0,
         totalBerkasPdf: 0,
@@ -63,17 +63,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 4. Fetch IndicatorRecords
+    // Fetch IndicatorRecords
     const records = await prisma.indicatorRecord.findMany({
-      where: { submissionId: { in: submissionIds } }
+      where: { respondenId: { in: respondenIds } }
     });
 
-    // 5. Fetch ValidationEvidences
+    // Fetch ValidationEvidences
     const evidences = await prisma.validationEvidence.findMany({
-      where: { submissionId: { in: submissionIds } }
+      where: { respondenId: { in: respondenIds } }
     });
 
-    // 6. Calculate Stats
+    // Calculate Stats
     const totalDataInput = records.length;
     const totalBerkasPdf = evidences.length;
 
@@ -102,15 +102,12 @@ export async function GET(request: NextRequest) {
 
     // Count uploaded evidence per indicator
     evidences.forEach((e: any) => {
-      // formType usually looks like "Indikator 1" or just "1"
       const match = String(e.formType).match(/\d+/);
       const indId = match ? parseInt(match[0]) : null;
       if (indId && indId >= 1 && indId <= 8) {
         indMap[indId].uploaded++;
       }
     });
-
-
 
     const indikatorStats = [];
     const status8Indikator = [];
@@ -120,7 +117,7 @@ export async function GET(request: NextRequest) {
         id: i,
         name: `Indikator ${i} (${indikatorNames[i-1]})`,
         uploaded: indMap[i].uploaded,
-        target: indMap[i].count // The target is the number of data entries inputted
+        target: indMap[i].count
       });
 
       status8Indikator.push({
@@ -132,7 +129,7 @@ export async function GET(request: NextRequest) {
     }
 
     const recentSubmissions = await prisma.indicatorRecord.findMany({
-      where: { submissionId: { in: submissionIds } },
+      where: { respondenId: { in: respondenIds } },
       orderBy: { createdAt: 'desc' },
       take: 10,
       include: {
@@ -155,3 +152,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

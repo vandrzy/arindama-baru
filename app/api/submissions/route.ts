@@ -3,13 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { verifyJwtToken } from "@/lib/auth";
 import { parseAndValidateExcelFile, ValidationErrorDetail, ParsedIndicatorRecordData } from "@/lib/services/excelService";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
 
 export const dynamic = "force-dynamic";
 
-// Allowed Excel extensions & MIME types
 const ALLOWED_EXCEL_EXTENSIONS = [".xlsx", ".xls"];
 const ALLOWED_EXCEL_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -29,7 +25,7 @@ const submissionSchema = z.object({
   tahunSurvei: z.number().int().min(2020).max(2100).default(2024),
 });
 
-// GET: List all submissions with identity & indicator records
+// GET: List all respondens with indicator records & validation evidences (aliased as submissions for backward compatibility)
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get("auth_token")?.value;
@@ -50,14 +46,12 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const filterUserId = searchParams.get("userId");
-    const tahun = searchParams.get("tahun");
 
     const targetUserId = payload.role === "OPERATOR" ? payload.id : filterUserId || undefined;
 
-    const submissions = await prisma.submission.findMany({
+    const respondens = await prisma.responden.findMany({
       where: {
         ...(targetUserId && { userId: targetUserId }),
-        ...(tahun && { tahunSurvei: parseInt(tahun) }),
       },
       include: {
         user: {
@@ -71,16 +65,35 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        indicatorRecords: {
-          include: {
-            responden: true
-          }
-        },
+        indicatorRecords: true,
         validationEvidences: true,
       },
       orderBy: {
         createdAt: "desc",
       },
+    });
+
+    const submissions = respondens.map((r) => {
+      const respondenObj = {
+        id: r.id,
+        nik: r.nik,
+        nama: r.nama,
+        kabupatenKota: r.kabupatenKota,
+        kecamatan: r.kecamatan,
+        cabangOlahraga: r.cabangOlahraga,
+        nomorTelepon: r.nomorTelepon,
+      };
+
+      return {
+        ...r,
+        noRegistrasi: r.id,
+        responden: respondenObj,
+        totalIndikatorTerisi: new Set(r.indicatorRecords.map((i) => i.indicatorId)).size,
+        indicatorRecords: r.indicatorRecords.map((rec) => ({
+          ...rec,
+          responden: respondenObj,
+        })),
+      };
     });
 
     return NextResponse.json({ success: true, submissions });
@@ -93,7 +106,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create new submission by streaming files to disk and validating sequentially
+// POST: Process uploaded excel files and attach indicator records to target Responden
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get("auth_token")?.value;
@@ -113,18 +126,24 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
-    const tahunRaw = formData.get("tahunSurvei");
-    const tahunSurvei = tahunRaw ? parseInt(tahunRaw as string) : new Date().getFullYear();
+    const respondenId = formData.get("respondenId") as string | null;
+    const respondenNik = formData.get("respondenNik") as string | null;
 
-    const validation = submissionSchema.safeParse({ tahunSurvei });
-    if (!validation.success) {
+    // Cari responden target
+    let responden = null;
+    if (respondenId) {
+      responden = await prisma.responden.findUnique({ where: { id: respondenId } });
+    }
+    if (!responden && respondenNik) {
+      responden = await prisma.responden.findUnique({ where: { nik: respondenNik } });
+    }
+
+    if (!responden) {
       return NextResponse.json(
-        { error: "Validasi metadata gagal", details: validation.error.errors },
+        { error: "Responden tidak ditemukan. Silakan pilih atau buat data responden terlebih dahulu." },
         { status: 400 }
       );
     }
-
-    const data = validation.data;
 
     // Filter file entries from FormData
     const rawFileEntries: { step: number; file: File }[] = [];
@@ -162,19 +181,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sort entries so step 0 (Identitas) is processed first
     rawFileEntries.sort((a, b) => a.step - b.step);
 
     const aggregatedErrors: ValidationErrorDetail[] = [];
     const allIndicatorRecords: ParsedIndicatorRecordData[] = [];
 
-    // Process each uploaded file sequentially
     for (const entry of rawFileEntries) {
-      // Get file buffer
       const arrayBuffer = await entry.file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-
-      // Parse and validate from memory
       const parseResult = parseAndValidateExcelFile(buffer, entry.step, entry.file.name);
 
       if (parseResult.errors.length > 0) {
@@ -186,7 +200,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If there are any validation errors across any files, reject request with detailed error mapping
     if (aggregatedErrors.length > 0) {
       return NextResponse.json(
         {
@@ -197,42 +210,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const respondenNik = formData.get("respondenNik") as string | null;
+    // Save indicator records attached to responden
+    await prisma.indicatorRecord.createMany({
+      data: allIndicatorRecords.map((r) => ({
+        ...r,
+        respondenId: responden.id,
+      })),
+    });
 
-    // Transactional save to DB
-    const submission = await prisma.$transaction(async (tx) => {
-      const sub = await tx.submission.create({
-        data: {
-          noRegistrasi: crypto.randomUUID(),
-          userId: payload.id,
-          tahunSurvei: data.tahunSurvei,
-          totalIndikatorTerisi: new Set(allIndicatorRecords.map((r) => r.indicatorId)).size,
-          indicatorRecords: {
-            create: allIndicatorRecords.map(r => ({
-              ...r,
-              respondenNik: respondenNik || undefined
-            })),
-          },
-        },
-        include: {
-          indicatorRecords: true,
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          userId: payload.id,
-          action: "CREATE_SUBMISSION",
-          entity: "Submission",
-          entityId: sub.id,
-        },
-      });
-
-      return sub;
+    await prisma.auditLog.create({
+      data: {
+        userId: payload.id,
+        action: "UPLOAD_INDICATORS",
+        entity: "Responden",
+        entityId: responden.id,
+      },
     });
 
     return NextResponse.json(
-      { success: true, submissionId: submission.id, submission },
+      { success: true, respondenId: responden.id, message: "Data indikator berhasil disimpan." },
       { status: 201 }
     );
   } catch (error) {
@@ -243,4 +239,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

@@ -28,7 +28,6 @@ model User {
   nomorTelepon  String   @default("")
   
   // Relations
-  submissions Submission[]
   auditLogs   AuditLog[]
   respondens  Responden[]
   
@@ -61,38 +60,11 @@ enum JenisKelamin {
 }
 
 // ============================================
-// SURVEY SUBMISSIONS
-// ============================================
-
-model Submission {
-  id                   String               @id @default(cuid())
-  noRegistrasi         String               @unique @default(uuid())
-  userId               String
-  tahunSurvei          Int                  @default(2024)
-  totalIndikatorTerisi Int                  @default(0)
-  
-  // Relations
-  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  indicatorRecords     IndicatorRecord[]
-  validationEvidences  ValidationEvidence[]
-  fileAttachments      FileAttachment[]
-
-  // Timestamps
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-
-  @@index([userId])
-  @@index([tahunSurvei])
-  @@map("submissions")
-}
-
-// ============================================
 // INDICATOR RECORDS (Form Indikator 1 - 8)
 // ============================================
 
 model IndicatorRecord {
   id                     String       @id @default(cuid())
-  submissionId           String
   indicatorId            Int          // 1 - 8
   namaKegiatan           String
   cabangOlahraga         String
@@ -102,16 +74,14 @@ model IndicatorRecord {
   uraianCapaian          String
   status                 RecordStatus @default(MENUNGGU_REVIEW)
 
-  respondenNik           String?
-  responden              Responden?   @relation(fields: [respondenNik], references: [nik], onDelete: SetNull)
+  respondenId            String?
+  responden              Responden?   @relation(fields: [respondenId], references: [id], onDelete: Cascade)
 
-  submission             Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
 
-  @@index([submissionId])
   @@index([indicatorId])
-  @@index([respondenNik])
+  @@index([respondenId])
   @@map("indicator_records")
 }
 
@@ -121,18 +91,18 @@ model IndicatorRecord {
 
 model ValidationEvidence {
   id           String     @id @default(cuid())
-  submissionId String
+  respondenId  String
   formType     String
   recordId     String
   fileName     String
   fileUrl      String
   fileSize     String?
   
-  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  responden    Responden  @relation(fields: [respondenId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  @@unique([submissionId, formType, recordId])
+  @@unique([respondenId, formType, recordId])
   @@map("validation_evidences")
 }
 
@@ -168,19 +138,19 @@ model AuditLog {
 
 model FileAttachment {
   id           String     @id @default(cuid())
-  submissionId String
+  respondenId  String
   fileName     String
   filePath     String     // S3 path or local path
   fileSize     Int
   mimeType     String
   fileHash     String     // SHA-256 for integrity
   
-  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  responden    Responden  @relation(fields: [respondenId], references: [id], onDelete: Cascade)
 
   // Timestamps
   createdAt    DateTime   @default(now())
   
-  @@index([submissionId])
+  @@index([respondenId])
   @@map("file_attachments")
 }
 
@@ -207,7 +177,8 @@ model DynamicWeight {
 // ============================================
 
 model Responden {
-  nik            String       @id // NIK is the primary key
+  id             String       @id @default(cuid())
+  nik            String       @unique
   nama           String
   jenisKelamin   JenisKelamin @default(LAKI_LAKI)
   tanggalLahir   DateTime
@@ -219,11 +190,14 @@ model Responden {
   userId         String?
   user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  indicatorRecords IndicatorRecord[]
+  indicatorRecords    IndicatorRecord[]
+  validationEvidences ValidationEvidence[]
+  fileAttachments     FileAttachment[]
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@map("responden")
 }
+
 
