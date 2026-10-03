@@ -14,7 +14,6 @@ import {
   Menu,
   X,
   FileCheck,
-  BarChart3,
   MapPin,
   Building2,
 } from "lucide-react";
@@ -62,12 +61,6 @@ export function Navbar() {
       label: "Berkas & Bukti Sah",
       icon: FileText,
       match: (p: string) => p.startsWith("/kuesioner"),
-    });
-    navLinks.push({
-      href: "/statistik",
-      label: "Statistik",
-      icon: BarChart3,
-      match: (p: string) => p.startsWith("/statistik"),
     });
   }
 

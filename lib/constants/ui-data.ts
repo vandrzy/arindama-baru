@@ -112,8 +112,8 @@ export const FLOW_STEPS: FlowStepItem[] = [
   },
   {
     step: 6,
-    title: "Selesai & Pantau Statistik",
-    desc: "Lihat hasil akumulasi data olahraga Anda di menu \"Statistik\" secara real-time.",
+    title: "Selesai & Pantau Hasil",
+    desc: "Lihat hasil akumulasi data olahraga Anda di Dashboard Utama secara real-time.",
     icon: BarChart3,
     tag: "Akumulasi & Peringkat Nasional",
   },
