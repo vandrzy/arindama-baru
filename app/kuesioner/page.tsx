@@ -527,8 +527,8 @@ export default function KuesionerPage() {
       return;
     }
 
-    const recordId = `row_${record.recordIndex}`;
-    const key = record.evidenceKey;
+    const recordId = String(record.id);
+    const key = record.evidenceKey || recordId;
 
     setUploadingEvidences((prev) => ({ ...prev, [key]: true }));
     if (file.size > 1024 * 1024) {
