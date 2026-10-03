@@ -53,11 +53,19 @@ export async function PUT(
       );
     }
 
-    // Update indicator record status in database
-    const updatedRecord = await prisma.indicatorRecord.update({
-      where: { id: recordId },
-      data: { status },
-    });
+    // Update category record or responden status in database
+    let updatedRecord: any = null;
+    try {
+      updatedRecord = await prisma.categoryRecord.update({
+        where: { id: recordId },
+        data: { status },
+      });
+    } catch {
+      updatedRecord = await prisma.responden.update({
+        where: { id: recordId },
+        data: { status },
+      });
+    }
 
     return NextResponse.json({
       success: true,

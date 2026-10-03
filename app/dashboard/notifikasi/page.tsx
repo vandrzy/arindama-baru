@@ -103,7 +103,7 @@ export default function NotifikasiPage() {
           count: adminStats.perluDiverifikasi,
           unit: "Berkas",
           description:
-            "Terdapat berkas pengajuan indikator dari operator daerah yang membutuhkan verifikasi dan pengesahan oleh Tim Verifikator Dispora.",
+            "Terdapat berkas pengajuan kategori dari operator daerah yang membutuhkan verifikasi dan pengesahan oleh Tim Verifikator Dispora.",
           actionText: "Verifikasi Berkas",
           actionUrl: "/kuesioner",
           time: "Pembaruan Real-time",
@@ -169,7 +169,7 @@ export default function NotifikasiPage() {
           count: operatorStats.sudahDiverifikasi,
           unit: "Berkas",
           description:
-            "Berkas capaian indikator yang telah ditinjau dan dinyatakan Sah & Terverifikasi oleh tim verifikator Dispora.",
+            "Berkas capaian kategori yang telah ditinjau dan dinyatakan Sah & Terverifikasi oleh tim verifikator Dispora.",
           actionText: "Lihat Status",
           actionUrl: "/kuesioner",
           time: "Status Disetujui",
@@ -209,7 +209,7 @@ export default function NotifikasiPage() {
             Informasi Ringkasan & Agenda Kerja
           </h1>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
-            Pantau status indikator utama, verifikasi berkas survei, serta pencapaian target responden secara terpusat.
+            Pantau status kategori utama, verifikasi berkas survei, serta pencapaian target responden secara terpusat.
           </p>
         </div>
 

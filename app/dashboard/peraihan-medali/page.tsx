@@ -20,7 +20,7 @@ import {
 // Types
 export interface PeraihanMedaliRecord {
   id: string;
-  indicatorId: number;
+  categoryId: number;
   kategori: "Pelajar" | "Atlet";
   namaKegiatan: string;
   cabangOlahraga: string;
@@ -212,7 +212,7 @@ export default function PeraihanMedaliPage() {
             <span>{headerTitle}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Rekapitulasi perolehan medali berstatus sah & terverifikasi bersumber dari Indikator 1 (Pelajar) dan Indikator 6 (Atlet)
+            Rekapitulasi perolehan medali berstatus sah & terverifikasi bersumber dari Kategori 2 (Pelajar) dan Kategori 7 (Atlet)
           </p>
         </div>
 
@@ -242,7 +242,7 @@ export default function PeraihanMedaliPage() {
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              Gabungan akumulasi medali dari Indikator 1 (Pelajar) & Indikator 6 (Atlet)
+              Gabungan akumulasi medali dari Kategori 2 (Pelajar) & Kategori 7 (Atlet)
             </p>
           </div>
 
@@ -361,8 +361,8 @@ export default function PeraihanMedaliPage() {
               className="w-full px-3 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-medium cursor-pointer"
             >
               <option value="Semua">Semua Tingkatan</option>
-              <option value="Pelajar">Pelajar (Indikator 1)</option>
-              <option value="Atlet">Atlet (Indikator 6)</option>
+              <option value="Pelajar">Pelajar (Kategori 2)</option>
+              <option value="Atlet">Atlet (Kategori 7)</option>
             </select>
           </div>
         </div>

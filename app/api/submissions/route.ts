@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        indicatorRecords: true,
+        categoryRecords: true,
         validationEvidences: true,
       },
       orderBy: {
@@ -78,21 +78,28 @@ export async function GET(request: NextRequest) {
         id: r.id,
         nik: r.nik,
         nama: r.nama,
+        jenisKelamin: r.jenisKelamin,
+        tanggalLahir: r.tanggalLahir,
         kabupatenKota: r.kabupatenKota,
         kecamatan: r.kecamatan,
         cabangOlahraga: r.cabangOlahraga,
         nomorTelepon: r.nomorTelepon,
       };
 
+      const catRecords = r.categoryRecords.map((rec) => ({
+        ...rec,
+        indicatorId: rec.categoryId,
+        responden: respondenObj,
+      }));
+
       return {
         ...r,
         noRegistrasi: r.id,
         responden: respondenObj,
-        totalIndikatorTerisi: new Set(r.indicatorRecords.map((i) => i.indicatorId)).size,
-        indicatorRecords: r.indicatorRecords.map((rec) => ({
-          ...rec,
-          responden: respondenObj,
-        })),
+        totalKategoriTerisi: new Set(r.categoryRecords.map((i) => i.categoryId)).size,
+        totalIndikatorTerisi: new Set(r.categoryRecords.map((i) => i.categoryId)).size,
+        categoryRecords: catRecords,
+        indicatorRecords: catRecords,
       };
     });
 
@@ -106,7 +113,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Process uploaded excel files and attach indicator records to target Responden
+// POST: Process uploaded excel files and attach category records to target Responden
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get("auth_token")?.value;
@@ -129,7 +136,7 @@ export async function POST(request: NextRequest) {
     const respondenId = formData.get("respondenId") as string | null;
     const respondenNik = formData.get("respondenNik") as string | null;
 
-    // Cari responden target
+    // Cari responden target jika dikirim
     let responden = null;
     if (respondenId) {
       responden = await prisma.responden.findUnique({ where: { id: respondenId } });
@@ -138,19 +145,12 @@ export async function POST(request: NextRequest) {
       responden = await prisma.responden.findUnique({ where: { nik: respondenNik } });
     }
 
-    if (!responden) {
-      return NextResponse.json(
-        { error: "Responden tidak ditemukan. Silakan pilih atau buat data responden terlebih dahulu." },
-        { status: 400 }
-      );
-    }
-
     // Filter file entries from FormData
     const rawFileEntries: { step: number; file: File }[] = [];
     for (const [key, value] of formData.entries()) {
       if (typeof value === "object" && value !== null && "name" in value && "size" in value) {
         const file = value as File;
-        const keyMatch = key.match(/^(?:file|indicator|fileIndicator)[_-]?(\d+)$/i);
+        const keyMatch = key.match(/^(?:file|category|indicator|fileCategory|fileIndicator)[_-]?(\d+)$/i);
         if (keyMatch && file.size > 0) {
           if (file.size > MAX_FILE_SIZE) {
             return NextResponse.json(
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     rawFileEntries.sort((a, b) => a.step - b.step);
 
     const aggregatedErrors: ValidationErrorDetail[] = [];
-    const allIndicatorRecords: ParsedIndicatorRecordData[] = [];
+    const allCategoryRecords: ParsedIndicatorRecordData[] = [];
 
     for (const entry of rawFileEntries) {
       const arrayBuffer = await entry.file.arrayBuffer();
@@ -195,9 +195,77 @@ export async function POST(request: NextRequest) {
         aggregatedErrors.push(...parseResult.errors);
       }
 
-      if (parseResult.indicatorRecords.length > 0) {
-        allIndicatorRecords.push(...parseResult.indicatorRecords);
+      if (entry.step === 1 && parseResult.respondenRecords && parseResult.respondenRecords.length > 0) {
+        const respData = parseResult.respondenRecords[0];
+        if (respData) {
+          if (!respData.nik || respData.nik === "-" || respData.nik.trim().length < 8) {
+            aggregatedErrors.push({
+              file: entry.file.name,
+              step: 1,
+              row: 1,
+              field: "NIK",
+              message: "NIK pada file Excel Data Responden (Kategori 1) wajib diisi dan valid.",
+            });
+          } else {
+            const cleanNik = respData.nik.trim();
+            if (responden) {
+              await prisma.responden.update({
+                where: { id: responden.id },
+                data: {
+                  ...(respData.nama && { nama: respData.nama }),
+                  nik: cleanNik,
+                  ...(respData.jenisKelamin && { jenisKelamin: respData.jenisKelamin.toLowerCase().includes("perempuan") ? "PEREMPUAN" : "LAKI_LAKI" }),
+                  ...(respData.kabupatenKota && { kabupatenKota: respData.kabupatenKota }),
+                  ...(respData.kecamatan && { kecamatan: respData.kecamatan }),
+                  ...(respData.cabangOlahraga && { cabangOlahraga: respData.cabangOlahraga }),
+                  ...(respData.nomorTelepon && { nomorTelepon: respData.nomorTelepon }),
+                },
+              });
+            } else {
+              const existing = await prisma.responden.findUnique({ where: { nik: cleanNik } });
+              if (existing) {
+                responden = await prisma.responden.update({
+                  where: { id: existing.id },
+                  data: {
+                    ...(respData.nama && { nama: respData.nama }),
+                    ...(respData.jenisKelamin && { jenisKelamin: respData.jenisKelamin.toLowerCase().includes("perempuan") ? "PEREMPUAN" : "LAKI_LAKI" }),
+                    ...(respData.kabupatenKota && { kabupatenKota: respData.kabupatenKota }),
+                    ...(respData.kecamatan && { kecamatan: respData.kecamatan }),
+                    ...(respData.cabangOlahraga && { cabangOlahraga: respData.cabangOlahraga }),
+                    ...(respData.nomorTelepon && { nomorTelepon: respData.nomorTelepon }),
+                  },
+                });
+              } else {
+                responden = await prisma.responden.create({
+                  data: {
+                    nik: cleanNik,
+                    nama: respData.nama || "Tanpa Nama",
+                    jenisKelamin: respData.jenisKelamin?.toLowerCase().includes("perempuan") ? "PEREMPUAN" : "LAKI_LAKI",
+                    tanggalLahir: respData.tanggalLahir ? new Date(respData.tanggalLahir) : new Date(),
+                    kabupatenKota: respData.kabupatenKota || "Kalimantan Timur",
+                    kecamatan: respData.kecamatan || "-",
+                    cabangOlahraga: respData.cabangOlahraga || "-",
+                    nomorTelepon: respData.nomorTelepon || "-",
+                    userId: payload.id,
+                  },
+                });
+              }
+            }
+          }
+        }
       }
+
+      const parsedRecs = parseResult.categoryRecords || parseResult.indicatorRecords || [];
+      if (parsedRecs.length > 0) {
+        allCategoryRecords.push(...parsedRecs);
+      }
+    }
+
+    if (!responden) {
+      return NextResponse.json(
+        { error: "Responden tidak ditemukan. Silakan pilih atau buat data responden terlebih dahulu." },
+        { status: 400 }
+      );
     }
 
     if (aggregatedErrors.length > 0) {
@@ -210,10 +278,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save indicator records attached to responden
-    await prisma.indicatorRecord.createMany({
-      data: allIndicatorRecords.map((r) => ({
-        ...r,
+    // Save category records attached to responden
+    await prisma.categoryRecord.createMany({
+      data: allCategoryRecords.map((r) => ({
+        categoryId: r.categoryId || r.indicatorId,
+        namaKegiatan: r.namaKegiatan,
+        cabangOlahraga: r.cabangOlahraga,
+        tingkatPenyelenggaraan: r.tingkatPenyelenggaraan,
+        sumberPendanaan: r.sumberPendanaan,
+        medali: r.medali,
+        uraianCapaian: r.uraianCapaian,
         respondenId: responden.id,
       })),
     });
@@ -221,14 +295,14 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: payload.id,
-        action: "UPLOAD_INDICATORS",
+        action: "UPLOAD_CATEGORIES",
         entity: "Responden",
         entityId: responden.id,
       },
     });
 
     return NextResponse.json(
-      { success: true, respondenId: responden.id, message: "Data indikator berhasil disimpan." },
+      { success: true, respondenId: responden.id, message: "Data kategori berhasil disimpan." },
       { status: 201 }
     );
   } catch (error) {

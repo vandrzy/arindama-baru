@@ -24,8 +24,8 @@ export interface OperatortIdentity {
 }
 
 export interface SurveyAnswer {
-  indicatorId: number;
-  indicatorTitle: string;
+  categoryId: number;
+  categoryTitle: string;
   namaKegiatan: string;
   cabangOlahraga: string;
   tingkatPenyelenggaraan: "Nasional" | "Internasional" | "";
@@ -57,6 +57,6 @@ export interface SurveySubmission {
     jabatan?: string;
     kabupatenKota?: string;
   };
-  totalIndikatorTerisi: number;
+  totalKategoriTerisi: number;
 }
 

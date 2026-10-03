@@ -346,6 +346,7 @@ export default function RespondenPage() {
               <tr className="border-b border-slate-200">
                 <th className="pb-3 text-xs font-extrabold text-slate-400 tracking-wider">NO</th>
                 <th className="pb-3 text-xs font-extrabold text-slate-400 tracking-wider">NAMA LENGKAP & NIK</th>
+                <th className="pb-3 text-xs font-extrabold text-slate-400 tracking-wider">JENIS KELAMIN</th>
                 <th className="pb-3 text-xs font-extrabold text-slate-400 tracking-wider">TANGGAL LAHIR</th>
                 <th className="pb-3 text-xs font-extrabold text-slate-400 tracking-wider">DOMISILI & KECAMATAN</th>
                 <th className="pb-3 text-xs font-extrabold text-slate-400 tracking-wider">CABANG OLAHRAGA</th>
@@ -355,22 +356,27 @@ export default function RespondenPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">Memuat data...</td>
+                  <td colSpan={7} className="py-8 text-center text-slate-500">Memuat data...</td>
                 </tr>
               ) : respondens.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">Belum ada data responden.</td>
+                  <td colSpan={7} className="py-8 text-center text-slate-500">Belum ada data responden.</td>
                 </tr>
               ) : (
                 respondens.map((r, i) => (
-                  <tr key={r.nik} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={r.nik || i} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 text-slate-500 font-medium">{(page - 1) * 10 + i + 1}</td>
                     <td className="py-4">
                       <div className="font-bold text-slate-900">{r.nama}</div>
                       <div className="text-xs text-slate-500">NIK: {r.nik}</div>
                     </td>
+                    <td className="py-4 font-bold text-slate-700">
+                      {r.jenisKelamin === "PEREMPUAN" || r.jenisKelamin === "Perempuan" ? "Perempuan" : "Laki-laki"}
+                    </td>
                     <td className="py-4">
-                      <div className="font-medium text-slate-700">{new Date(r.tanggalLahir).toLocaleDateString("id-ID")}</div>
+                      <div className="font-medium text-slate-700">
+                        {r.tanggalLahir ? new Date(r.tanggalLahir).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}
+                      </div>
                     </td>
                     <td className="py-4">
                       <div className="font-bold text-slate-900">{r.kabupatenKota}</div>

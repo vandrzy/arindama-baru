@@ -60,12 +60,12 @@ enum JenisKelamin {
 }
 
 // ============================================
-// INDICATOR RECORDS (Form Indikator 1 - 8)
+// CATEGORY RECORDS (Form Kategori 1 - 9)
 // ============================================
 
-model IndicatorRecord {
+model CategoryRecord {
   id                     String       @id @default(cuid())
-  indicatorId            Int          // 1 - 8
+  categoryId             Int          // 1 - 9
   namaKegiatan           String
   cabangOlahraga         String
   tingkatPenyelenggaraan String
@@ -80,9 +80,9 @@ model IndicatorRecord {
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
 
-  @@index([indicatorId])
+  @@index([categoryId])
   @@index([respondenId])
-  @@map("indicator_records")
+  @@map("category_records")
 }
 
 // ============================================
@@ -186,11 +186,12 @@ model Responden {
   kecamatan      String
   cabangOlahraga String
   nomorTelepon   String
+  status         RecordStatus @default(MENUNGGU_REVIEW)
 
   userId         String?
   user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  indicatorRecords    IndicatorRecord[]
+  categoryRecords     CategoryRecord[]
   validationEvidences ValidationEvidence[]
   fileAttachments     FileAttachment[]
 

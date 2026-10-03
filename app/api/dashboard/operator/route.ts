@@ -31,15 +31,16 @@ export async function GET(request: NextRequest) {
 
     const respondenIds = respondens.map((r: any) => r.id);
 
-    const indikatorNames = [
-      "Biodata Operator",
+    const kategoriNames = [
+      "Data Responden",
       "Kejuaraan Pelajar",
       "Peningkatan Mutu SDM",
-      "Pelatih Bawa Tim",
-      "Wasit Nasional/Intl",
-      "Wasit Bertugas",
-      "Tenaga Kesehatan",
-      "Organisasi Olahraga"
+      "Pelatih Berlisensi",
+      "Wasit & Juri Terakreditasi",
+      "Penugasan Wasit & Juri",
+      "Atlet Tim Nasional",
+      "Event Keolahragaan",
+      "Olahraga Rekreasi"
     ];
 
     if (respondenIds.length === 0) {
@@ -48,23 +49,35 @@ export async function GET(request: NextRequest) {
         totalBerkasPdf: 0,
         totalDisetujui: 0,
         menungguReview: 0,
-        indikatorStats: Array.from({ length: 8 }, (_, i) => ({ 
+        kategoriStats: Array.from({ length: 9 }, (_, i) => ({ 
           id: i + 1, 
-          name: `Indikator ${i + 1} (${indikatorNames[i]})`, 
+          name: `Kategori ${i + 1} (${kategoriNames[i]})`, 
           uploaded: 0, 
           target: 0 
         })),
-        status8Indikator: Array.from({ length: 8 }, (_, i) => ({ 
-          code: `IND-0${i + 1}`, 
-          title: indikatorNames[i], 
+        statusKategori: Array.from({ length: 9 }, (_, i) => ({ 
+          code: `KAT-0${i + 1}`, 
+          title: kategoriNames[i], 
+          count: 0, 
+          sah: 0 
+        })),
+        indikatorStats: Array.from({ length: 9 }, (_, i) => ({ 
+          id: i + 1, 
+          name: `Kategori ${i + 1} (${kategoriNames[i]})`, 
+          uploaded: 0, 
+          target: 0 
+        })),
+        status8Indikator: Array.from({ length: 9 }, (_, i) => ({ 
+          code: `KAT-0${i + 1}`, 
+          title: kategoriNames[i], 
           count: 0, 
           sah: 0 
         }))
       });
     }
 
-    // Fetch IndicatorRecords
-    const records = await prisma.indicatorRecord.findMany({
+    // Fetch CategoryRecords
+    const records = await prisma.categoryRecord.findMany({
       where: { respondenId: { in: respondenIds } }
     });
 
@@ -81,7 +94,7 @@ export async function GET(request: NextRequest) {
     let menungguReview = 0;
 
     const indMap: Record<number, { uploaded: number, sah: number, count: number }> = {};
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 9; i++) {
       indMap[i] = { uploaded: 0, sah: 0, count: 0 };
     }
 
@@ -92,43 +105,43 @@ export async function GET(request: NextRequest) {
       if (isSah) totalDisetujui++;
       if (isMenunggu) menungguReview++;
 
-      if (r.indicatorId >= 1 && r.indicatorId <= 8) {
-        indMap[r.indicatorId].count++;
+      if (r.categoryId >= 1 && r.categoryId <= 9) {
+        indMap[r.categoryId].count++;
         if (isSah) {
-          indMap[r.indicatorId].sah++;
+          indMap[r.categoryId].sah++;
         }
       }
     });
 
-    // Count uploaded evidence per indicator
+    // Count uploaded evidence per category
     evidences.forEach((e: any) => {
       const match = String(e.formType).match(/\d+/);
       const indId = match ? parseInt(match[0]) : null;
-      if (indId && indId >= 1 && indId <= 8) {
+      if (indId && indId >= 1 && indId <= 9) {
         indMap[indId].uploaded++;
       }
     });
 
-    const indikatorStats = [];
-    const status8Indikator = [];
+    const kategoriStats = [];
+    const statusKategori = [];
 
-    for (let i = 1; i <= 8; i++) {
-      indikatorStats.push({
+    for (let i = 1; i <= 9; i++) {
+      kategoriStats.push({
         id: i,
-        name: `Indikator ${i} (${indikatorNames[i-1]})`,
+        name: `Kategori ${i} (${kategoriNames[i-1]})`,
         uploaded: indMap[i].uploaded,
         target: indMap[i].count
       });
 
-      status8Indikator.push({
-        code: `IND-0${i}`,
-        title: indikatorNames[i-1],
+      statusKategori.push({
+        code: `KAT-0${i}`,
+        title: kategoriNames[i-1],
         count: indMap[i].count,
         sah: indMap[i].sah
       });
     }
 
-    const recentSubmissions = await prisma.indicatorRecord.findMany({
+    const recentSubmissions = await prisma.categoryRecord.findMany({
       where: { respondenId: { in: respondenIds } },
       orderBy: { createdAt: 'desc' },
       take: 10,
@@ -143,8 +156,10 @@ export async function GET(request: NextRequest) {
       totalBerkasPdf,
       totalDisetujui,
       menungguReview,
-      indikatorStats,
-      status8Indikator,
+      kategoriStats,
+      statusKategori,
+      indikatorStats: kategoriStats,
+      status8Indikator: statusKategori,
       recentSubmissions
     });
   } catch (error) {

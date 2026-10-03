@@ -44,9 +44,18 @@ export async function POST(request: NextRequest) {
     const formType = formData.get("formType") as string | null;
     const respondenNik = formData.get("respondenNik") as string | null;
 
-    if (!file || !targetId || formType === null || formType === undefined) {
+    const stepNum = formType !== null && formType !== undefined ? parseInt(formType, 10) : NaN;
+
+    if (!file || isNaN(stepNum) || stepNum < 1 || stepNum > 9) {
       return NextResponse.json(
-        { error: "File Excel, respondenId, dan formType wajib diisi." },
+        { error: "File Excel dan formType kategori (1-9) wajib diisi." },
+        { status: 400 }
+      );
+    }
+
+    if (stepNum !== 1 && !targetId && !respondenNik) {
+      return NextResponse.json(
+        { error: "Pilih responden terlebih dahulu." },
         { status: 400 }
       );
     }
@@ -65,26 +74,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pastikan responden ada dan user berhak mengakses
-    const responden = await prisma.responden.findFirst({
-      where: {
-        OR: [{ id: targetId }, { nik: targetId }, ...(respondenNik ? [{ nik: respondenNik }] : [])],
-        ...(payload.role !== "ADMIN" && { userId: payload.id }),
-      },
-    });
+    // Pastikan responden ada jika stepNum !== 1
+    let responden = null;
+    if (targetId || respondenNik) {
+      responden = await prisma.responden.findFirst({
+        where: {
+          OR: [
+            ...(targetId ? [{ id: targetId }, { nik: targetId }] : []),
+            ...(respondenNik ? [{ nik: respondenNik }] : []),
+          ],
+          ...(payload.role !== "ADMIN" && { userId: payload.id }),
+        },
+      });
+    }
 
-    if (!responden) {
+    if (!responden && stepNum !== 1) {
       return NextResponse.json(
         { error: "Responden tidak ditemukan atau Anda tidak memiliki hak akses." },
         { status: 404 }
-      );
-    }
-
-    const stepNum = parseInt(formType);
-    if (isNaN(stepNum) || stepNum < 1 || stepNum > 8) {
-      return NextResponse.json(
-        { error: "formType indikator tidak valid (harus 1 s.d. 8)." },
-        { status: 400 }
       );
     }
 
@@ -102,55 +109,111 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!validationResult.indicatorRecords || validationResult.indicatorRecords.length === 0) {
-      return NextResponse.json(
-        { error: `File Excel tidak berisi baris data untuk Indikator ${stepNum}.` },
-        { status: 400 }
-      );
-    }
+    if (stepNum === 1) {
+      if (validationResult.respondenRecords && validationResult.respondenRecords.length > 0) {
+        const respData = validationResult.respondenRecords[0];
+        if (!respData.nik || respData.nik === "-" || respData.nik.trim().length < 8) {
+          return NextResponse.json(
+            { error: "NIK pada file Excel Data Responden (Kategori 1) tidak valid atau kosong." },
+            { status: 400 }
+          );
+        }
 
-    const recordsToInsert = (validationResult.indicatorRecords || []).map((rec: ParsedIndicatorRecordData) => ({
-      respondenId: responden.id,
-      indicatorId: stepNum,
-      namaKegiatan: rec.namaKegiatan,
-      cabangOlahraga: rec.cabangOlahraga,
-      tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan,
-      sumberPendanaan: rec.sumberPendanaan,
-      medali: rec.medali || null,
-      uraianCapaian: rec.uraianCapaian,
-    }));
+        const existingNikResponden = await prisma.responden.findUnique({
+          where: { nik: respData.nik.trim() },
+        });
 
-    if (recordsToInsert.length > 0) {
-      await prisma.indicatorRecord.createMany({
-        data: recordsToInsert,
+        const jenisKelaminEnum = respData.jenisKelamin?.toLowerCase().includes("perempuan")
+          ? "PEREMPUAN"
+          : "LAKI_LAKI";
+
+        const targetRespondenId = existingNikResponden?.id || responden?.id;
+
+        if (targetRespondenId) {
+          await prisma.responden.update({
+            where: { id: targetRespondenId },
+            data: {
+              ...(respData.nama && { nama: respData.nama }),
+              ...(respData.nik && respData.nik !== "-" && { nik: respData.nik }),
+              ...(respData.jenisKelamin && { jenisKelamin: jenisKelaminEnum }),
+              ...(respData.kabupatenKota && { kabupatenKota: respData.kabupatenKota }),
+              ...(respData.kecamatan && { kecamatan: respData.kecamatan }),
+              ...(respData.cabangOlahraga && { cabangOlahraga: respData.cabangOlahraga }),
+              ...(respData.nomorTelepon && { nomorTelepon: respData.nomorTelepon }),
+            },
+          });
+        } else {
+          await prisma.responden.create({
+            data: {
+              nik: respData.nik.trim(),
+              nama: respData.nama || "Tanpa Nama",
+              jenisKelamin: jenisKelaminEnum,
+              tanggalLahir: respData.tanggalLahir ? new Date(respData.tanggalLahir) : new Date(),
+              kabupatenKota: respData.kabupatenKota || "Kalimantan Timur",
+              kecamatan: respData.kecamatan || "-",
+              cabangOlahraga: respData.cabangOlahraga || "-",
+              nomorTelepon: respData.nomorTelepon || "-",
+              userId: payload.id,
+            },
+          });
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Berhasil mengunggah data Responden (Kategori 1).",
+      });
+    } else {
+      if (!validationResult.indicatorRecords || validationResult.indicatorRecords.length === 0) {
+        return NextResponse.json(
+          { error: `File Excel tidak berisi baris data untuk Kategori ${stepNum}.` },
+          { status: 400 }
+        );
+      }
+
+      const recordsToInsert = (validationResult.indicatorRecords || []).map((rec: ParsedIndicatorRecordData) => ({
+        respondenId: responden!.id,
+        categoryId: stepNum,
+        namaKegiatan: rec.namaKegiatan,
+        cabangOlahraga: rec.cabangOlahraga,
+        tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan,
+        sumberPendanaan: rec.sumberPendanaan,
+        medali: rec.medali || null,
+        uraianCapaian: rec.uraianCapaian,
+      }));
+
+      if (recordsToInsert.length > 0) {
+        await prisma.categoryRecord.createMany({
+          data: recordsToInsert,
+        });
+      }
+
+      // Ambil data terbaru yang tersimpan untuk dikembalikan langsung ke client
+      const dbRecords = await prisma.categoryRecord.findMany({
+        where: { respondenId: responden!.id, categoryId: stepNum },
+        orderBy: { createdAt: "asc" },
+      });
+      const latestRecords = dbRecords.map((rec) => {
+        const item: Record<string, any> = {
+          "Nama Kegiatan/ Kejuaraan Olahraga": rec.namaKegiatan,
+          "Cabang Olahraga": rec.cabangOlahraga,
+          "Tingkat Penyelenggaraan": rec.tingkatPenyelenggaraan,
+          "Sumber Pendanaan": rec.sumberPendanaan,
+        };
+        if (stepNum === 2 || stepNum === 7) {
+          item["Medali"] = rec.medali || "-";
+        }
+        item["Uraian Capaian"] = rec.uraianCapaian;
+        item["Status"] = rec.status;
+        return item;
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Berhasil menambahkan data dari file Excel.",
+        records: latestRecords,
       });
     }
-
-    // Ambil data terbaru yang tersimpan untuk dikembalikan langsung ke client
-    const dbRecords = await prisma.indicatorRecord.findMany({
-      where: { respondenId: responden.id, indicatorId: stepNum },
-      orderBy: { createdAt: "asc" },
-    });
-    const latestRecords = dbRecords.map((rec) => {
-      const item: Record<string, any> = {
-        "Nama Kegiatan/ Kejuaraan Olahraga": rec.namaKegiatan,
-        "Cabang Olahraga": rec.cabangOlahraga,
-        "Tingkat Penyelenggaraan": rec.tingkatPenyelenggaraan,
-        "Sumber Pendanaan": rec.sumberPendanaan,
-      };
-      if (stepNum === 1 || stepNum === 6) {
-        item["Medali"] = rec.medali || "-";
-      }
-      item["Uraian Capaian"] = rec.uraianCapaian;
-      item["Status"] = rec.status;
-      return item;
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: "Berhasil menambahkan data dari file Excel.",
-      records: latestRecords,
-    });
   } catch (error: any) {
     console.error("Reupload Excel error:", error);
     return NextResponse.json(

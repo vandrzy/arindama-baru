@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
             kabupatenKota: true,
           },
         },
-        indicatorRecords: {
-          orderBy: { indicatorId: "asc" },
+        categoryRecords: {
+          orderBy: { categoryId: "asc" },
         },
       },
       orderBy: {
@@ -39,15 +39,20 @@ export async function GET(request: NextRequest) {
         nomorTelepon: r.nomorTelepon,
       };
 
+      const catRecords = r.categoryRecords.map((rec) => ({
+        ...rec,
+        indicatorId: rec.categoryId,
+        responden: respondenObj,
+      }));
+
       return {
         ...r,
         noRegistrasi: r.id,
         responden: respondenObj,
-        totalIndikatorTerisi: new Set(r.indicatorRecords.map((i) => i.indicatorId)).size,
-        indicatorRecords: r.indicatorRecords.map((rec) => ({
-          ...rec,
-          responden: respondenObj,
-        })),
+        totalKategoriTerisi: new Set(r.categoryRecords.map((i) => i.categoryId)).size,
+        totalIndikatorTerisi: new Set(r.categoryRecords.map((i) => i.categoryId)).size,
+        categoryRecords: catRecords,
+        indicatorRecords: catRecords,
       };
     });
 

@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { useApp } from "@/lib/context/app-context";
-import { SURVEY_INDICATORS } from "@/lib/constants/survey-data";
-import { KABUPATEN_KOTA_OPTIONS } from "@/lib/constants/survey-data";
+import { SURVEY_INDICATORS, KABUPATEN_KOTA_OPTIONS } from "@/lib/constants/survey-data";
+import { FULL_TEMPLATE_NAMES } from "@/lib/constants/ui-data";
 import * as XLSX from "xlsx";
 import { fixWorksheetRange } from "@/lib/services/excelService";
 import {
@@ -57,6 +57,20 @@ const KALTIM_REGIONS = [
   { name: "Penajam Paser Utara", desc: "Wilayah Penajam" },
   { name: "Mahakam Ulu", desc: "Wilayah Ujoh Bilang" },
 ];
+
+// Mock Data Kaltim untuk Kabupaten/Kota & Kecamatan
+const KALTIM_DATA = {
+  "Kota Balikpapan": ["Balikpapan Barat", "Balikpapan Kota", "Balikpapan Selatan", "Balikpapan Tengah", "Balikpapan Timur", "Balikpapan Utara"],
+  "Kota Bontang": ["Bontang Barat", "Bontang Selatan", "Bontang Utara"],
+  "Kota Samarinda": ["Loa Janan Ilir", "Palaran", "Samarinda Ilir", "Samarinda Kota", "Samarinda Seberang", "Samarinda Ulu", "Samarinda Utara", "Sambutan", "Sungai Kunjang", "Sungai Pinang"],
+  "Kabupaten Berau": ["Batu Putih", "Biatan", "Biduk-Biduk", "Gunung Tabur", "Kelay", "Maratua", "Pulau Derawan", "Sambaliung", "Segah", "Tabalar", "Talisayan", "Tanjung Redeb", "Teluk Bayur"],
+  "Kabupaten Kutai Barat": ["Barong Tongkok", "Benangaq", "Bentiang Besar", "Damai", "Jempang", "Linggang Bigung", "Long Iram", "Melak", "Mook Manaar Bulatn", "Muara Lawa", "Muara Pahu", "Nyuatan", "Penyinggahan", "Sekolaq Darat", "Siluq Ngurai", "Tering"],
+  "Kabupaten Kutai Kartanegara": ["Anggana", "Kembang Janggut", "Kenohan", "Kota Bangun", "Kota Bangun Darat", "Loa Janan", "Loa Kulu", "Marang Kayu", "Muara Badak", "Muara Jawa", "Muara Kaman", "Muara Muntai", "Muara Wis", "Samboja", "Samboja Barat", "Sanga-Sanga", "Sebulu", "Tabang", "Tenggarong", "Tenggarong Seberang"],
+  "Kabupaten Kutai Timur": ["Batu Ampar", "Bengalon", "Busang", "Kaliorang", "Karangan", "Kaubun", "Kongbeng", "Long Mesangat", "Muara Ancalong", "Muara Bengkal", "Muara Wahau", "Rantau Pulung", "Sandaran", "Sangatta Selatan", "Sangatta Utara", "Sangkulirang", "Telen", "Teluk Pandan"],
+  "Kabupaten Mahakam Ulu": ["Laham", "Long Apari", "Long Bagun", "Long Hubung", "Long Pahangai"],
+  "Kabupaten Paser": ["Batu Engau", "Batu Sopang", "Kuaro", "Long Ikis", "Long Kali", "Muara Komam", "Muara Samu", "Paser Belengkong", "Tanah Grogot", "Tanjung Harapan"],
+  "Kabupaten Penajam Paser Utara": ["Babulu", "Penajam", "Sepaku", "Waru"]
+};
 
 // Default Fallback Dynamic Weights Matrix
 const DEFAULT_WEIGHTS = [
@@ -168,14 +182,46 @@ export default function KuesionerPage() {
     uraianCapaian: "",
   });
 
+  // State & kalkulasi khusus Form Responden (Kategori 1)
+  const [respondenFormData, setRespondenFormData] = useState({
+    id: "",
+    nama: "",
+    nik: "",
+    jenisKelamin: "Laki-laki",
+    tanggalLahir: "",
+    kabupatenKota: "",
+    kecamatan: "",
+    cabangOlahraga: "",
+    nomorTelepon: "",
+  });
+
+  const respondenUsia = useMemo(() => {
+    if (respondenFormData.tanggalLahir) {
+      const birthDate = new Date(respondenFormData.tanggalLahir);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return `${age} Tahun`;
+    }
+    return "Pilih tanggal lahir...";
+  }, [respondenFormData.tanggalLahir]);
+
+  const respondenKecamatanList = respondenFormData.kabupatenKota
+    ? (KALTIM_DATA[respondenFormData.kabupatenKota as keyof typeof KALTIM_DATA] || [])
+    : [];
+
   const handleDeleteRecord = async (recordId: string) => {
-    if (!confirm("Yakin ingin menghapus entri kegiatan ini?")) return;
+    if (!confirm("Yakin ingin menghapus entri ini?")) return;
     try {
       const res = await fetch(`/api/records/manual?id=${recordId}`, { method: "DELETE" });
       if (res.ok) {
         setNotification("Entri berhasil dihapus.");
         setTimeout(() => setNotification(null), 4000);
         await loadSubmissions();
+        await loadRespondens();
       } else {
         alert("Gagal menghapus entri.");
       }
@@ -186,47 +232,109 @@ export default function KuesionerPage() {
   };
 
   const handleManualSubmit = async () => {
-    if (!manualFormData.respondenNik || !manualFormData.namaKegiatan || !manualFormData.cabangOlahraga || !manualFormData.tingkatPenyelenggaraan) {
-      setUploadError("Mohon isi semua kolom yang bertanda bintang (*).");
-      setTimeout(() => setUploadError(null), 4000);
-      return;
-    }
-    setIsSubmittingManual(true);
-    try {
-      const res = await fetch("/api/records/manual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...manualFormData,
-          indicatorId: activeIndicatorId
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setNotification("Berhasil menambahkan entri kegiatan manual.");
-        setTimeout(() => setNotification(null), 4000);
-        setShowManualModal(false);
-        setManualFormData({
-          id: "",
-          respondenNik: "",
-          namaKegiatan: "",
-          cabangOlahraga: "",
-          tingkatPenyelenggaraan: "",
-          medali: "",
-          sumberPendanaan: "",
-          uraianCapaian: "",
-        });
-        await loadSubmissions();
-      } else {
-        setUploadError(data.error || "Gagal menyimpan entri kegiatan.");
+    if (activeIndicatorId === 1) {
+      if (
+        !respondenFormData.nama ||
+        !respondenFormData.nik ||
+        !respondenFormData.tanggalLahir ||
+        !respondenFormData.kabupatenKota ||
+        !respondenFormData.kecamatan ||
+        !respondenFormData.cabangOlahraga ||
+        !respondenFormData.nomorTelepon
+      ) {
+        setUploadError("Mohon isi semua kolom yang bertanda bintang (*).");
         setTimeout(() => setUploadError(null), 4000);
+        return;
       }
-    } catch (err: any) {
-      console.error("Gagal simpan manual:", err);
-      setUploadError("Terjadi kesalahan sistem saat menyimpan data.");
-      setTimeout(() => setUploadError(null), 4000);
-    } finally {
-      setIsSubmittingManual(false);
+
+      if (respondenFormData.nik.length < 16) {
+        setUploadError("NIK wajib 16 digit.");
+        setTimeout(() => setUploadError(null), 4000);
+        return;
+      }
+
+      setIsSubmittingManual(true);
+      try {
+        const isEdit = Boolean(respondenFormData.id);
+        const res = await fetch("/api/responden", {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(respondenFormData),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setNotification(isEdit ? "Berhasil memperbarui data responden." : "Berhasil menambahkan responden baru.");
+          setTimeout(() => setNotification(null), 4000);
+          setShowManualModal(false);
+          setRespondenFormData({
+            id: "",
+            nama: "",
+            nik: "",
+            jenisKelamin: "Laki-laki",
+            tanggalLahir: "",
+            kabupatenKota: "",
+            kecamatan: "",
+            cabangOlahraga: "",
+            nomorTelepon: "",
+          });
+          await loadSubmissions();
+          await loadRespondens();
+        } else {
+          setUploadError(data.error || "Gagal menyimpan data responden.");
+          setTimeout(() => setUploadError(null), 4000);
+        }
+      } catch (err: any) {
+        console.error("Gagal simpan responden:", err);
+        setUploadError("Terjadi kesalahan sistem saat menyimpan data responden.");
+        setTimeout(() => setUploadError(null), 4000);
+      } finally {
+        setIsSubmittingManual(false);
+      }
+    } else {
+      if (!manualFormData.respondenNik || !manualFormData.namaKegiatan || !manualFormData.cabangOlahraga || !manualFormData.tingkatPenyelenggaraan) {
+        setUploadError("Mohon isi semua kolom yang bertanda bintang (*).");
+        setTimeout(() => setUploadError(null), 4000);
+        return;
+      }
+      setIsSubmittingManual(true);
+      try {
+        const res = await fetch("/api/records/manual", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...manualFormData,
+            categoryId: activeIndicatorId,
+            indicatorId: activeIndicatorId,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setNotification("Berhasil menyimpan entri kegiatan.");
+          setTimeout(() => setNotification(null), 4000);
+          setShowManualModal(false);
+          setManualFormData({
+            id: "",
+            respondenNik: "",
+            namaKegiatan: "",
+            cabangOlahraga: "",
+            tingkatPenyelenggaraan: "",
+            medali: "",
+            sumberPendanaan: "",
+            uraianCapaian: "",
+          });
+          await loadSubmissions();
+        } else {
+          setUploadError(data.error || "Gagal menyimpan entri kegiatan.");
+          setTimeout(() => setUploadError(null), 4000);
+        }
+      } catch (err: any) {
+        console.error("Gagal simpan manual:", err);
+        setUploadError("Terjadi kesalahan sistem saat menyimpan data.");
+        setTimeout(() => setUploadError(null), 4000);
+      } finally {
+        setIsSubmittingManual(false);
+      }
     }
   };
 
@@ -342,7 +450,7 @@ export default function KuesionerPage() {
     return SURVEY_INDICATORS.find((ind) => ind.id === activeIndicatorId) || SURVEY_INDICATORS[0];
   }, [activeIndicatorId]);
 
-  // Aggregate all records for active indicator across submissions
+  // Aggregate all records for active indicator/category across submissions
   const allRecords = useMemo(() => {
     const list: any[] = [];
     const isUserRole = currentUser?.role === "OPERATOR";
@@ -353,7 +461,49 @@ export default function KuesionerPage() {
         return;
       }
 
-      if (Array.isArray(sub.indicatorRecords)) {
+      if (activeIndicatorId === 1) {
+        const key = `${sub.id}_ind1_${sub.id}`;
+        const evidence =
+          rowValidationFiles[key] ||
+          (Array.isArray(sub.validationEvidences)
+            ? sub.validationEvidences.find((e: any) => e.formType === "1" || e.formType === "RESPONDEN")
+            : null) ||
+          null;
+
+        list.push({
+          id: sub.id,
+          respondenId: sub.id,
+          submissionId: sub.id,
+          submissionNo: sub.noRegistrasi || sub.id,
+          userNama: sub.nama || sub.user?.nama || "Responden",
+          userEmail: sub.user?.email || "",
+          userKabKota: sub.kabupatenKota || sub.user?.kabupatenKota || sub.user?.instansi || "Kalimantan Timur",
+          namaKegiatan: sub.nama,
+          cabangOlahraga: sub.cabangOlahraga || "-",
+          tanggalLahir: sub.tanggalLahir || sub.responden?.tanggalLahir,
+          jenisKelamin: sub.jenisKelamin || sub.responden?.jenisKelamin,
+          tingkatPenyelenggaraan: sub.kabupatenKota || "-",
+          sumberPendanaan: sub.nomorTelepon || "-",
+          medali: null,
+          uraianCapaian: `NIK: ${sub.nik || "-"} | Tgl Lahir: ${sub.tanggalLahir ? new Date(sub.tanggalLahir).toLocaleDateString("id-ID") : "-"} | Kec: ${sub.kecamatan || "-"}`,
+          status: sub.status || "Menunggu Review",
+          recordIndex: 0,
+          evidenceKey: key,
+          evidence: evidence || null,
+          createdAt: sub.createdAt,
+          responden: {
+            id: sub.id,
+            nik: sub.nik,
+            nama: sub.nama,
+            jenisKelamin: sub.jenisKelamin || sub.responden?.jenisKelamin,
+            tanggalLahir: sub.tanggalLahir || sub.responden?.tanggalLahir,
+            kabupatenKota: sub.kabupatenKota,
+            kecamatan: sub.kecamatan,
+            cabangOlahraga: sub.cabangOlahraga,
+            nomorTelepon: sub.nomorTelepon,
+          },
+        });
+      } else if (Array.isArray(sub.indicatorRecords)) {
         sub.indicatorRecords
           .filter((rec: any) => rec.indicatorId === activeIndicatorId)
           .forEach((rec: any, idx: number) => {
@@ -364,7 +514,7 @@ export default function KuesionerPage() {
               ...rec,
               submissionId: sub.id,
               submissionNo: sub.noRegistrasi || sub.id,
-              userNama: sub.user?.nama || "Operator",
+              userNama: rec.responden?.nama || sub.user?.nama || "Operator",
               userEmail: sub.user?.email || "",
               userKabKota: rec.responden?.kabupatenKota || sub.user?.kabupatenKota || sub.user?.instansi || "Kalimantan Timur",
               recordIndex: idx,
@@ -452,7 +602,7 @@ export default function KuesionerPage() {
   const handleExcelUpload = async (file: File) => {
     if (!file) return;
 
-    if (!selectedUploadResponden) {
+    if (activeIndicatorId !== 1 && !selectedUploadResponden) {
       setUploadError("Pilih responden terlebih dahulu.");
       return;
     }
@@ -470,7 +620,9 @@ export default function KuesionerPage() {
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("respondenNik", selectedUploadResponden);
+      if (activeIndicatorId !== 1 && selectedUploadResponden) {
+        formData.append("respondenNik", selectedUploadResponden);
+      }
 
       if (targetSubmissionId) {
         formData.append("submissionId", targetSubmissionId);
@@ -503,7 +655,7 @@ export default function KuesionerPage() {
         }
       }
 
-      setNotification(`Berhasil mengunggah file Excel untuk Indikator-${String(activeIndicatorId).padStart(2, "0")}`);
+      setNotification(`Berhasil mengunggah file Excel untuk Kategori-${String(activeIndicatorId).padStart(2, "0")}`);
       setTimeout(() => setNotification(null), 4000);
       setShowUploadExcelModal(false);
       await loadSubmissions();
@@ -571,49 +723,29 @@ export default function KuesionerPage() {
 
   // Download Template Excel
   const handleDownloadTemplate = () => {
-    const isMedal = activeIndicatorId === 1 || activeIndicatorId === 6;
-    let templateData: any[] = [];
-
-    if (isMedal) {
-      templateData = [
-        {
-          "Nama Kegiatan/ Kejuaraan Olahraga": "Kejuaraan Pelajar Tingkat Nasional 2026",
-          "Cabang Olahraga": "Atletik",
-          "Tingkat Penyelenggara": "Tk. Nasional",
-          "Sumber Pendanaan": "APBD Kaltim",
-          Medali: "Medali Emas",
-          "Uraian Capaian": "Juara 1 Lari 100m Pelajar",
-        },
-      ];
-    } else {
-      templateData = [
-        {
-          "Nama Kegiatan/ Kejuaraan Olahraga": "Penataran Wasit/Juri Lisensi 2026",
-          "Cabang Olahraga": "Renang",
-          "Tingkat Penyelenggaraan": "Tk. Provinsi",
-          "Sumber Pendanaan": "Dispora Kaltim",
-          "Uraian Capaian": "Lulus sertifikasi wasit tingkat nasional",
-        },
-      ];
+    const templateFileName = FULL_TEMPLATE_NAMES[activeIndicatorId];
+    if (templateFileName) {
+      const link = document.createElement("a");
+      link.href = `/templates/${encodeURIComponent(templateFileName)}`;
+      link.download = templateFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
-
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Indikator ${activeIndicatorId}`);
-    XLSX.writeFile(wb, `Template_Indikator_${activeIndicatorId}.xlsx`);
   };
 
-  // Calculate Indicator Distribution Data (Indikator 1 s.d. 8)
+  // Calculate Category Distribution Data (Kategori 1 s.d. 9)
   const indicatorStats = useMemo(() => {
     const shortTitlesMap: Record<number, string> = {
-      1: "Kejuaraan Pelajar",
-      2: "Mutu SDM Olahraga",
-      3: "Pelatih Berlisensi",
-      4: "Database Wasit",
-      5: "Wasit Bertugas",
-      6: "Atlet Tim Nasional",
-      7: "Event Keolahragaan",
-      8: "Olahraga Rekreasi",
+      1: "Data Responden",
+      2: "Kejuaraan Pelajar",
+      3: "Mutu SDM Olahraga",
+      4: "Pelatih Berlisensi",
+      5: "Database Wasit",
+      6: "Wasit Bertugas",
+      7: "Atlet Tim Nasional",
+      8: "Event Keolahragaan",
+      9: "Olahraga Rekreasi",
     };
 
     const targetSubmissions = submissionsList.filter((sub) => {
@@ -628,7 +760,17 @@ export default function KuesionerPage() {
       let verified = 0;
 
       targetSubmissions.forEach((sub) => {
-        if (Array.isArray(sub.indicatorRecords)) {
+        if (ind.id === 1) {
+          count += 1;
+          const key = `${sub.id}_ind1_${sub.id}`;
+          if (
+            rowValidationFiles[key] ||
+            (Array.isArray(sub.validationEvidences) &&
+              sub.validationEvidences.some((e: any) => e.formType === "1" || e.formType === "RESPONDEN"))
+          ) {
+            verified += 1;
+          }
+        } else if (Array.isArray(sub.indicatorRecords)) {
           sub.indicatorRecords
             .filter((rec: any) => rec.indicatorId === ind.id)
             .forEach((rec: any, idx: number) => {
@@ -645,7 +787,7 @@ export default function KuesionerPage() {
 
       return {
         id: ind.id,
-        codeStr: `Indikator-${String(ind.id).padStart(2, "0")}`,
+        codeStr: `Kategori-${String(ind.id).padStart(2, "0")}`,
         title: shortTitlesMap[ind.id] || ind.title,
         fullTitle: ind.title,
         count,
@@ -683,30 +825,30 @@ export default function KuesionerPage() {
               PILIH KATEGORI EVALUASI
             </h2>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="hidden sm:flex bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 font-bold text-xs px-4 py-2 rounded-xl items-center gap-2 transition-all"
+          <a
+            href="/templates/Semua_Template_Kuesioner.zip"
+            download="Semua_Template_Kuesioner.zip"
+            className="hidden sm:flex bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs px-4 py-2 rounded-xl items-center gap-2 transition-all cursor-pointer"
           >
             <Download className="w-4 h-4 text-slate-500" />
             <span>Download Semua Format (ZIP)</span>
-          </Button>
+          </a>
         </div>
 
         {/* Tab Buttons */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2.5">
           {SURVEY_INDICATORS.map((ind) => {
             const isActive = ind.id === activeIndicatorId;
-            const codeStr = `Indikator-${String(ind.id).padStart(2, "0")}`;
             const shortTitles: Record<number, string> = {
-              1: "Kejuaraan Pelajar",
-              2: "Mutu SDM Olahraga",
-              3: "Pelatih Berlisensi",
-              4: "Database Wasit",
-              5: "Wasit Bertugas",
-              6: "Atlet Tim Nasional",
-              7: "Event Keolahragaan",
-              8: "Olahraga Rekreasi",
+              1: "Data Responden",
+              2: "Kejuaraan Pelajar",
+              3: "Mutu SDM Olahraga",
+              4: "Pelatih Berlisensi",
+              5: "Database Wasit",
+              6: "Wasit Bertugas",
+              7: "Atlet Tim Nasional",
+              8: "Event Keolahragaan",
+              9: "Olahraga Rekreasi",
             };
 
             return (
@@ -714,22 +856,22 @@ export default function KuesionerPage() {
                 key={ind.id}
                 type="button"
                 onClick={() => setActiveIndicatorId(ind.id)}
-                className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border text-center transition-all duration-150 group h-full ${
+                className={`flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-2xl border text-center transition-all duration-150 group h-full ${
                   isActive
                     ? "bg-[#0b1f18] text-white border-emerald-400 shadow-md ring-1 ring-emerald-400"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                 }`}
               >
                 <span
-                  className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md mb-2 border ${
+                  className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md mb-1.5 border ${
                     isActive 
                       ? "bg-emerald-400 text-slate-900 border-emerald-400" 
                       : "bg-slate-50 text-slate-500 border-slate-200"
                   }`}
                 >
-                  INDIKATOR-{String(ind.id).padStart(2, "0")}
+                  KATEGORI-{String(ind.id).padStart(2, "0")}
                 </span>
-                <span className={`text-xs sm:text-sm font-bold leading-tight ${isActive ? "text-white" : "text-slate-800"}`}>
+                <span className={`text-[11px] sm:text-xs font-bold leading-tight ${isActive ? "text-white" : "text-slate-800"}`}>
                   {shortTitles[ind.id] || ind.title}
                 </span>
               </button>
@@ -745,10 +887,10 @@ export default function KuesionerPage() {
             {/* Badges */}
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="bg-emerald-400 text-slate-900 border-none text-xs font-extrabold px-3 py-1 rounded-md uppercase tracking-wider">
-                INDIKATOR-{String(currentIndicator.id).padStart(2, "0")}
+                KATEGORI-{String(currentIndicator.id).padStart(2, "0")}
               </span>
               <span className="bg-white/10 text-emerald-50 border border-white/5 text-xs font-medium px-3 py-1 rounded-full">
-                Olahraga Prestasi &amp; Pelajar
+                {currentIndicator.id === 1 ? "Identitas & Profil Responden" : "Olahraga Prestasi & Pelajar"}
               </span>
             </div>
 
@@ -769,11 +911,38 @@ export default function KuesionerPage() {
               <>
                 <Button
                   type="button"
-                  onClick={() => setShowManualModal(true)}
+                  onClick={() => {
+                    setUploadError(null);
+                    if (activeIndicatorId === 1) {
+                      setRespondenFormData({
+                        id: "",
+                        nama: "",
+                        nik: "",
+                        jenisKelamin: "Laki-laki",
+                        tanggalLahir: "",
+                        kabupatenKota: currentUser?.kabupatenKota || "",
+                        kecamatan: "",
+                        cabangOlahraga: "",
+                        nomorTelepon: "",
+                      });
+                    } else {
+                      setManualFormData({
+                        id: "",
+                        respondenNik: "",
+                        namaKegiatan: "",
+                        cabangOlahraga: "",
+                        tingkatPenyelenggaraan: "",
+                        medali: "",
+                        sumberPendanaan: "",
+                        uraianCapaian: "",
+                      });
+                    }
+                    setShowManualModal(true);
+                  }}
                   className="w-full bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-bold text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border-none"
                 >
                   <span className="text-lg leading-none mb-0.5">+</span>
-                  <span>Tambah Entri Kegiatan</span>
+                  <span>{activeIndicatorId === 1 ? "Tambah Data Responden" : "Tambah Entri Kegiatan"}</span>
                 </Button>
 
                 <Button
@@ -799,7 +968,7 @@ export default function KuesionerPage() {
               className="w-full bg-white/5 hover:bg-white/10 text-emerald-300 font-medium text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 border border-emerald-700/50 transition-all"
             >
               <Download className="w-4 h-4 text-emerald-300" />
-              <span>Unduh Format Excel (INDIKATOR-{String(activeIndicatorId).padStart(2, "0")})</span>
+              <span>Unduh Format Excel (KATEGORI-{String(activeIndicatorId).padStart(2, "0")})</span>
             </Button>
           </div>
         </div>
@@ -960,7 +1129,7 @@ export default function KuesionerPage() {
           <div>
             <div className="flex items-center gap-3">
               <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <span>Daftar Submisi Indikator-{String(activeIndicatorId).padStart(2, "0")}: {currentIndicator.title}</span>
+                <span>Daftar Submisi Kategori-{String(activeIndicatorId).padStart(2, "0")}: {currentIndicator.title}</span>
               </h3>
               <Badge variant="success" className="rounded-full px-3 text-[11px]">
                 {filteredRecords.length} entri
@@ -1001,7 +1170,7 @@ export default function KuesionerPage() {
             <p className="text-xs text-slate-500 max-w-md mx-auto">
               {allRecords.length > 0 || searchQuery || selectedWilayah || selectedTingkat || selectedMedali || selectedStatusBerkas
                 ? "Silakan coba ubah kata kunci pencarian atau sesuaikan opsi filter Anda."
-                : `Silakan unggah berkas Excel sesuai dengan template resmi untuk mengisikan data pada Indikator-${String(activeIndicatorId).padStart(2, "0")}.`}
+                : `Silakan unggah berkas Excel sesuai dengan template resmi untuk mengisikan data pada Kategori-${String(activeIndicatorId).padStart(2, "0")}.`}
             </p>
           </div>
         ) : (
@@ -1010,8 +1179,17 @@ export default function KuesionerPage() {
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
                   <th className="py-3.5 px-4">ATLET / RESPONDEN</th>
-                  <th className="py-3.5 px-4">NAMA KEGIATAN</th>
-                  <th className="py-3.5 px-4">{(activeIndicatorId === 1 || activeIndicatorId === 6) ? "JENJANG & CAPAIAN" : "JENJANG"}</th>
+                  {activeIndicatorId === 1 ? (
+                    <>
+                      <th className="py-3.5 px-4">TANGGAL LAHIR</th>
+                      <th className="py-3.5 px-4">CABANG OLAHRAGA</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="py-3.5 px-4">NAMA KEGIATAN</th>
+                      <th className="py-3.5 px-4">{(activeIndicatorId === 2 || activeIndicatorId === 7) ? "JENJANG & CAPAIAN" : "JENJANG / DETAIL"}</th>
+                    </>
+                  )}
                   <th className="py-3.5 px-4">WILAYAH</th>
                   <th className="py-3.5 px-4 text-center">BUKTI PDF</th>
                   <th className="py-3.5 px-4 text-center">STATUS VALIDASI</th>
@@ -1021,7 +1199,7 @@ export default function KuesionerPage() {
               <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
                 {paginatedRecords.map((rec, index) => {
                   const isUploadingPdf = uploadingEvidences[rec.evidenceKey];
-                  const hasMedali = activeIndicatorId === 1 || activeIndicatorId === 6;
+                  const hasMedali = activeIndicatorId === 2 || activeIndicatorId === 7;
                   const isAdmin = currentUser?.role === "ADMIN";
 
                   return (
@@ -1036,23 +1214,63 @@ export default function KuesionerPage() {
                         </div>
                       </td>
 
-                      {/* NAMA KEGIATAN */}
-                      <td className="py-3.5 px-4 max-w-[220px]">
-                        <div className="font-bold text-slate-900">{rec.namaKegiatan || "-"}</div>
-                        <div className="text-[11px] text-slate-500 truncate" title={rec.cabangOlahraga}>
-                          {rec.cabangOlahraga || "-"}
-                        </div>
-                      </td>
+                      {activeIndicatorId === 1 ? (
+                        <>
+                          {/* TANGGAL LAHIR */}
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-slate-900">
+                              {rec.responden?.tanggalLahir
+                                ? new Date(rec.responden.tanggalLahir).toLocaleDateString("id-ID", {
+                                    day: "numeric",
+                                    month: "long",
+                                    year: "numeric",
+                                  })
+                                : rec.tanggalLahir
+                                ? new Date(rec.tanggalLahir).toLocaleDateString("id-ID", {
+                                    day: "numeric",
+                                    month: "long",
+                                    year: "numeric",
+                                  })
+                                : "-"}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {rec.responden?.jenisKelamin === "PEREMPUAN" || rec.jenisKelamin === "PEREMPUAN"
+                                ? "Perempuan"
+                                : rec.responden?.jenisKelamin === "LAKI_LAKI" || rec.jenisKelamin === "LAKI_LAKI"
+                                ? "Laki-laki"
+                                : "-"}
+                            </div>
+                          </td>
 
-                      {/* JENJANG & CAPAIAN */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{rec.tingkatPenyelenggaraan || "-"}</div>
-                        {hasMedali && rec.medali && (
-                          <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
-                            {rec.medali}
-                          </span>
-                        )}
-                      </td>
+                          {/* CABANG OLAHRAGA */}
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-slate-900">{rec.responden?.cabangOlahraga || rec.cabangOlahraga || "-"}</div>
+                            <div className="text-[11px] text-slate-500">
+                              No. HP: {rec.responden?.nomorTelepon || rec.sumberPendanaan || "-"}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          {/* NAMA KEGIATAN */}
+                          <td className="py-3.5 px-4 max-w-[220px]">
+                            <div className="font-bold text-slate-900">{rec.namaKegiatan || "-"}</div>
+                            <div className="text-[11px] text-slate-500 truncate" title={rec.cabangOlahraga}>
+                              {rec.cabangOlahraga || "-"}
+                            </div>
+                          </td>
+
+                          {/* JENJANG & CAPAIAN */}
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-slate-900">{rec.tingkatPenyelenggaraan || "-"}</div>
+                            {hasMedali && rec.medali && (
+                              <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                                {rec.medali}
+                              </span>
+                            )}
+                          </td>
+                        </>
+                      )}
 
                       {/* WILAYAH */}
                       <td className="py-3.5 px-4">
@@ -1185,16 +1403,40 @@ export default function KuesionerPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setManualFormData({
-                                  id: rec.id,
-                                  respondenNik: rec.respondenNik || "",
-                                  namaKegiatan: rec.namaKegiatan || "",
-                                  cabangOlahraga: rec.cabangOlahraga || "",
-                                  tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan || "",
-                                  medali: rec.medali || "",
-                                  sumberPendanaan: rec.sumberPendanaan || "",
-                                  uraianCapaian: rec.uraianCapaian || "",
-                                });
+                                setUploadError(null);
+                                if (activeIndicatorId === 1) {
+                                  const r = rec.responden || rec;
+                                  let birthStr = "";
+                                  if (r.tanggalLahir) {
+                                    try {
+                                      birthStr = new Date(r.tanggalLahir).toISOString().split("T")[0];
+                                    } catch (e) {
+                                      birthStr = "";
+                                    }
+                                  }
+                                  setRespondenFormData({
+                                    id: r.id || rec.id || "",
+                                    nama: r.nama || rec.userNama || "",
+                                    nik: r.nik || "",
+                                    jenisKelamin: (r.jenisKelamin || "").toLowerCase().includes("perempuan") ? "Perempuan" : "Laki-laki",
+                                    tanggalLahir: birthStr,
+                                    kabupatenKota: r.kabupatenKota || rec.userKabKota || "",
+                                    kecamatan: r.kecamatan || "",
+                                    cabangOlahraga: r.cabangOlahraga || rec.cabangOlahraga || "",
+                                    nomorTelepon: r.nomorTelepon || "",
+                                  });
+                                } else {
+                                  setManualFormData({
+                                    id: rec.id,
+                                    respondenNik: rec.respondenNik || rec.responden?.nik || "",
+                                    namaKegiatan: rec.namaKegiatan || "",
+                                    cabangOlahraga: rec.cabangOlahraga || "",
+                                    tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan || "",
+                                    medali: rec.medali || "",
+                                    sumberPendanaan: rec.sumberPendanaan || "",
+                                    uraianCapaian: rec.uraianCapaian || "",
+                                  });
+                                }
                                 setShowManualModal(true);
                               }}
                               className="h-8 w-8 p-0 rounded-xl border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all shadow-xs"
@@ -1461,17 +1703,24 @@ export default function KuesionerPage() {
             </div>
           </div>
       </Modal>
-      {/* 9. MODAL FORM MANUAL TAMBAH/EDIT ENTRI */}
+      {/* 9. MODAL FORM MANUAL TAMBAH/EDIT ENTRI / RESPONDEN */}
       <Modal isOpen={showManualModal} onClose={() => setShowManualModal(false)}>
-        <div className="bg-white rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden">
+        <div className={`bg-white rounded-3xl ${activeIndicatorId === 1 ? 'max-w-2xl' : 'max-w-lg'} w-full flex flex-col shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-hidden`}>
             
             <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700">
-                  <FileText className="w-5 h-5" />
+                  {activeIndicatorId === 1 ? <User className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Entri Kegiatan Manual</h3>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {activeIndicatorId === 1
+                      ? (respondenFormData.id ? "Edit Data Responden" : "Formulir Pendaftaran Responden Baru")
+                      : (manualFormData.id ? "Edit Entri Kegiatan" : "Entri Kegiatan Manual")}
+                  </h3>
+                  {activeIndicatorId === 1 && (
+                    <p className="text-xs text-slate-500">Kalkulasi usia otomatis berdasarkan tanggal lahir responden</p>
+                  )}
                 </div>
               </div>
               <button
@@ -1483,114 +1732,255 @@ export default function KuesionerPage() {
               </button>
             </div>
             
-              <div className="p-6 pt-2 space-y-4 overflow-y-auto custom-scrollbar">
+            <div className="p-6 pt-2 space-y-4 overflow-y-auto custom-scrollbar">
               {uploadError && (
                 <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs font-medium flex gap-2 items-start mt-2 pb-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                   <div className="break-words w-full">
                     <p className="opacity-90">{uploadError}</p>
                   </div>
                 </div>
               )}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Pilih Responden *</label>
-                <select
-                  value={manualFormData.respondenNik}
-                  onChange={(e) => setManualFormData({ ...manualFormData, respondenNik: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                >
-                  <option value="" disabled>Pilih Responden...</option>
-                  {respondensList.map((r) => (
-                    <option key={r.nik} value={r.nik}>
-                      {r.nama} - NIK: {r.nik}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Nama Kegiatan / Ajang Kejuaraan *</label>
-                <input 
-                  type="text" 
-                  value={manualFormData.namaKegiatan}
-                  onChange={(e) => setManualFormData({ ...manualFormData, namaKegiatan: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
-                />
-              </div>
+              {activeIndicatorId === 1 ? (
+                /* FORM RESPONDEN BARU / EDIT (KATEGORI 1) */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Nama Lengkap & Gelar *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Muhammad Ilham, S.Pd."
+                        value={respondenFormData.nama}
+                        onChange={(e) => setRespondenFormData({ ...respondenFormData, nama: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">NIK *</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={16}
+                        placeholder="16 Digit NIK"
+                        value={respondenFormData.nik}
+                        onChange={(e) => setRespondenFormData({ ...respondenFormData, nik: e.target.value.replace(/\D/g, '') })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Cabang Olahraga *</label>
-                  <input 
-                    type="text" 
-                    value={manualFormData.cabangOlahraga}
-                    onChange={(e) => setManualFormData({ ...manualFormData, cabangOlahraga: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-700">Jenis Kelamin *</label>
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <label className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-bold ${respondenFormData.jenisKelamin === 'Laki-laki' ? 'bg-emerald-50/50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                          <input
+                            type="radio"
+                            name="modalJenisKelamin"
+                            value="Laki-laki"
+                            checked={respondenFormData.jenisKelamin === 'Laki-laki'}
+                            onChange={(e) => setRespondenFormData({ ...respondenFormData, jenisKelamin: e.target.value })}
+                            className="hidden"
+                          />
+                          Laki-laki
+                        </label>
+                        <label className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-bold ${respondenFormData.jenisKelamin === 'Perempuan' ? 'bg-emerald-50/50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                          <input
+                            type="radio"
+                            name="modalJenisKelamin"
+                            value="Perempuan"
+                            checked={respondenFormData.jenisKelamin === 'Perempuan'}
+                            onChange={(e) => setRespondenFormData({ ...respondenFormData, jenisKelamin: e.target.value })}
+                            className="hidden"
+                          />
+                          Perempuan
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-700">Tanggal Lahir *</label>
+                      <input
+                        type="date"
+                        required
+                        value={respondenFormData.tanggalLahir}
+                        onChange={(e) => setRespondenFormData({ ...respondenFormData, tanggalLahir: e.target.value })}
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-700">Usia (Otomatis)</label>
+                      <input
+                        type="text"
+                        disabled
+                        value={respondenUsia}
+                        className="w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-500 cursor-not-allowed font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Kabupaten / Kota *</label>
+                      <select
+                        required
+                        value={respondenFormData.kabupatenKota}
+                        onChange={(e) => setRespondenFormData({ ...respondenFormData, kabupatenKota: e.target.value, kecamatan: "" })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none"
+                      >
+                        <option value="" disabled hidden>Pilih Kabupaten / Kota...</option>
+                        {Object.keys(KALTIM_DATA).map((kab) => (
+                          <option key={kab} value={kab}>{kab}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Kecamatan Asal *</label>
+                      <select
+                        required
+                        disabled={!respondenFormData.kabupatenKota}
+                        value={respondenFormData.kecamatan}
+                        onChange={(e) => setRespondenFormData({ ...respondenFormData, kecamatan: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="" disabled hidden>Pilih Kecamatan...</option>
+                        {respondenKecamatanList.map((kec: string) => (
+                          <option key={kec} value={kec}>{kec}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Cabang Olahraga / Afiliasi *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Atletik / Taekwondo"
+                        value={respondenFormData.cabangOlahraga}
+                        onChange={(e) => setRespondenFormData({ ...respondenFormData, cabangOlahraga: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">No. Telepon / WhatsApp *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="0812-xxxx-xxxx"
+                        value={respondenFormData.nomorTelepon}
+                        onChange={(e) => setRespondenFormData({ ...respondenFormData, nomorTelepon: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700">Tingkat Penyelenggara *</label>
-                  <select 
-                    value={manualFormData.tingkatPenyelenggaraan}
-                    onChange={(e) => setManualFormData({ ...manualFormData, tingkatPenyelenggaraan: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-                  >
-                    <option value="" disabled>Pilih Opsi...</option>
-                    <option value="Provinsi">Provinsi</option>
-                    <option value="Nasional">Nasional</option>
-                    <option value="Internasional">Internasional</option>
-                  </select>
-                </div>
-              </div>
-
-              {(activeIndicatorId === 1 || activeIndicatorId === 6) && (
-                <div className="grid grid-cols-2 gap-4">
+              ) : (
+                /* FORM ENTRI KEGIATAN MANUAL (KATEGORI 2-9) */
+                <>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Capaian Medali *</label>
-                    <select 
-                      value={manualFormData.medali}
-                      onChange={(e) => setManualFormData({ ...manualFormData, medali: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                    <label className="text-xs font-bold text-slate-700">Pilih Responden *</label>
+                    <select
+                      value={manualFormData.respondenNik}
+                      onChange={(e) => setManualFormData({ ...manualFormData, respondenNik: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
                     >
-                      <option value="" disabled>Pilih Opsi...</option>
-                      <option value="Emas">Emas</option>
-                      <option value="Perak">Perak</option>
-                      <option value="Perunggu">Perunggu</option>
-                      <option value="Partisipasi">Partisipasi</option>
+                      <option value="" disabled>Pilih Responden...</option>
+                      {respondensList.map((r) => (
+                        <option key={r.nik} value={r.nik}>
+                          {r.nama} - NIK: {r.nik}
+                        </option>
+                      ))}
                     </select>
                   </div>
+
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700">Sumber Pendanaan *</label>
-                    <select 
-                      value={manualFormData.sumberPendanaan}
-                      onChange={(e) => setManualFormData({ ...manualFormData, sumberPendanaan: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
-                    >
-                      <option value="" disabled>Pilih Opsi...</option>
-                      <option value="APBD (Daerah)">APBD (Daerah)</option>
-                      <option value="APBN (Pusat/Kemenpora)">APBN (Pusat/Kemenpora)</option>
-                      <option value="Swasta / Sponsorship">Swasta / Sponsorship</option>
-                      <option value="Kombinasi (Pemerintah & Swasta)">Kombinasi (Pemerintah & Swasta)</option>
-                      <option value="Mandiri">Mandiri</option>
-                    </select>
+                    <label className="text-xs font-bold text-slate-700">Nama Kegiatan / Ajang Kejuaraan *</label>
+                    <input 
+                      type="text" 
+                      value={manualFormData.namaKegiatan}
+                      onChange={(e) => setManualFormData({ ...manualFormData, namaKegiatan: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
+                    />
                   </div>
-                </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Cabang Olahraga *</label>
+                      <input 
+                        type="text" 
+                        value={manualFormData.cabangOlahraga}
+                        onChange={(e) => setManualFormData({ ...manualFormData, cabangOlahraga: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Tingkat Penyelenggara *</label>
+                      <select 
+                        value={manualFormData.tingkatPenyelenggaraan}
+                        onChange={(e) => setManualFormData({ ...manualFormData, tingkatPenyelenggaraan: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                      >
+                        <option value="" disabled>Pilih Opsi...</option>
+                        <option value="Provinsi">Provinsi</option>
+                        <option value="Nasional">Nasional</option>
+                        <option value="Internasional">Internasional</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {(activeIndicatorId === 2 || activeIndicatorId === 7) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">Capaian Medali *</label>
+                        <select 
+                          value={manualFormData.medali}
+                          onChange={(e) => setManualFormData({ ...manualFormData, medali: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                        >
+                          <option value="" disabled>Pilih Opsi...</option>
+                          <option value="Emas">Emas</option>
+                          <option value="Perak">Perak</option>
+                          <option value="Perunggu">Perunggu</option>
+                          <option value="Partisipasi">Partisipasi</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">Sumber Pendanaan *</label>
+                        <select 
+                          value={manualFormData.sumberPendanaan}
+                          onChange={(e) => setManualFormData({ ...manualFormData, sumberPendanaan: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                        >
+                          <option value="" disabled>Pilih Opsi...</option>
+                          <option value="APBD (Daerah)">APBD (Daerah)</option>
+                          <option value="APBN (Pusat/Kemenpora)">APBN (Pusat/Kemenpora)</option>
+                          <option value="Swasta / Sponsorship">Swasta / Sponsorship</option>
+                          <option value="Kombinasi (Pemerintah & Swasta)">Kombinasi (Pemerintah & Swasta)</option>
+                          <option value="Mandiri">Mandiri</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                     <label className="text-xs font-bold text-slate-700">Uraian Capaian</label>
+                     <textarea 
+                        rows={3} 
+                        value={manualFormData.uraianCapaian}
+                        onChange={(e) => setManualFormData({ ...manualFormData, uraianCapaian: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
+                        placeholder="Masukkan detail capaian..."
+                     ></textarea>
+                  </div>
+                </>
               )}
-
-              <div className="space-y-1.5">
-                 <label className="text-xs font-bold text-slate-700">Uraian Capaian</label>
-                 <textarea 
-                    rows={3} 
-                    value={manualFormData.uraianCapaian}
-                    onChange={(e) => setManualFormData({ ...manualFormData, uraianCapaian: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" 
-                    placeholder="Masukkan detail capaian..."
-                 ></textarea>
-              </div>
-
-              <div className="space-y-1.5 pb-2">
-                <label className="text-xs font-bold text-slate-700">Berkas Bukti Fisik PDF (Opsional)</label>
-                <input type="file" accept=".pdf" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
-              </div>
             </div>
             
             <div className="p-6 pt-4 border-t border-slate-100 shrink-0 flex justify-end gap-3">
@@ -1600,7 +1990,7 @@ export default function KuesionerPage() {
                 disabled={isSubmittingManual}
                 onClick={handleManualSubmit}
               >
-                {isSubmittingManual ? "Menyimpan..." : "Simpan Entri Kegiatan"}
+                {isSubmittingManual ? "Menyimpan..." : (activeIndicatorId === 1 ? (respondenFormData.id ? "Simpan Perubahan" : "Simpan Responden") : "Simpan Entri Kegiatan")}
               </Button>
             </div>
           </div>
@@ -1617,7 +2007,7 @@ export default function KuesionerPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Unggah File Excel</h3>
-                  <p className="text-xs text-slate-500">Isi otomatis data Indikator-{String(activeIndicatorId).padStart(2, "0")}</p>
+                  <p className="text-xs text-slate-500">Isi otomatis data Kategori-{String(activeIndicatorId).padStart(2, "0")}</p>
                 </div>
               </div>
               <button
@@ -1630,21 +2020,23 @@ export default function KuesionerPage() {
             </div>
             
             <div className="p-6 pt-2 space-y-4 overflow-y-auto custom-scrollbar">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Pilih Responden *</label>
-                <select
-                  value={selectedUploadResponden}
-                  onChange={(e) => setSelectedUploadResponden(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                >
-                  <option value="" disabled>Pilih Responden...</option>
-                  {respondensList.map((r) => (
-                    <option key={r.id} value={r.nik}>
-                      {r.nama} - NIK: {r.nik}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {activeIndicatorId !== 1 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700">Pilih Responden *</label>
+                  <select
+                    value={selectedUploadResponden}
+                    onChange={(e) => setSelectedUploadResponden(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                  >
+                    <option value="" disabled>Pilih Responden...</option>
+                    {respondensList.map((r) => (
+                      <option key={r.id} value={r.nik}>
+                        {r.nama} - NIK: {r.nik}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Area Dropzone */}
               <div className="space-y-1.5 pt-2">

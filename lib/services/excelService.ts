@@ -9,7 +9,8 @@ export interface ValidationErrorDetail {
   message: string;
 }
 
-export interface ParsedIndicatorRecordData {
+export interface ParsedCategoryRecordData {
+  categoryId: number;
   indicatorId: number;
   namaKegiatan: string;
   cabangOlahraga: string;
@@ -19,8 +20,24 @@ export interface ParsedIndicatorRecordData {
   uraianCapaian: string;
 }
 
+export type ParsedIndicatorRecordData = ParsedCategoryRecordData;
+
+export interface ParsedRespondenRecordData {
+  nama: string;
+  nik: string;
+  jenisKelamin: string;
+  tanggalLahir: string;
+  umur: string;
+  kabupatenKota: string;
+  kecamatan: string;
+  cabangOlahraga: string;
+  nomorTelepon: string;
+}
+
 export interface ExcelParseResult {
-  indicatorRecords: ParsedIndicatorRecordData[];
+  categoryRecords: ParsedCategoryRecordData[];
+  indicatorRecords: ParsedCategoryRecordData[];
+  respondenRecords?: ParsedRespondenRecordData[];
   errors: ValidationErrorDetail[];
 }
 
@@ -43,17 +60,19 @@ function formatCellValue(val: any): string {
 
 // Zod schemas for row content validation
 const identitasZodSchema = z.object({
-  namaLengkap: z.string().min(1, "Nama Lengkap & Gelar wajib diisi"),
-  jenisKelamin: z.string().min(1, "Jenis Kelamin wajib diisi"),
-  tanggalLahir: z.string().min(1, "Tanggal Lahir wajib diisi"),
-  umur: z.string().min(1, "Umur wajib diisi"),
-  kabupatenKotaAsal: z.string().min(1, "Kabupaten/ Kota Asal wajib diisi"),
-  kecamatan: z.string().min(1, "Kecamatan wajib diisi"),
-  pekerjaanJabatan: z.string().min(1, "Pekerjaan/ Jabatan di Bidang Olahraga wajib diisi"),
-  nomorTelepon: z.string().min(1, "Nomor Telepon/ Whatsapp Aktif wajib diisi"),
+  nama: z.string().min(1, "Nama Lengkap & Gelar wajib diisi"),
+  nik: z.string().optional().default("-"),
+  jenisKelamin: z.string().optional().default("Laki-laki"),
+  tanggalLahir: z.string().optional().default("1990-01-01"),
+  umur: z.string().optional().default("-"),
+  kabupatenKota: z.string().optional().default("Samarinda"),
+  kecamatan: z.string().optional().default("-"),
+  cabangOlahraga: z.string().optional().default("-"),
+  nomorTelepon: z.string().optional().default("-"),
 });
 
-const indicatorZodSchema = z.object({
+const categoryZodSchema = z.object({
+  categoryId: z.number().int(),
   indicatorId: z.number().int(),
   namaKegiatan: z.string().min(1, "Nama Kegiatan/ Kejuaraan Olahraga wajib diisi"),
   cabangOlahraga: z.string().min(1, "Cabang Olahraga wajib diisi"),
@@ -66,13 +85,14 @@ const indicatorZodSchema = z.object({
 // Dictionary of allowed headers per column index
 const IDENTITY_COLUMN_ALIASES: Record<number, { name: string; aliases: string[] }> = {
   0: { name: "Nama Lengkap & Gelar", aliases: ["nama", "nama lengkap", "nama lengkap & gelar"] },
-  1: { name: "Jenis Kelamin", aliases: ["jenis kelamin", "kelamin", "jk"] },
-  2: { name: "Tanggal Lahir", aliases: ["tanggal lahir", "tgl lahir", "tgl"] },
-  3: { name: "Umur", aliases: ["umur", "usia"] },
-  4: { name: "Kabupaten/ Kota Asal", aliases: ["kabupaten", "kota", "kabupaten/ kota asal", "kabupaten/kota asal", "kabupaten / kota asal", "kabupaten kota asal", "asal"] },
-  5: { name: "Kecamatan", aliases: ["kecamatan"] },
-  6: { name: "Pekerjaan/ Jabatan di Bidang Olahraga", aliases: ["pekerjaan", "jabatan", "pekerjaan/ jabatan di bidang olahraga", "pekerjaan/jabatan di bidang olahraga", "pekerjaan / jabatan di bidang olahraga", "pekerjaan/jabatan"] },
-  7: { name: "Nomor Telepon/ Whatsapp Aktif", aliases: ["nomor telepon", "telepon", "whatsapp", "wa", "hp", "nomor telepon/ whatsapp aktif", "nomor telepon/whatsapp aktif", "nomor telepon / whatsapp aktif", "nomor whatsapp"] },
+  1: { name: "NIK", aliases: ["nik", "nomor induk kependudukan"] },
+  2: { name: "Jenis Kelamin", aliases: ["jenis kelamin", "kelamin", "jk"] },
+  3: { name: "Tanggal Lahir", aliases: ["tanggal lahir", "tgl lahir", "tgl"] },
+  4: { name: "Umur", aliases: ["umur", "usia"] },
+  5: { name: "Kabupaten/ Kota Asal", aliases: ["kabupaten", "kota", "kabupaten/ kota asal", "kabupaten/kota asal", "kabupaten / kota asal", "kabupaten kota asal", "asal"] },
+  6: { name: "Kecamatan", aliases: ["kecamatan"] },
+  7: { name: "Cabang Olahraga/ Afiliasi Organisasi", aliases: ["cabang olahraga", "cabor", "afiliasi", "organisasi", "cabang olahraga/ afiliasi organisasi"] },
+  8: { name: "Nomor Telepon/ Whatsapp Aktif", aliases: ["nomor telepon", "telepon", "whatsapp", "wa", "hp", "nomor telepon/ whatsapp aktif", "nomor telepon/whatsapp aktif", "nomor telepon / whatsapp aktif", "nomor whatsapp"] },
 };
 
 const INDICATOR_WITH_MEDAL_ALIASES: Record<number, { name: string; aliases: string[] }> = {
@@ -183,7 +203,8 @@ export function parseAndValidateExcelFile(
   fileName: string
 ): ExcelParseResult {
   const errors: ValidationErrorDetail[] = [];
-  const indicatorRecords: ParsedIndicatorRecordData[] = [];
+  const categoryRecords: ParsedCategoryRecordData[] = [];
+  const respondenRecords: ParsedRespondenRecordData[] = [];
 
   try {
     const workbook = XLSX.read(fileBuffer, { type: "buffer", cellDates: true, raw: false });
@@ -193,7 +214,7 @@ export function parseAndValidateExcelFile(
         step,
         message: "File Excel tidak memiliki sheet yang valid.",
       });
-      return { indicatorRecords, errors };
+      return { categoryRecords, indicatorRecords: categoryRecords, respondenRecords, errors };
     }
 
     const sheetName = workbook.SheetNames[0];
@@ -204,7 +225,7 @@ export function parseAndValidateExcelFile(
         step,
         message: `Sheet '${sheetName}' tidak dapat dibaca.`,
       });
-      return { indicatorRecords, errors };
+      return { categoryRecords, indicatorRecords: categoryRecords, respondenRecords, errors };
     }
 
     // Fix cell range boundary in case !ref was outdated
@@ -218,7 +239,7 @@ export function parseAndValidateExcelFile(
         step,
         message: "File Excel kosong.",
       });
-      return { indicatorRecords, errors };
+      return { categoryRecords, indicatorRecords: categoryRecords, respondenRecords, errors };
     }
 
     // Identify header row (first non-empty row)
@@ -236,24 +257,75 @@ export function parseAndValidateExcelFile(
         step,
         message: "Header tidak ditemukan dalam file Excel.",
       });
-      return { indicatorRecords, errors };
+      return { categoryRecords, indicatorRecords: categoryRecords, respondenRecords, errors };
     }
 
     const rawHeaders = rawRows[headerRowIndex].map(normalizeHeader);
     const dataRows = rawRows.slice(headerRowIndex + 1);
 
-    // Step 1 to 8: Indicator files
-    const aliasesConfig = (step === 1 || step === 6) ? INDICATOR_WITH_MEDAL_ALIASES : INDICATOR_STANDARD_ALIASES;
-    const headerCheck = checkTemplateHeaders(rawHeaders, aliasesConfig);
+    if (step === 1) {
+      // Step 1: Responden (Kategori 1)
+      const headerCheck = checkTemplateHeaders(rawHeaders, IDENTITY_COLUMN_ALIASES);
+      if (!headerCheck.valid) {
+        errors.push({
+          file: fileName,
+          step,
+          row: headerRowIndex + 1,
+          message: `Header template Kategori 1 (Data Responden) tidak sesuai. Kolom tidak ditemukan: ${headerCheck.missing.join(", ")}`,
+        });
+        return { categoryRecords, indicatorRecords: categoryRecords, respondenRecords, errors };
+      }
+
+      const idxMap = headerCheck.colIndices;
+
+      for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
+        const row = dataRows[rIdx];
+        if (!row || !row.some((c) => c !== null && c !== undefined && String(c).trim() !== "")) {
+          continue;
+        }
+
+        const displayRow = headerRowIndex + 2 + rIdx;
+        const rawRecord = {
+          nama: formatCellValue(row[idxMap["Nama Lengkap & Gelar"]]),
+          nik: formatCellValue(row[idxMap["NIK"]]),
+          jenisKelamin: formatCellValue(row[idxMap["Jenis Kelamin"]]),
+          tanggalLahir: formatCellValue(row[idxMap["Tanggal Lahir"]]),
+          umur: formatCellValue(row[idxMap["Umur"]]),
+          kabupatenKota: formatCellValue(row[idxMap["Kabupaten/ Kota Asal"]]),
+          kecamatan: formatCellValue(row[idxMap["Kecamatan"]]),
+          cabangOlahraga: formatCellValue(row[idxMap["Cabang Olahraga/ Afiliasi Organisasi"]]),
+          nomorTelepon: formatCellValue(row[idxMap["Nomor Telepon/ Whatsapp Aktif"]]),
+        };
+
+        const valResult = identitasZodSchema.safeParse(rawRecord);
+        if (!valResult.success) {
+          for (const issue of valResult.error.issues) {
+            errors.push({
+              file: fileName,
+              step,
+              row: displayRow,
+              field: issue.path.join("."),
+              message: `Baris ${displayRow}: ${issue.message}`,
+            });
+          }
+        } else {
+          respondenRecords.push(valResult.data as ParsedRespondenRecordData);
+        }
+      }
+    } else {
+      // Step 2 to 9: Category files
+      const isMedalCategory = step === 2 || step === 7;
+      const aliasesConfig = isMedalCategory ? INDICATOR_WITH_MEDAL_ALIASES : INDICATOR_STANDARD_ALIASES;
+      const headerCheck = checkTemplateHeaders(rawHeaders, aliasesConfig);
 
       if (!headerCheck.valid) {
         errors.push({
           file: fileName,
           step,
           row: headerRowIndex + 1,
-          message: `Header template Indikator ${step} tidak sesuai. Kolom tidak ditemukan / salah: ${headerCheck.missing.join(", ")}`,
+          message: `Header template Kategori ${step} tidak sesuai. Kolom tidak ditemukan / salah: ${headerCheck.missing.join(", ")}`,
         });
-        return { indicatorRecords, errors };
+        return { categoryRecords, indicatorRecords: categoryRecords, respondenRecords, errors };
       }
 
       const idxMap = headerCheck.colIndices;
@@ -267,16 +339,17 @@ export function parseAndValidateExcelFile(
         const displayRow = headerRowIndex + 2 + rIdx;
 
         const rawRecord = {
+          categoryId: step,
           indicatorId: step,
           namaKegiatan: formatCellValue(row[idxMap["Nama Kegiatan/ Kejuaraan Olahraga"]]),
           cabangOlahraga: formatCellValue(row[idxMap["Cabang Olahraga"]]),
-          tingkatPenyelenggaraan: formatCellValue(row[idxMap[(step === 1 || step === 6) ? "Tingkat Penyelenggara" : "Tingkat Penyelenggaraan"]]),
+          tingkatPenyelenggaraan: formatCellValue(row[idxMap[isMedalCategory ? "Tingkat Penyelenggara" : "Tingkat Penyelenggaraan"]]),
           sumberPendanaan: formatCellValue(row[idxMap["Sumber Pendanaan"]]),
-          medali: (step === 1 || step === 6) && idxMap["Medali"] !== undefined ? formatCellValue(row[idxMap["Medali"]]) || null : null,
+          medali: isMedalCategory && idxMap["Medali"] !== undefined ? formatCellValue(row[idxMap["Medali"]]) || null : null,
           uraianCapaian: formatCellValue(row[idxMap["Uraian Capaian"]]),
         };
 
-        const valResult = indicatorZodSchema.safeParse(rawRecord);
+        const valResult = categoryZodSchema.safeParse(rawRecord);
         if (!valResult.success) {
           for (const issue of valResult.error.issues) {
             errors.push({
@@ -288,12 +361,14 @@ export function parseAndValidateExcelFile(
             });
           }
         } else {
-          indicatorRecords.push({
+          categoryRecords.push({
             ...valResult.data,
+            categoryId: step,
             indicatorId: step,
-          } as ParsedIndicatorRecordData);
+          } as ParsedCategoryRecordData);
         }
       }
+    }
   } catch (err: any) {
     errors.push({
       file: fileName,
@@ -302,5 +377,6 @@ export function parseAndValidateExcelFile(
     });
   }
 
-  return { indicatorRecords, errors };
+  return { categoryRecords, indicatorRecords: categoryRecords, respondenRecords, errors };
 }
+

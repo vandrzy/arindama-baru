@@ -439,7 +439,7 @@ export default function RekapitulasiWilayahPage() {
                 <div className="pt-6 border-t border-slate-200 flex justify-between items-end text-xs">
                   <div className="space-y-1 text-slate-500 text-[11px]">
                     <p className="font-semibold text-slate-700">Dokumen ini secara resmi dihasilkan oleh Sistem ARINDAMA.</p>
-                    <p>Seluruh skor indeks dihitung berdasarkan akumulasi indikator sah di Database.</p>
+                    <p>Seluruh skor indeks dihitung berdasarkan akumulasi kategori sah di Database.</p>
                   </div>
 
                   <div className="text-center space-y-12 pr-4">

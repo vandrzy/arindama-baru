@@ -55,13 +55,13 @@ export async function GET(request: NextRequest) {
       lokasi = currentUser.kabupatenKota || "";
     }
 
-    // Bangun filter Prisma untuk IndicatorRecord
-    // Syarat Mutlak 1: Hanya Indikator 1 (Pelajar) & Indikator 6 (Atlet)
-    let indicatorIds = [1, 6];
+    // Bangun filter Prisma untuk CategoryRecord
+    // Syarat Mutlak 1: Hanya Kategori 2 (Pelajar) & Kategori 7 (Atlet)
+    let categoryIds = [2, 7];
     if (tingkatanParam.toLowerCase() === "pelajar") {
-      indicatorIds = [1];
+      categoryIds = [2];
     } else if (tingkatanParam.toLowerCase() === "atlet") {
-      indicatorIds = [6];
+      categoryIds = [7];
     }
 
     // Syarat Mutlak 2: Hanya status SAH / SAH_TERVERIFIKASI / DISETUJUI
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     ];
 
     const whereClause: any = {
-      indicatorId: { in: indicatorIds },
+      categoryId: { in: categoryIds },
       status: { in: validStatuses },
       medali: {
         not: null,
@@ -136,8 +136,8 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Query data indikator beserta data responden
-    const records = await prisma.indicatorRecord.findMany({
+    // Query data kategori beserta data responden
+    const records = await prisma.categoryRecord.findMany({
       where: whereClause,
       include: {
         responden: true,
@@ -167,8 +167,8 @@ export async function GET(request: NextRequest) {
       );
       return {
         id: rec.id,
-        indicatorId: rec.indicatorId,
-        kategori: rec.indicatorId === 1 ? "Pelajar" : "Atlet",
+        categoryId: rec.categoryId,
+        kategori: rec.categoryId === 2 ? "Pelajar" : "Atlet",
         namaKegiatan: rec.namaKegiatan,
         cabangOlahraga: rec.cabangOlahraga,
         tingkatPenyelenggaraan: rec.tingkatPenyelenggaraan,

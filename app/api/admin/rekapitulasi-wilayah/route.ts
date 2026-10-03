@@ -15,8 +15,8 @@ function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
   const tingkatStr = (rec.tingkatPenyelenggaraan || "").toLowerCase();
 
   let targetPilar = "PRESTASI";
-  if (rec.indicatorId === 2 || rec.indicatorId === 7) targetPilar = "DISABILITAS";
-  if (rec.indicatorId === 3 || rec.indicatorId === 8) targetPilar = "REKREASI";
+  if (rec.categoryId === 2 || rec.categoryId === 7) targetPilar = "DISABILITAS";
+  if (rec.categoryId === 3 || rec.categoryId === 8) targetPilar = "REKREASI";
 
   let matchedRow = dynamicWeightsList.find((w: any) =>
     (w.pilar ? w.pilar === targetPilar : true) &&
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       console.warn("Could not fetch dynamic weights, using default.");
     }
 
-    // 2. Base filter for IndicatorRecords
+    // 2. Base filter for CategoryRecords
     let instansiFilter = {};
     if (pilarFilter !== "Semua") {
       // mapping instansi filter
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Fetch data
-    const allRecords = await prisma.indicatorRecord.findMany({
+    const allRecords = await prisma.categoryRecord.findMany({
       where: instansiFilter,
       include: {
         responden: {
@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
       }
 
       const isVerified = verifiedStatuses.includes(rec.status);
-      const isMedalIndicator = rec.indicatorId === 1 || rec.indicatorId === 6;
+      const isMedalCategory = rec.categoryId === 2 || rec.categoryId === 7;
       
       const user = rec.responden?.user;
       const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (user?.kabupatenKota || "Lainnya");
@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
         wData.jumlahOperator.add(user.id);
       }
 
-      if (isVerified || isMedalIndicator) {
+      if (isVerified || isMedalCategory) {
         if (medaliStr.includes("emas")) {
           wData.medaliEmas++;
           wData.jumlahMedaliSah++;

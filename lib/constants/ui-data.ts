@@ -26,50 +26,56 @@ export interface FlowStepItem {
 export const SURVEY_TEMPLATES: SurveyTemplateItem[] = [
   {
     id: 1,
-    title: "Indikator 1: Kejuaraan Pelajar",
-    file: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx",
+    title: "Kategori 1: Data Responden",
+    file: "KAT 01_Data Responden.xlsx",
+    desc: "Data identitas responden, NIK, jenis kelamin, domisili, dan kontak.",
+  },
+  {
+    id: 2,
+    title: "Kategori 2: Kejuaraan Atlet Pelajar Berjenjang",
+    file: "KAT 02_Kejuaraan Atlet Pelajar Berjenjang.xlsx",
     desc: "Data partisipasi dan perolehan medali pada kejuaraan pelajar tingkat nasional & internasional.",
   },
   {
     id: 3,
-    title: "Indikator 2: Peningkatan Mutu SDM Olahraga",
-    file: "Indikator 2_Peningkatan Mutu SDM Olahraga.xlsx",
+    title: "Kategori 3: Peningkatan Mutu SDM Olahraga",
+    file: "KAT 03_Peningkatan Mutu SDM Olahraga.xlsx",
     desc: "Sertifikasi, pelatihan, dan program peningkatan kapasitas SDM keolahragaan daerah.",
   },
   {
     id: 4,
-    title: "Indikator 3: Pelatih Cabor Membawa Tim",
-    file: "Indikator 3_Pelatih Cabor Membawa Tim Tingkat Nasional Internasional.xlsx",
+    title: "Kategori 4: Pelatih Berlisensi Mendampingi Kontingen",
+    file: "KAT 04_Pelatih Berlisensi Mendampingi Kontingen.xlsx",
     desc: "Rekam jejak pelatih cabang olahraga yang mendampingi tim nasional atau internasional.",
   },
   {
     id: 5,
-    title: "Indikator 4: Wasit Cabor Lisensi Nasional/Int.",
-    file: "Indikator 4_ Wasit Cabang Olahraga Masuk dalam Wasit Nasional Internasional.xlsx",
+    title: "Kategori 5: Wasit & Juri Terakreditasi",
+    file: "KAT 05_Wasit & Juri Terakreditasi.xlsx",
     desc: "Data lisensi resmi wasit cabang olahraga tingkat nasional maupun internasional.",
   },
   {
     id: 6,
-    title: "Indikator 5: Wasit / Juri Bertugas di Event",
-    file: "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional.xlsx",
+    title: "Kategori 6: Penugasan Wasit & Juri Pertandingan",
+    file: "KAT 06_Penugasan Wasit & Juri Pertandingan.xlsx",
     desc: "Penugasan aktif wasit dan juri daerah pada kegiatan olahraga resmi skala nasional/internasional.",
   },
   {
     id: 7,
-    title: "Indikator 6: Atlet Membawa Nama Timnas",
-    file: "Indikator 6_Atlet Cabang Olahraga Mewakili Tim Nasional Internasional.xlsx",
+    title: "Kategori 7: Atlet Daerah Mewakili Kontingen & Timnas",
+    file: "KAT 07_Atlet Daerah Mewakili Kontingen & Timnas.xlsx",
     desc: "Data atlet daerah yang terpilih memperkuat tim nasional pada ajang internasional.",
   },
   {
     id: 8,
-    title: "Indikator 7: Penyelenggaraan Event Olahraga",
-    file: "Indikator 7_Penyelenggaraan Event Olahraga Nasional Internasional.xlsx",
+    title: "Kategori 8: Penyelenggaraan Event Keolahragaan Daerah",
+    file: "KAT 08_Penyelenggaraan Event Keolahragaan Daerah.xlsx",
     desc: "Laporan pelaksanaan kejuaraan dan kegiatan keolahragaan yang diselenggarakan di daerah.",
   },
   {
     id: 9,
-    title: "Indikator 8: Prestasi Olahraga Masyarakat",
-    file: "Indikator 8_Prestasi Event Olahraga Masyarakat Tingkat Nasional.xlsx",
+    title: "Kategori 9: Olahraga Masyarakat, Tradisional & Rekreasi",
+    file: "KAT 09_Olahraga Masyarakat, Tradisional & Rekreasi.xlsx",
     desc: "Capaian prestasi pada festival dan kejuaraan olahraga masyarakat tingkat nasional.",
   },
 ];
@@ -85,7 +91,7 @@ export const FLOW_STEPS: FlowStepItem[] = [
   {
     step: 2,
     title: "Unduh Template Excel",
-    desc: "Unduh template form Identitas dan ke-8 form Indikator (format .xlsx) yang tersedia di halaman beranda.",
+    desc: "Unduh template form ke-9 Kategori (format .xlsx) yang tersedia di halaman beranda.",
     icon: FileSpreadsheet,
     tag: "Tersedia di Dasbor",
   },
@@ -99,9 +105,9 @@ export const FLOW_STEPS: FlowStepItem[] = [
   {
     step: 4,
     title: "Unggah Kuesioner (Upload)",
-    desc: "Masuk ke menu dasbor \"Isi Kuesioner\", lalu unggah ke-9 file Excel tersebut secara bersamaan.",
+    desc: "Masuk ke menu dasbor \"Isi Kuesioner\", lalu unggah file Excel Kategori tersebut secara bersamaan.",
     icon: UploadCloud,
-    tag: "Upload 9 Berkas Sekaligus",
+    tag: "Upload Berkas Kategori",
   },
   {
     step: 5,
@@ -120,35 +126,31 @@ export const FLOW_STEPS: FlowStepItem[] = [
 ];
 
 export const FULL_TEMPLATE_NAMES: Record<number, string> = {
-  0: "IdentitasOperator_Fixed.xlsx",
-  1: "Indikator 1_Kejuaraan Pelajar Tingkat Nasional dan Internasional.xlsx",
-  2: "Indikator 2_Peningkatan Mutu SDM Olahraga.xlsx",
-  3: "Indikator 3_Pelatih Cabor Membawa Tim Tingkat Nasional Internasional.xlsx",
-  4: "Indikator 4_ Wasit Cabang Olahraga Masuk dalam Wasit Nasional Internasional.xlsx",
-  5: "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional.xlsx",
-  6: "Indikator 6_Atlet Cabang Olahraga Mewakili Tim Nasional Internasional.xlsx",
-  7: "Indikator 7_Penyelenggaraan Event Olahraga Nasional Internasional.xlsx",
-  8: "Indikator 8_Prestasi Event Olahraga Masyarakat Tingkat Nasional.xlsx",
+  1: "KAT 01_Data Responden.xlsx",
+  2: "KAT 02_Kejuaraan Atlet Pelajar Berjenjang.xlsx",
+  3: "KAT 03_Peningkatan Mutu SDM Olahraga.xlsx",
+  4: "KAT 04_Pelatih Berlisensi Mendampingi Kontingen.xlsx",
+  5: "KAT 05_Wasit & Juri Terakreditasi.xlsx",
+  6: "KAT 06_Penugasan Wasit & Juri Pertandingan.xlsx",
+  7: "KAT 07_Atlet Daerah Mewakili Kontingen & Timnas.xlsx",
+  8: "KAT 08_Penyelenggaraan Event Keolahragaan Daerah.xlsx",
+  9: "KAT 09_Olahraga Masyarakat, Tradisional & Rekreasi.xlsx",
 };
 
 export const EXPECTED_FILE_NAMES: Record<number, string[]> = {
-  0: ["IdentitasOperator"],
-  1: ["Indikator 1"],
-  2: ["Indikator 2"],
-  3: ["Indikator 3"],
-  4: ["Indikator 4"],
-  5: [
-    "Indikator 5_ WasitJuri yang Bertugas pada Kegiatan Nasional Internasional",
-    "Indikator 5_WasitJuri yang Bertugas pada Kegiatan Nasional Internasional",
-    "Indikator 5",
-  ],
-  6: ["Indikator 6"],
-  7: ["Indikator 7"],
-  8: ["Indikator 8"],
+  1: ["KAT 01", "Data Responden", "Responden", "Kategori 1"],
+  2: ["KAT 02", "Kejuaraan Atlet Pelajar", "Kategori 2", "Indikator 1"],
+  3: ["KAT 03", "Peningkatan Mutu SDM", "Kategori 3", "Indikator 2"],
+  4: ["KAT 04", "Pelatih Berlisensi", "Kategori 4", "Indikator 3"],
+  5: ["KAT 05", "Wasit & Juri Terakreditasi", "Kategori 5", "Indikator 4"],
+  6: ["KAT 06", "Penugasan Wasit", "Kategori 6", "Indikator 5"],
+  7: ["KAT 07", "Atlet Daerah", "Kategori 7", "Indikator 6"],
+  8: ["KAT 08", "Penyelenggaraan Event", "Kategori 8", "Indikator 7"],
+  9: ["KAT 09", "Olahraga Masyarakat", "Kategori 9", "Indikator 8"],
 };
 
 export function isValidFileName(step: number, fileName: string): boolean {
   const keywords = EXPECTED_FILE_NAMES[step];
   if (!keywords) return true;
-  return keywords.some((keyword) => fileName.includes(keyword));
+  return keywords.some((keyword) => fileName.toLowerCase().includes(keyword.toLowerCase()));
 }

@@ -53,19 +53,19 @@ export async function GET(request: NextRequest) {
     const limit = limitStr ? parseInt(limitStr) : 0;
     const skip = (page - 1) * limit;
 
-    const indicatorIdNum = parseInt(formType);
+    const categoryIdNum = parseInt(formType);
 
-    const totalCount = await prisma.indicatorRecord.count({
+    const totalCount = await prisma.categoryRecord.count({
       where: {
         respondenId: responden.id,
-        indicatorId: indicatorIdNum,
+        categoryId: categoryIdNum,
       },
     });
 
     const queryOpts: any = {
       where: {
         respondenId: responden.id,
-        indicatorId: indicatorIdNum,
+        categoryId: categoryIdNum,
       },
       orderBy: {
         createdAt: "asc",
@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
       queryOpts.skip = skip;
     }
 
-    // Fetch Indicator Records
-    const records = await prisma.indicatorRecord.findMany(queryOpts);
+    // Fetch Category Records
+    const records = await prisma.categoryRecord.findMany(queryOpts);
 
     const formattedRecords = records.map((rec) => {
       const item: Record<string, any> = {
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         "Sumber Pendanaan": rec.sumberPendanaan,
       };
 
-      if (indicatorIdNum === 1 || indicatorIdNum === 6) {
+      if (categoryIdNum === 2 || categoryIdNum === 7) {
         item["Medali"] = rec.medali || "-";
       }
 

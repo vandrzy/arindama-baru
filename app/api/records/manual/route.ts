@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const targetCatId = body.categoryId || body.indicatorId;
     const {
-      indicatorId,
       respondenId,
       respondenNik,
       namaKegiatan,
@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
       uraianCapaian
     } = body;
 
-    if (!indicatorId || (!respondenId && !respondenNik) || !namaKegiatan || !cabangOlahraga || !tingkatPenyelenggaraan) {
+    const catIdNum = parseInt(targetCatId, 10);
+
+    if (!targetCatId || (catIdNum !== 1 && !respondenId && !respondenNik) || !namaKegiatan || !cabangOlahraga || !tingkatPenyelenggaraan) {
       return NextResponse.json({ error: "Kolom wajib belum diisi." }, { status: 400 });
     }
 
@@ -47,10 +49,10 @@ export async function POST(request: NextRequest) {
 
     if (body.id) {
       // Update data jika id dikirimkan
-      const updatedRecord = await prisma.indicatorRecord.update({
+      const updatedRecord = await prisma.categoryRecord.update({
         where: { id: body.id },
         data: {
-          indicatorId: parseInt(indicatorId, 10),
+          categoryId: catIdNum,
           respondenId: responden.id,
           namaKegiatan,
           cabangOlahraga,
@@ -62,10 +64,10 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json({ success: true, data: updatedRecord });
     } else {
-      // Buat IndicatorRecord baru
-      const newRecord = await prisma.indicatorRecord.create({
+      // Buat CategoryRecord baru
+      const newRecord = await prisma.categoryRecord.create({
         data: {
-          indicatorId: parseInt(indicatorId, 10),
+          categoryId: catIdNum,
           respondenId: responden.id,
           namaKegiatan,
           cabangOlahraga,
@@ -98,7 +100,11 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID tidak ditemukan" }, { status: 400 });
 
-    await prisma.indicatorRecord.delete({ where: { id } });
+    try {
+      await prisma.categoryRecord.delete({ where: { id } });
+    } catch {
+      await prisma.responden.delete({ where: { id } });
+    }
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/records/manual error:", error);

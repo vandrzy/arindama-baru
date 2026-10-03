@@ -151,3 +151,61 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const payload = verifyJwtToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id, nik, nama, jenisKelamin, tanggalLahir, kabupatenKota, kecamatan, cabangOlahraga, nomorTelepon } = body;
+
+    if (!id && !nik) {
+      return NextResponse.json({ error: "ID atau NIK responden wajib disertakan." }, { status: 400 });
+    }
+
+    const responden = await prisma.responden.findFirst({
+      where: {
+        OR: [{ id: id || "" }, { nik: nik || "" }],
+        ...(payload.role !== "ADMIN" && { userId: payload.id }),
+      },
+    });
+
+    if (!responden) {
+      return NextResponse.json({ error: "Responden tidak ditemukan atau Anda tidak memiliki akses." }, { status: 404 });
+    }
+
+    const jenisKelaminEnum =
+      jenisKelamin === "Perempuan" || jenisKelamin === "PEREMPUAN"
+        ? JenisKelamin.PEREMPUAN
+        : JenisKelamin.LAKI_LAKI;
+
+    const updatedResponden = await prisma.responden.update({
+      where: { id: responden.id },
+      data: {
+        ...(nama && { nama }),
+        ...(nik && { nik }),
+        ...(jenisKelamin && { jenisKelamin: jenisKelaminEnum }),
+        ...(tanggalLahir && { tanggalLahir: new Date(tanggalLahir) }),
+        ...(kabupatenKota && { kabupatenKota }),
+        ...(kecamatan && { kecamatan }),
+        ...(cabangOlahraga && { cabangOlahraga }),
+        ...(nomorTelepon && { nomorTelepon }),
+      },
+    });
+
+    return NextResponse.json({ success: true, responden: updatedResponden });
+  } catch (error: any) {
+    console.error("PUT /api/responden error:", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server saat memperbarui data responden." },
+      { status: 500 }
+    );
+  }
+}

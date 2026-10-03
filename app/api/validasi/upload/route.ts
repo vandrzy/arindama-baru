@@ -126,8 +126,13 @@ export async function POST(request: NextRequest) {
 
     // Format direktori: "id responden_nama responden"
     const folderName = `${responden.id}_${trimmedNamaResponden}`;
-    // Format nama file: "id indikator_nama responden"
-    const formattedFileName = `${recordId}_${trimmedNamaResponden}${fileExt}`;
+    // Format nama file:
+    // Untuk Kategori 1 / Data Responden: "id responden_nama responden.pdf"
+    // Untuk Kategori 2-9 / Entri Indikator: "id record_nama responden.pdf"
+    const isRespondenForm = formType === "RESPONDEN" || formType === "1" || recordId === responden.id;
+    const formattedFileName = isRespondenForm
+      ? `${responden.id}_${trimmedNamaResponden}${fileExt}`
+      : `${recordId}_${trimmedNamaResponden}${fileExt}`;
 
     const uploadDir = path.join(process.cwd(), "uploads", folderName);
     await fs.mkdir(uploadDir, { recursive: true });

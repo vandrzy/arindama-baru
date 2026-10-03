@@ -15,8 +15,8 @@ function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
   const tingkatStr = (rec.tingkatPenyelenggaraan || "").toLowerCase();
 
   let targetPilar = "PRESTASI";
-  if (rec.indicatorId === 2 || rec.indicatorId === 7) targetPilar = "DISABILITAS";
-  if (rec.indicatorId === 3 || rec.indicatorId === 8) targetPilar = "REKREASI";
+  if (rec.categoryId === 2 || rec.categoryId === 7) targetPilar = "DISABILITAS";
+  if (rec.categoryId === 3 || rec.categoryId === 8) targetPilar = "REKREASI";
 
   let matchedRow = dynamicWeightsList.find((w: any) =>
     (w.pilar ? w.pilar === targetPilar : true) &&
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       console.warn("Could not fetch dynamic weights, using default.");
     }
 
-    // 2. Base filter for IndicatorRecords
+    // 2. Base filter for CategoryRecords
     let instansiFilter = {};
     if (pilarFilter !== "Semua") {
       const targetInstansi = pilarFilter === "Prestasi (KONI)" ? "KONI" :
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Fetch data for records
-    const allRecords = await prisma.indicatorRecord.findMany({
+    const allRecords = await prisma.categoryRecord.findMany({
       where: instansiFilter,
       include: {
         responden: {
@@ -166,10 +166,10 @@ export async function GET(request: NextRequest) {
       }
 
       const isVerified = verifiedStatuses.includes(rec.status as string);
-      const isMedalIndicator = rec.indicatorId === 1 || rec.indicatorId === 6;
+      const isMedalCategory = rec.categoryId === 2 || rec.categoryId === 7;
       const user = rec.responden?.user;
       
-      if (isVerified || isMedalIndicator) {
+      if (isVerified || isMedalCategory) {
         const score = calculateRecordPoints(rec, weights);
         if (isVerified) {
           totalKomposit += score;
@@ -203,9 +203,9 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(url.searchParams.get("limit") || "10");
     const search = url.searchParams.get("search") || "";
     
-    // Recent Submissions (Indikator 1 & 6)
+    // Recent Submissions (Kategori 2 & 7)
     // Filtered by search and paginated
-    let filteredRecent = allRecords.filter(r => r.indicatorId === 1 || r.indicatorId === 6);
+    let filteredRecent = allRecords.filter(r => r.categoryId === 2 || r.categoryId === 7);
     
     if (search) {
       const lowerSearch = search.toLowerCase();
@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
         operator: r.responden?.nama || r.responden?.user?.nama || "Tanpa Nama",
         peserta: r.responden?.nama || r.responden?.user?.nama || "Tanpa Nama",
         instansi: r.responden?.user?.instansi || "-",
-        indikator: r.indicatorId === 1 ? "1 (Capaian Prestasi Nasional/Internasional)" : "6 (Capaian Prestasi Daerah)",
+        kategori: r.categoryId === 2 ? "Kategori 2 (Kejuaraan Atlet Pelajar Berjenjang)" : "Kategori 7 (Atlet Daerah Mewakili Kontingen & Timnas)",
         kejuaraan: r.namaKegiatan || "-",
         cabor: r.cabangOlahraga || "-",
         medali: r.medali || "-",
