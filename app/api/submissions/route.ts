@@ -209,60 +209,49 @@ export async function POST(request: NextRequest) {
       }
 
       if (entry.step === 1 && parseResult.respondenRecords && parseResult.respondenRecords.length > 0) {
-        const respData = parseResult.respondenRecords[0];
-        if (respData) {
-          if (!respData.nik || respData.nik === "-" || respData.nik.trim().length < 8) {
+        for (const respData of parseResult.respondenRecords) {
+          const cleanNik = respData.nik?.trim() || "";
+          if (cleanNik.length !== 16) {
             aggregatedErrors.push({
               file: entry.file.name,
               step: 1,
               row: 1,
               field: "NIK",
-              message: "NIK pada file Excel Data Responden (Kategori 1) wajib diisi dan valid.",
+              message: `NIK '${cleanNik}' untuk responden '${respData.nama}' harus tepat 16 karakter.`,
             });
-          } else {
+            continue;
+          }
+
+          const existing = await prisma.responden.findUnique({ where: { nik: cleanNik } });
+          if (existing) {
+            aggregatedErrors.push({
+              file: entry.file.name,
+              step: 1,
+              row: 1,
+              field: "NIK",
+              message: `NIK '${cleanNik}' untuk responden '${respData.nama}' sudah terdaftar di database. NIK harus belum pernah digunakan.`,
+            });
+          }
+        }
+
+        if (aggregatedErrors.length === 0) {
+          for (const respData of parseResult.respondenRecords) {
             const cleanNik = respData.nik.trim();
-            if (responden) {
-              await prisma.responden.update({
-                where: { id: responden.id },
-                data: {
-                  ...(respData.nama && { nama: respData.nama }),
-                  nik: cleanNik,
-                  ...(respData.jenisKelamin && { jenisKelamin: respData.jenisKelamin.toLowerCase().includes("perempuan") ? "PEREMPUAN" : "LAKI_LAKI" }),
-                  ...(respData.kabupatenKota && { kabupatenKota: respData.kabupatenKota }),
-                  ...(respData.kecamatan && { kecamatan: respData.kecamatan }),
-                  ...(respData.cabangOlahraga && { cabangOlahraga: respData.cabangOlahraga }),
-                  ...(respData.nomorTelepon && { nomorTelepon: respData.nomorTelepon }),
-                },
-              });
-            } else {
-              const existing = await prisma.responden.findUnique({ where: { nik: cleanNik } });
-              if (existing) {
-                responden = await prisma.responden.update({
-                  where: { id: existing.id },
-                  data: {
-                    ...(respData.nama && { nama: respData.nama }),
-                    ...(respData.jenisKelamin && { jenisKelamin: respData.jenisKelamin.toLowerCase().includes("perempuan") ? "PEREMPUAN" : "LAKI_LAKI" }),
-                    ...(respData.kabupatenKota && { kabupatenKota: respData.kabupatenKota }),
-                    ...(respData.kecamatan && { kecamatan: respData.kecamatan }),
-                    ...(respData.cabangOlahraga && { cabangOlahraga: respData.cabangOlahraga }),
-                    ...(respData.nomorTelepon && { nomorTelepon: respData.nomorTelepon }),
-                  },
-                });
-              } else {
-                responden = await prisma.responden.create({
-                  data: {
-                    nik: cleanNik,
-                    nama: respData.nama || "Tanpa Nama",
-                    jenisKelamin: respData.jenisKelamin?.toLowerCase().includes("perempuan") ? "PEREMPUAN" : "LAKI_LAKI",
-                    tanggalLahir: respData.tanggalLahir ? new Date(respData.tanggalLahir) : new Date(),
-                    kabupatenKota: respData.kabupatenKota || "Kalimantan Timur",
-                    kecamatan: respData.kecamatan || "-",
-                    cabangOlahraga: respData.cabangOlahraga || "-",
-                    nomorTelepon: respData.nomorTelepon || "-",
-                    userId: payload.id,
-                  },
-                });
-              }
+            const created = await prisma.responden.create({
+              data: {
+                nik: cleanNik,
+                nama: respData.nama || "Tanpa Nama",
+                jenisKelamin: respData.jenisKelamin?.toLowerCase().includes("perempuan") ? "PEREMPUAN" : "LAKI_LAKI",
+                tanggalLahir: respData.tanggalLahir && !isNaN(Date.parse(respData.tanggalLahir)) ? new Date(respData.tanggalLahir) : new Date(),
+                kabupatenKota: respData.kabupatenKota || "Kalimantan Timur",
+                kecamatan: respData.kecamatan || "-",
+                cabangOlahraga: respData.cabangOlahraga || "-",
+                nomorTelepon: respData.nomorTelepon || "-",
+                userId: payload.id,
+              },
+            });
+            if (!responden) {
+              responden = created;
             }
           }
         }

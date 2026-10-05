@@ -111,44 +111,43 @@ export async function POST(request: NextRequest) {
 
     if (stepNum === 1) {
       if (validationResult.respondenRecords && validationResult.respondenRecords.length > 0) {
-        const respData = validationResult.respondenRecords[0];
-        if (!respData.nik || respData.nik === "-" || respData.nik.trim().length < 8) {
+        const errors: string[] = [];
+        for (const respData of validationResult.respondenRecords) {
+          const cleanNik = respData.nik?.trim() || "";
+          if (cleanNik.length !== 16) {
+            errors.push(`NIK '${cleanNik}' untuk responden '${respData.nama}' harus tepat 16 karakter.`);
+            continue;
+          }
+
+          const existingNikResponden = await prisma.responden.findUnique({
+            where: { nik: cleanNik },
+          });
+
+          if (existingNikResponden) {
+            errors.push(`NIK '${cleanNik}' untuk responden '${respData.nama}' sudah terdaftar di database.`);
+          }
+        }
+
+        if (errors.length > 0) {
           return NextResponse.json(
-            { error: "NIK pada file Excel Data Responden (Kategori 1) tidak valid atau kosong." },
+            { error: `Validasi Responden gagal: ${errors.join(" | ")}` },
             { status: 400 }
           );
         }
 
-        const existingNikResponden = await prisma.responden.findUnique({
-          where: { nik: respData.nik.trim() },
-        });
+        let createdCount = 0;
+        for (const respData of validationResult.respondenRecords) {
+          const cleanNik = respData.nik.trim();
+          const jenisKelaminEnum = respData.jenisKelamin?.toLowerCase().includes("perempuan")
+            ? "PEREMPUAN"
+            : "LAKI_LAKI";
 
-        const jenisKelaminEnum = respData.jenisKelamin?.toLowerCase().includes("perempuan")
-          ? "PEREMPUAN"
-          : "LAKI_LAKI";
-
-        const targetRespondenId = existingNikResponden?.id || responden?.id;
-
-        if (targetRespondenId) {
-          await prisma.responden.update({
-            where: { id: targetRespondenId },
-            data: {
-              ...(respData.nama && { nama: respData.nama }),
-              ...(respData.nik && respData.nik !== "-" && { nik: respData.nik }),
-              ...(respData.jenisKelamin && { jenisKelamin: jenisKelaminEnum }),
-              ...(respData.kabupatenKota && { kabupatenKota: respData.kabupatenKota }),
-              ...(respData.kecamatan && { kecamatan: respData.kecamatan }),
-              ...(respData.cabangOlahraga && { cabangOlahraga: respData.cabangOlahraga }),
-              ...(respData.nomorTelepon && { nomorTelepon: respData.nomorTelepon }),
-            },
-          });
-        } else {
           await prisma.responden.create({
             data: {
-              nik: respData.nik.trim(),
+              nik: cleanNik,
               nama: respData.nama || "Tanpa Nama",
               jenisKelamin: jenisKelaminEnum,
-              tanggalLahir: respData.tanggalLahir ? new Date(respData.tanggalLahir) : new Date(),
+              tanggalLahir: respData.tanggalLahir && !isNaN(Date.parse(respData.tanggalLahir)) ? new Date(respData.tanggalLahir) : new Date(),
               kabupatenKota: respData.kabupatenKota || "Kalimantan Timur",
               kecamatan: respData.kecamatan || "-",
               cabangOlahraga: respData.cabangOlahraga || "-",
@@ -156,13 +155,19 @@ export async function POST(request: NextRequest) {
               userId: payload.id,
             },
           });
+          createdCount++;
         }
-      }
 
-      return NextResponse.json({
-        success: true,
-        message: "Berhasil mengunggah data Responden (Kategori 1).",
-      });
+        return NextResponse.json({
+          success: true,
+          message: `Berhasil menambahkan ${createdCount} data Responden baru dari file Excel.`,
+        });
+      } else {
+        return NextResponse.json(
+          { error: "File Excel tidak berisi baris data responden yang valid." },
+          { status: 400 }
+        );
+      }
     } else {
       if (!validationResult.indicatorRecords || validationResult.indicatorRecords.length === 0) {
         return NextResponse.json(

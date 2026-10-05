@@ -61,7 +61,12 @@ function formatCellValue(val: any): string {
 // Zod schemas for row content validation
 const identitasZodSchema = z.object({
   nama: z.string().min(1, "Nama Lengkap & Gelar wajib diisi"),
-  nik: z.string().optional().default("-"),
+  nik: z
+    .string()
+    .transform((val) => val.trim())
+    .refine((val) => val.length === 16, {
+      message: "NIK harus berupa 16 digit karakter",
+    }),
   jenisKelamin: z.string().optional().default("Laki-laki"),
   tanggalLahir: z.string().optional().default("1990-01-01"),
   umur: z.string().optional().default("-"),
@@ -277,6 +282,7 @@ export function parseAndValidateExcelFile(
       }
 
       const idxMap = headerCheck.colIndices;
+      const seenNiksInExcel = new Set<string>();
 
       for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
         const row = dataRows[rIdx];
@@ -309,7 +315,22 @@ export function parseAndValidateExcelFile(
             });
           }
         } else {
-          respondenRecords.push(valResult.data as ParsedRespondenRecordData);
+          const cleanNik = valResult.data.nik;
+          if (seenNiksInExcel.has(cleanNik)) {
+            errors.push({
+              file: fileName,
+              step,
+              row: displayRow,
+              field: "nik",
+              message: `Baris ${displayRow}: NIK '${cleanNik}' duplikat di dalam file Excel ini.`,
+            });
+          } else {
+            seenNiksInExcel.add(cleanNik);
+            respondenRecords.push({
+              ...valResult.data,
+              nik: cleanNik,
+            } as ParsedRespondenRecordData);
+          }
         }
       }
     } else {
