@@ -210,6 +210,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Catat AuditLog
+    await prisma.auditLog.create({
+      data: {
+        userId: payload.id,
+        action: "Verifikasi Berkas",
+        entity: "ValidationEvidence",
+        entityId: evidence.id,
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+        details: { recordId, formType, fileName: formattedFileName },
+      },
+    });
+
     return NextResponse.json({
       success: true,
       evidence,

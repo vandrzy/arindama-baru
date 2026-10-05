@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: auth.payload.id,
-        action: "UPDATE_DYNAMIC_WEIGHTS",
+        action: "Ubah Bobot",
         entity: "DynamicWeight",
         details: body.weights,
       },
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: auth.payload.id,
-        action: "RESET_DYNAMIC_WEIGHTS",
+        action: "Reset Bobot",
         entity: "DynamicWeight",
         details: { resetTo: "Kemenpora Standard" },
       },

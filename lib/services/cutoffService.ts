@@ -92,6 +92,18 @@ export async function updateCutoffConfig(
     },
   });
 
+  // Catat AuditLog "Ubah Batas Waktu"
+  if (adminId && adminId !== "ADMIN_SYSTEM") {
+    await prisma.auditLog.create({
+      data: {
+        userId: adminId,
+        action: "Ubah Batas Waktu",
+        entity: "SystemConfig",
+        details: { title: mergedConfig.title, startDate: mergedConfig.startDate, cutoffDate: mergedConfig.cutoffDate, kebijakanAkses: mergedConfig.kebijakanAkses },
+      },
+    });
+  }
+
   return mergedConfig;
 }
 

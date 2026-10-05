@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: admin.id,
-        action: "CREATE_USER",
+        action: "Tambah Pengguna",
         entity: "User",
         entityId: newUser.id,
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",

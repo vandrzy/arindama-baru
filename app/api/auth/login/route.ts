@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: {
         userId: user.id,
-        action: "LOGIN",
+        action: "Login",
         ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
       },

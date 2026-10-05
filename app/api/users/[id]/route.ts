@@ -182,7 +182,7 @@ export async function PUT(
     await prisma.auditLog.create({
       data: {
         userId: admin.id,
-        action: "UPDATE_USER",
+        action: "Ubah Pengguna",
         entity: "User",
         entityId: id,
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",
@@ -238,7 +238,7 @@ export async function DELETE(
     await prisma.auditLog.create({
       data: {
         userId: admin.id,
-        action: "DELETE_USER",
+        action: "Hapus Pengguna",
         entity: "User",
         entityId: id,
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",
@@ -302,7 +302,7 @@ export async function PATCH(
       await prisma.auditLog.create({
         data: {
           userId: admin.id,
-          action: "RESET_PASSWORD",
+          action: "Reset Sandi",
           entity: "User",
           entityId: id,
           ipAddress: request.headers.get("x-forwarded-for") || "unknown",

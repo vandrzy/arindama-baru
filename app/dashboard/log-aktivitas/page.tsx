@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useApp } from "@/lib/context/app-context";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -40,10 +40,13 @@ export interface LogItem {
     | "Login"
     | "Tambah Pengguna"
     | "Ubah Pengguna"
+    | "Hapus Pengguna"
     | "Reset Sandi"
-    | "Verifikasi Kegiatan"
+    | "Verifikasi Berkas"
     | "Ubah Bobot"
+    | "Reset Bobot"
     | "Hitung Ulang Skor"
+    | "Ubah Batas Waktu"
     | "Bersihkan Log";
   targetModule: string;
   targetId: string;
@@ -145,7 +148,7 @@ const MOCK_LOGS: LogItem[] = [
     aktorNama: "Siti Aminah, S.STP",
     aktorEmail: "operator.kukar@arindama.id",
     aktorRole: "OPERATOR",
-    aksi: "Verifikasi Kegiatan",
+    aksi: "Verifikasi Berkas",
     targetModule: "responden",
     targetId: "RSP-KUKAR-089",
     ipAddress: "103.247.218.12",
@@ -216,65 +219,90 @@ export default function LogAktivitasPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // State Data Logs (Dukungan Hapus / Purge)
-  const [logsList, setLogsList] = useState<LogItem[]>(MOCK_LOGS);
+  const [logsList, setLogsList] = useState<LogItem[]>([]);
 
   // State Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Filter Log berdasarkan kriteria
-  const filteredLogs = useMemo(() => {
-    return logsList.filter((log) => {
-      // 1. Filter Pencarian Teks (Nama, Email, ID Target, ID Log)
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch =
-        !q ||
-        log.aktorNama.toLowerCase().includes(q) ||
-        log.aktorEmail.toLowerCase().includes(q) ||
-        log.targetId.toLowerCase().includes(q) ||
-        log.id.toLowerCase().includes(q) ||
-        log.detailDeskripsi.toLowerCase().includes(q);
+  // Fetch Log Activity Data
+  const fetchLogs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("page", currentPage.toString());
+      params.append("limit", itemsPerPage.toString());
+      if (searchQuery) params.append("search", searchQuery);
+      if (selectedAction && selectedAction !== "Semua Aksi") params.append("action", selectedAction);
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
 
-      // 2. Filter Dropdown Aksi
-      const matchAction =
-        selectedAction === "Semua Aksi" || log.aksi === selectedAction;
-
-      // 3. Filter Rentang Tanggal
-      let matchDate = true;
-      if (startDate) {
-        matchDate = matchDate && log.rawDate >= startDate;
+      const response = await fetch(`/api/audit-logs?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        const formattedLogs: LogItem[] = data.data.map((log: any) => ({
+          id: log.id,
+          waktu: new Date(log.createdAt).toLocaleString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          rawDate: log.createdAt.split("T")[0],
+          aktorNama: log.user?.nama || "System",
+          aktorEmail: log.user?.email || "-",
+          aktorRole: log.user?.role || "ADMIN",
+          aksi: log.action,
+          targetModule: log.entity || "-",
+          targetId: log.entityId || "-",
+          ipAddress: log.ipAddress || "-",
+          userAgent: log.userAgent || "-",
+          detailDeskripsi: log.details ? JSON.stringify(log.details) : "-",
+        }));
+        
+        setLogsList(formattedLogs);
+        setTotalPages(data.pagination.totalPages || 1);
+        setTotalLogs(data.pagination.total || 0);
       }
-      if (endDate) {
-        matchDate = matchDate && log.rawDate <= endDate;
-      }
+    } catch (error) {
+      console.error("Failed to fetch logs:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, itemsPerPage, searchQuery, selectedAction, startDate, endDate]);
 
-      return matchSearch && matchAction && matchDate;
-    });
-  }, [logsList, searchQuery, selectedAction, startDate, endDate]);
-
-  // Hitung total halaman & data paginasi
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
-  const currentLogs = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredLogs.slice(start, start + itemsPerPage);
-  }, [filteredLogs, currentPage, itemsPerPage]);
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   // Handler Hapus Log > 90 hari
   const handlePurgeLogs = async () => {
     setIsPurging(true);
-    // Simulasi pembersihan log lama
-    setTimeout(() => {
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-      const cutoffStr = ninetyDaysAgo.toISOString().split("T")[0];
-
-      setLogsList((prev) => prev.filter((item) => item.rawDate >= cutoffStr));
+    try {
+      const response = await fetch("/api/audit-logs/cleanup", {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setToastMessage(`Berhasil membersihkan ${data.count} log aktivitas yang berusia > 90 hari.`);
+        setTimeout(() => setToastMessage(null), 4000);
+        fetchLogs();
+      } else {
+        setToastMessage("Gagal membersihkan log.");
+        setTimeout(() => setToastMessage(null), 4000);
+      }
+    } catch (error) {
+      console.error(error);
+      setToastMessage("Terjadi kesalahan saat pembersihan log.");
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
       setIsPurging(false);
       setIsPurgeModalOpen(false);
-
-      setToastMessage("Berhasil membersihkan log aktivitas yang berusia > 90 hari.");
-      setTimeout(() => setToastMessage(null), 4000);
-    }, 600);
+    }
   };
 
   // Helper render badge aksi
@@ -304,10 +332,10 @@ export default function LogAktivitasPage() {
             Reset Sandi
           </span>
         );
-      case "Verifikasi Kegiatan":
+      case "Verifikasi Berkas":
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
-            Verifikasi Kegiatan
+            Verifikasi Berkas
           </span>
         );
       case "Ubah Bobot":
@@ -320,6 +348,12 @@ export default function LogAktivitasPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
             Hitung Ulang Skor
+          </span>
+        );
+      case "Ubah Batas Waktu":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+            Ubah Batas Waktu
           </span>
         );
       case "Bersihkan Log":
@@ -419,9 +453,10 @@ export default function LogAktivitasPage() {
             <option value="Tambah Pengguna">Tambah Pengguna</option>
             <option value="Ubah Pengguna">Ubah Pengguna</option>
             <option value="Reset Sandi">Reset Sandi</option>
-            <option value="Verifikasi Kegiatan">Verifikasi Kegiatan</option>
+            <option value="Verifikasi Berkas">Verifikasi Berkas</option>
             <option value="Ubah Bobot">Ubah Bobot</option>
             <option value="Hitung Ulang Skor">Hitung Ulang Skor</option>
+            <option value="Ubah Batas Waktu">Ubah Batas Waktu</option>
             <option value="Bersihkan Log">Bersihkan Log</option>
           </select>
         </div>
@@ -469,7 +504,7 @@ export default function LogAktivitasPage() {
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-500 bg-slate-50/40">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-slate-400" />
-            <span>{filteredLogs.length} peristiwa tercatat</span>
+            <span>{totalLogs} peristiwa tercatat</span>
           </div>
           {(searchQuery || selectedAction !== "Semua Aksi" || startDate || endDate) && (
             <button
@@ -511,7 +546,14 @@ export default function LogAktivitasPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {currentLogs.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                    <RefreshCw className="w-8 h-8 mx-auto text-slate-300 mb-2 animate-spin" />
+                    <p className="font-semibold text-slate-600">Memuat log aktivitas...</p>
+                  </td>
+                </tr>
+              ) : logsList.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
                     <FileText className="w-10 h-10 mx-auto text-slate-300 mb-2" />
@@ -522,7 +564,7 @@ export default function LogAktivitasPage() {
                   </td>
                 </tr>
               ) : (
-                currentLogs.map((log) => (
+                logsList.map((log) => (
                   <tr
                     key={log.id}
                     className="hover:bg-slate-50/70 transition-colors group"
@@ -580,7 +622,7 @@ export default function LogAktivitasPage() {
         {/* FOOTER & PAGINASI */}
         <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            Halaman {currentPage} dari {totalPages} ({filteredLogs.length} data)
+            Halaman {currentPage} dari {totalPages} ({totalLogs} data)
           </div>
 
           <div className="flex items-center gap-1.5">
