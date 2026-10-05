@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJwtToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { RecordStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,46 @@ const DEFAULT_WEIGHTS = [
   { tingkat: "Nasional", emas: 60, perak: 45, perunggu: 30, partisipasi: 15 },
   { tingkat: "Provinsi", emas: 30, perak: 20, perunggu: 15, partisipasi: 10 },
 ];
+
+const PRISMA_VERIFIED_STATUSES: RecordStatus[] = [
+  RecordStatus.SAH_TERVERIFIKASI,
+  RecordStatus.SAH,
+  RecordStatus.DISETUJUI,
+];
+
+const VERIFIED_STATUS_STRINGS = [
+  RecordStatus.SAH_TERVERIFIKASI,
+  RecordStatus.SAH,
+  RecordStatus.DISETUJUI,
+  "Sah & Terverifikasi",
+  "Sah",
+  "Disetujui",
+  "SAH_TERVERIFIKASI",
+  "SAH",
+  "DISETUJUI"
+];
+
+const LIST_KAB_KOTA = [
+  "Samarinda", "Balikpapan", "Bontang", "Kutai Kartanegara", 
+  "Berau", "Kutai Timur", "Paser", "Penajam Paser Utara", 
+  "Kutai Barat", "Mahakam Ulu"
+];
+
+function isVerifiedStatus(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return VERIFIED_STATUS_STRINGS.includes(status);
+}
+
+function normalizeWilayah(rawName: string | null | undefined): string | null {
+  if (!rawName) return null;
+  const cleaned = rawName.replace(/^(Kota|Kab\.|Kabupaten)\s+/i, "").trim().toLowerCase();
+  for (const official of LIST_KAB_KOTA) {
+    if (official.toLowerCase() === cleaned || cleaned.includes(official.toLowerCase()) || official.toLowerCase().includes(cleaned)) {
+      return official;
+    }
+  }
+  return null;
+}
 
 function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
   if (!rec) return 0;
@@ -56,7 +97,6 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const pilarFilter = url.searchParams.get("pilar") || "Semua";
-    const tingkatWilayahFilter = url.searchParams.get("tingkat") || "Tingkat 2";
 
     // 1. Get dynamic weights
     let weights = DEFAULT_WEIGHTS;
@@ -70,16 +110,20 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Base filter for CategoryRecords
+    const targetInstansi =
+      pilarFilter === "Prestasi (KONI)" ? "KONI" :
+      pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
+      pilarFilter === "Disabilitas (NPC)" ? "NPC" :
+      pilarFilter === "Dispora" ? "Dispora" : pilarFilter;
+
     let instansiFilter = {};
     if (pilarFilter !== "Semua") {
-      // mapping instansi filter
       instansiFilter = {
         responden: {
           user: {
-            instansi: pilarFilter === "Prestasi (KONI)" ? "KONI" :
-                     pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
-                     pilarFilter === "Disabilitas (NPC)" ? "NPC" :
-                     pilarFilter === "Dispora" ? "Dispora" : pilarFilter
+            instansi: {
+              contains: targetInstansi
+            }
           }
         }
       };
@@ -98,19 +142,18 @@ export async function GET(request: NextRequest) {
     });
 
     const totalDataMasuk = allRecords.length;
-    const verifiedStatuses = ["Sah & Terverifikasi", "Sah", "Disetujui"];
-    const totalDataTerverifikasi = allRecords.filter(r => verifiedStatuses.includes(r.status)).length;
+    const totalDataTerverifikasi = allRecords.filter(r => isVerifiedStatus(r.status)).length;
     const persentaseTerverifikasi = totalDataMasuk > 0 
       ? ((totalDataTerverifikasi / totalDataMasuk) * 100).toFixed(1) 
       : "0.0";
 
     let medaliSah = { emas: 0, perak: 0, perunggu: 0, total: 0 };
     
-    // Aggregation by Kabupaten/Kota (or Province)
+    // Aggregation map initialized for ALL 10 Kabupaten/Kota
     const wilayahMap = new Map<string, {
       namaWilayah: string,
       jumlahOperator: Set<string>,
-      jumlahResponden: number,
+      jumlahResponden: Set<string>,
       medaliEmas: number,
       medaliPerak: number,
       medaliPerunggu: number,
@@ -118,26 +161,52 @@ export async function GET(request: NextRequest) {
       skor: number
     }>();
 
-    // Fetch respondens from database
-    const allRespondens = await prisma.responden.findMany({
+    LIST_KAB_KOTA.forEach(kab => {
+      wilayahMap.set(kab, {
+        namaWilayah: kab,
+        jumlahOperator: new Set(),
+        jumlahResponden: new Set(),
+        medaliEmas: 0,
+        medaliPerak: 0,
+        medaliPerunggu: 0,
+        jumlahMedaliSah: 0,
+        skor: 0
+      });
+    });
+
+    // Fetch verified respondens strictly from Responden table
+    const verifiedRespondens = await prisma.responden.findMany({
+      where: {
+        ...(pilarFilter !== "Semua" ? {
+          user: {
+            instansi: { contains: targetInstansi }
+          }
+        } : {}),
+        OR: [
+          { status: { in: PRISMA_VERIFIED_STATUSES } },
+          {
+            categoryRecords: {
+              some: {
+                status: { in: PRISMA_VERIFIED_STATUSES }
+              }
+            }
+          }
+        ]
+      },
       select: {
         id: true,
-        nik: true,
         kabupatenKota: true
       }
     });
 
-    const totalResponden = allRespondens.length;
+    const totalResponden = verifiedRespondens.length;
 
-    // Init map with all OPERATOR users to ensure regions exist
+    // Fetch operators
     const allUsers = await prisma.user.findMany({
       where: {
         role: "OPERATOR",
         ...(pilarFilter !== "Semua" ? {
-          instansi: pilarFilter === "Prestasi (KONI)" ? "KONI" :
-                   pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
-                   pilarFilter === "Disabilitas (NPC)" ? "NPC" :
-                   pilarFilter === "Dispora" ? "Dispora" : pilarFilter
+          instansi: { contains: targetInstansi }
         } : {})
       }
     });
@@ -145,109 +214,74 @@ export async function GET(request: NextRequest) {
     const totalOperator = allUsers.length;
 
     allUsers.forEach(u => {
-      const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (u.kabupatenKota || "Lainnya");
-      if (!wilayahMap.has(namaWilayah)) {
-        wilayahMap.set(namaWilayah, {
-          namaWilayah,
-          jumlahOperator: new Set(),
-          jumlahResponden: 0,
-          medaliEmas: 0,
-          medaliPerak: 0,
-          medaliPerunggu: 0,
-          jumlahMedaliSah: 0,
-          skor: 0
-        });
+      const norm = normalizeWilayah(u.kabupatenKota);
+      if (norm && wilayahMap.has(norm)) {
+        wilayahMap.get(norm)!.jumlahOperator.add(u.id);
       }
-      wilayahMap.get(namaWilayah)!.jumlahOperator.add(u.id);
     });
 
-    // Populate respondens count per region
-    allRespondens.forEach(r => {
-      const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (r.kabupatenKota || "Lainnya");
-      let wData = wilayahMap.get(namaWilayah);
-      if (!wData) {
-        wData = {
-          namaWilayah,
-          jumlahOperator: new Set(),
-          jumlahResponden: 0,
-          medaliEmas: 0,
-          medaliPerak: 0,
-          medaliPerunggu: 0,
-          jumlahMedaliSah: 0,
-          skor: 0
-        };
-        wilayahMap.set(namaWilayah, wData);
+    // Populate respondens count per region from Responden table
+    verifiedRespondens.forEach(r => {
+      const norm = normalizeWilayah(r.kabupatenKota);
+      if (norm && wilayahMap.has(norm)) {
+        wilayahMap.get(norm)!.jumlahResponden.add(r.id);
       }
-      wData.jumlahResponden++;
     });
 
+    // Process all CategoryRecords (ONLY verified records count towards medals and scores)
     allRecords.forEach(rec => {
-      const medaliStr = (rec.medali || rec.uraianCapaian || "").toLowerCase();
-      if (medaliStr.includes("emas")) {
-        medaliSah.emas++;
-        medaliSah.total++;
-      } else if (medaliStr.includes("perak")) {
-        medaliSah.perak++;
-        medaliSah.total++;
-      } else if (medaliStr.includes("perunggu")) {
-        medaliSah.perunggu++;
-        medaliSah.total++;
-      }
+      const verified = isVerifiedStatus(rec.status);
 
-      const isVerified = verifiedStatuses.includes(rec.status);
-      const isMedalCategory = rec.categoryId === 2 || rec.categoryId === 7;
-      
-      const user = rec.responden?.user;
-      const namaWilayah = tingkatWilayahFilter === "Tingkat 3" ? "Kalimantan Timur" : (user?.kabupatenKota || "Lainnya");
-
-      let wData = wilayahMap.get(namaWilayah);
-      if (!wData) {
-        wData = {
-          namaWilayah,
-          jumlahOperator: new Set(),
-          jumlahResponden: 0,
-          medaliEmas: 0,
-          medaliPerak: 0,
-          medaliPerunggu: 0,
-          jumlahMedaliSah: 0,
-          skor: 0
-        };
-        wilayahMap.set(namaWilayah, wData);
-      }
-      if (user) {
-        wData.jumlahOperator.add(user.id);
-      }
-
-      if (isVerified || isMedalCategory) {
+      if (verified) {
+        const medaliStr = (rec.medali || rec.uraianCapaian || "").toLowerCase();
         if (medaliStr.includes("emas")) {
-          wData.medaliEmas++;
-          wData.jumlahMedaliSah++;
+          medaliSah.emas++;
+          medaliSah.total++;
         } else if (medaliStr.includes("perak")) {
-          wData.medaliPerak++;
-          wData.jumlahMedaliSah++;
+          medaliSah.perak++;
+          medaliSah.total++;
         } else if (medaliStr.includes("perunggu")) {
-          wData.medaliPerunggu++;
-          wData.jumlahMedaliSah++;
-        } else if (medaliStr.includes("partisipan")) {
-          wData.jumlahMedaliSah++; 
+          medaliSah.perunggu++;
+          medaliSah.total++;
         }
-        
-        if (isVerified) {
+
+        const rawWilayah = rec.responden?.kabupatenKota;
+        const norm = normalizeWilayah(rawWilayah);
+        const wData = norm ? wilayahMap.get(norm) : null;
+
+        if (wData) {
+          if (medaliStr.includes("emas")) {
+            wData.medaliEmas++;
+            wData.jumlahMedaliSah++;
+          } else if (medaliStr.includes("perak")) {
+            wData.medaliPerak++;
+            wData.jumlahMedaliSah++;
+          } else if (medaliStr.includes("perunggu")) {
+            wData.medaliPerunggu++;
+            wData.jumlahMedaliSah++;
+          } else if (medaliStr.includes("partisipasi") || medaliStr.includes("partisipan")) {
+            wData.jumlahMedaliSah++;
+          }
+          
           wData.skor += calculateRecordPoints(rec, weights);
         }
       }
     });
 
-    const peringkatWilayah = Array.from(wilayahMap.values()).map(w => ({
-      namaWilayah: w.namaWilayah,
-      jumlahOperator: w.jumlahOperator.size,
-      jumlahResponden: w.jumlahResponden,
-      medaliEmas: w.medaliEmas,
-      medaliPerak: w.medaliPerak,
-      medaliPerunggu: w.medaliPerunggu,
-      jumlahMedaliSah: w.jumlahMedaliSah,
-      skor: w.skor
-    })).sort((a, b) => b.skor - a.skor);
+    // Return all 10 regions sorted by score
+    const peringkatWilayah = LIST_KAB_KOTA.map(kab => {
+      const w = wilayahMap.get(kab)!;
+      return {
+        namaWilayah: w.namaWilayah,
+        jumlahOperator: w.jumlahOperator.size,
+        jumlahResponden: w.jumlahResponden.size,
+        medaliEmas: w.medaliEmas,
+        medaliPerak: w.medaliPerak,
+        medaliPerunggu: w.medaliPerunggu,
+        jumlahMedaliSah: w.jumlahMedaliSah,
+        skor: Math.round(w.skor)
+      };
+    }).sort((a, b) => b.skor - a.skor);
 
     return NextResponse.json({
       success: true,
@@ -268,3 +302,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+

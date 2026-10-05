@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJwtToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { RecordStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,46 @@ const DEFAULT_WEIGHTS = [
   { tingkat: "Nasional", emas: 60, perak: 45, perunggu: 30, partisipasi: 15 },
   { tingkat: "Provinsi", emas: 30, perak: 20, perunggu: 15, partisipasi: 10 },
 ];
+
+const PRISMA_VERIFIED_STATUSES: RecordStatus[] = [
+  RecordStatus.SAH_TERVERIFIKASI,
+  RecordStatus.SAH,
+  RecordStatus.DISETUJUI,
+];
+
+const VERIFIED_STATUS_STRINGS = [
+  RecordStatus.SAH_TERVERIFIKASI,
+  RecordStatus.SAH,
+  RecordStatus.DISETUJUI,
+  "Sah & Terverifikasi",
+  "Sah",
+  "Disetujui",
+  "SAH_TERVERIFIKASI",
+  "SAH",
+  "DISETUJUI"
+];
+
+const LIST_KAB_KOTA = [
+  "Samarinda", "Balikpapan", "Bontang", "Kutai Kartanegara", 
+  "Berau", "Kutai Timur", "Paser", "Penajam Paser Utara", 
+  "Kutai Barat", "Mahakam Ulu"
+];
+
+function isVerifiedStatus(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return VERIFIED_STATUS_STRINGS.includes(status);
+}
+
+function normalizeWilayah(rawName: string | null | undefined): string | null {
+  if (!rawName) return null;
+  const cleaned = rawName.replace(/^(Kota|Kab\.|Kabupaten)\s+/i, "").trim().toLowerCase();
+  for (const official of LIST_KAB_KOTA) {
+    if (official.toLowerCase() === cleaned || cleaned.includes(official.toLowerCase()) || official.toLowerCase().includes(cleaned)) {
+      return official;
+    }
+  }
+  return null;
+}
 
 function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
   if (!rec) return 0;
@@ -68,17 +109,21 @@ export async function GET(request: NextRequest) {
       console.warn("Could not fetch dynamic weights, using default.");
     }
 
-    // 2. Base filter for CategoryRecords
+    // 2. Base filter for CategoryRecords by Pilar
+    const targetInstansi =
+      pilarFilter === "Prestasi (KONI)" ? "KONI" :
+      pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
+      pilarFilter === "Disabilitas (NPC)" ? "NPC" :
+      pilarFilter === "Dispora" ? "Dispora" : pilarFilter;
+
     let instansiFilter = {};
     if (pilarFilter !== "Semua") {
-      const targetInstansi = pilarFilter === "Prestasi (KONI)" ? "KONI" :
-                     pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
-                     pilarFilter === "Disabilitas (NPC)" ? "NPC" :
-                     pilarFilter === "Dispora" ? "Dispora" : pilarFilter;
       instansiFilter = {
         responden: {
           user: {
-            instansi: targetInstansi
+            instansi: {
+              contains: targetInstansi
+            }
           }
         }
       };
@@ -96,27 +141,44 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const verifiedStatuses = ["Sah & Terverifikasi", "Sah", "Disetujui"];
-    const totalDataTerverifikasi = allRecords.filter(r => verifiedStatuses.includes(r.status as string)).length;
+    const totalDataTerverifikasi = allRecords.filter(r => isVerifiedStatus(r.status)).length;
     
-    const antreanValidasi = allRecords.filter(r => (r.status as string) === "Menunggu Validasi" || (r.status as string) === "Perlu Revisi" || (r.status as string) === "Menunggu Review" || (r.status as string) === "Revisi").length;
+    const antreanValidasi = allRecords.filter(r => 
+      ["Menunggu Validasi", "Perlu Revisi", "Menunggu Review", "Revisi", "MENUNGGU_REVIEW", "REVISI"].includes(r.status)
+    ).length;
 
     let medaliSah = { emas: 0, perak: 0, perunggu: 0, total: 0 };
     
-    // Total Operator & Responden
+    // Total Operator & Responden (Only verified respondens)
     const allUsers = await prisma.user.findMany({
       where: {
         role: "OPERATOR",
         ...(pilarFilter !== "Semua" ? {
-          instansi: pilarFilter === "Prestasi (KONI)" ? "KONI" :
-                   pilarFilter === "Masyarakat (KORMI)" ? "KORMI" :
-                   pilarFilter === "Disabilitas (NPC)" ? "NPC" :
-                   pilarFilter === "Dispora" ? "Dispora" : pilarFilter
+          instansi: { contains: targetInstansi }
         } : {})
       }
     });
     const totalOperator = allUsers.length;
-    const totalResponden = await prisma.responden.count();
+
+    const totalResponden = await prisma.responden.count({
+      where: {
+        ...(pilarFilter !== "Semua" ? {
+          user: {
+            instansi: { contains: targetInstansi }
+          }
+        } : {}),
+        OR: [
+          { status: { in: PRISMA_VERIFIED_STATUSES } },
+          {
+            categoryRecords: {
+              some: {
+                status: { in: PRISMA_VERIFIED_STATUSES }
+              }
+            }
+          }
+        ]
+      }
+    });
 
     // Pilar Scores and Composite Score
     const pilarScores = {
@@ -127,85 +189,74 @@ export async function GET(request: NextRequest) {
       Semua: 0
     };
 
-    // Aggregation by Kabupaten/Kota
+    // Aggregation by 10 Kabupaten/Kota (strictly from Responden database table)
     const wilayahMap = new Map<string, {
       namaWilayah: string,
       skor: number
     }>();
 
-    const listKabKota = [
-      "Samarinda", "Balikpapan", "Bontang", "Kutai Kartanegara", 
-      "Berau", "Kutai Timur", "Paser", "Penajam Paser Utara", 
-      "Kutai Barat", "Mahakam Ulu"
-    ];
-    listKabKota.forEach(kab => {
+    LIST_KAB_KOTA.forEach(kab => {
       wilayahMap.set(kab, { namaWilayah: kab, skor: 0 });
-    });
-
-    allUsers.forEach(u => {
-      const namaWilayah = u.kabupatenKota || "";
-      if (wilayahMap.has(namaWilayah)) {
-        // Just acknowledging the user exists in a valid region if needed, 
-        // though we're mostly counting scores later.
-      }
     });
 
     let totalKomposit = 0;
 
     allRecords.forEach(rec => {
-      const medaliStr = (rec.medali || rec.uraianCapaian || "").toLowerCase();
-      if (medaliStr.includes("emas")) {
-        medaliSah.emas++;
-        medaliSah.total++;
-      } else if (medaliStr.includes("perak")) {
-        medaliSah.perak++;
-        medaliSah.total++;
-      } else if (medaliStr.includes("perunggu")) {
-        medaliSah.perunggu++;
-        medaliSah.total++;
-      }
-
-      const isVerified = verifiedStatuses.includes(rec.status as string);
-      const isMedalCategory = rec.categoryId === 2 || rec.categoryId === 7;
-      const user = rec.responden?.user;
+      const verified = isVerifiedStatus(rec.status);
       
-      if (isVerified || isMedalCategory) {
-        const score = calculateRecordPoints(rec, weights);
-        if (isVerified) {
-          totalKomposit += score;
+      // ONLY include verified records for stats, medals, and scores
+      if (verified) {
+        const medaliStr = (rec.medali || rec.uraianCapaian || "").toLowerCase();
+        if (medaliStr.includes("emas")) {
+          medaliSah.emas++;
+          medaliSah.total++;
+        } else if (medaliStr.includes("perak")) {
+          medaliSah.perak++;
+          medaliSah.total++;
+        } else if (medaliStr.includes("perunggu")) {
+          medaliSah.perunggu++;
+          medaliSah.total++;
         }
-        
-        if (user) {
-          const instansi = user.instansi;
-          if (instansi === "KONI") pilarScores.KONI += score;
-          else if (instansi === "NPC") pilarScores.NPC += score;
-          else if (instansi === "KORMI") pilarScores.KORMI += score;
-          else if (instansi === "Dispora") pilarScores.Dispora += score;
 
-          const namaWilayah = user.kabupatenKota || "Lainnya";
-          let wData = wilayahMap.get(namaWilayah);
-          if (wData && isVerified) {
-            wData.skor += score;
-          }
+        const score = calculateRecordPoints(rec, weights);
+        totalKomposit += score;
+
+        const user = rec.responden?.user;
+        const instansi = (user?.instansi || "").toUpperCase();
+        if (instansi.includes("KONI")) pilarScores.KONI += score;
+        else if (instansi.includes("NPC")) pilarScores.NPC += score;
+        else if (instansi.includes("KORMI")) pilarScores.KORMI += score;
+        else if (instansi.includes("DISPORA")) pilarScores.Dispora += score;
+        else {
+          if (rec.categoryId === 2 || rec.categoryId === 7) pilarScores.KONI += score;
+          else if (rec.categoryId === 3 || rec.categoryId === 8) pilarScores.KORMI += score;
+          else pilarScores.Dispora += score;
+        }
+
+        // Must derive region from Responden table (rec.responden.kabupatenKota)
+        const rawWilayah = rec.responden?.kabupatenKota;
+        const normWilayah = normalizeWilayah(rawWilayah);
+        if (normWilayah && wilayahMap.has(normWilayah)) {
+          wilayahMap.get(normWilayah)!.skor += score;
         }
       }
     });
 
-    // Ensure we only sort and return exactly the 10 regions from our map
-    const chartWilayah = Array.from(wilayahMap.values())
-      .map(w => ({
+    // Ensure all 10 regions are returned, sorted by score descending
+    const chartWilayah = LIST_KAB_KOTA.map(kab => {
+      const w = wilayahMap.get(kab)!;
+      return {
         namaWilayah: w.namaWilayah,
         skor: Math.round(w.skor)
-      }))
-      .sort((a, b) => b.skor - a.skor);
+      };
+    }).sort((a, b) => b.skor - a.skor);
 
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
     const search = url.searchParams.get("search") || "";
     
-    // Recent Submissions (Kategori 2 & 7)
-    // Filtered by search and paginated
-    let filteredRecent = allRecords.filter(r => r.categoryId === 2 || r.categoryId === 7);
+    // Recent Submissions (Displaying all records, both verified and unverified)
+    let filteredRecent = [...allRecords];
     
     if (search) {
       const lowerSearch = search.toLowerCase();
@@ -271,3 +322,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+
