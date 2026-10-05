@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { useApp } from "@/lib/context/app-context";
+import { useCutoffStatus } from "@/lib/hooks/useCutoffStatus";
 import { SURVEY_INDICATORS, KABUPATEN_KOTA_OPTIONS } from "@/lib/constants/survey-data";
 import { FULL_TEMPLATE_NAMES } from "@/lib/constants/ui-data";
 import * as XLSX from "xlsx";
@@ -113,6 +114,7 @@ function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
 
 export default function KuesionerPage() {
   const { currentUser, isLoading: isSessionLoading } = useApp();
+  const { isLocked, message: cutoffMessage } = useCutoffStatus();
 
   // Tab Active State: Indicator ID (1 - 8)
   const [activeIndicatorId, setActiveIndicatorId] = useState<number>(1);
@@ -880,6 +882,19 @@ export default function KuesionerPage() {
         </div>
       </Card>
 
+      {/* BANNER PERINGATAN TERKUNCI (CUTOFF) */}
+      {isLocked && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 shadow-xs mb-6">
+          <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-rose-900">Mode Baca Saja (Read-Only) - Akses Ditutup</h3>
+            <p className="text-xs text-rose-700 mt-1">
+              {cutoffMessage || "Batas waktu pengisian telah lewat. Anda tidak dapat lagi menambahkan atau mengubah data."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 2. CARD INFO KATEGORI / HEADER HIJAU TUA (Sesuai Referensi Gambar Desain) */}
       <div className="relative overflow-hidden rounded-[32px] bg-[#0b1f18] text-white p-6 sm:p-10 shadow-elevated border-none">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8 relative z-10">
@@ -892,6 +907,11 @@ export default function KuesionerPage() {
               <span className="bg-white/10 text-emerald-50 border border-white/5 text-xs font-medium px-3 py-1 rounded-full">
                 {currentIndicator.id === 1 ? "Identitas & Profil Responden" : "Olahraga Prestasi & Pelajar"}
               </span>
+              {isLocked && (
+                <span className="bg-rose-500 text-white text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                  Terkunci (Read-Only)
+                </span>
+              )}
             </div>
 
             {/* Judul & Deskripsi */}
@@ -911,7 +931,10 @@ export default function KuesionerPage() {
               <>
                 <Button
                   type="button"
+                  disabled={isLocked}
+                  title={isLocked ? cutoffMessage : undefined}
                   onClick={() => {
+                    if (isLocked) return;
                     setUploadError(null);
                     if (activeIndicatorId === 1) {
                       setRespondenFormData({
@@ -939,7 +962,11 @@ export default function KuesionerPage() {
                     }
                     setShowManualModal(true);
                   }}
-                  className="w-full bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-bold text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border-none"
+                  className={`w-full font-bold text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all border-none ${
+                    isLocked
+                      ? "bg-slate-700 text-slate-400 cursor-not-allowed opacity-70"
+                      : "bg-emerald-400 hover:bg-emerald-500 text-slate-900"
+                  }`}
                 >
                   <span className="text-lg leading-none mb-0.5">+</span>
                   <span>{activeIndicatorId === 1 ? "Tambah Data Responden" : "Tambah Entri Kegiatan"}</span>
@@ -947,9 +974,17 @@ export default function KuesionerPage() {
 
                 <Button
                   type="button"
-                  disabled={isUploadingExcel}
-                  onClick={handleTriggerExcelUpload}
-                  className="w-full bg-white/5 hover:bg-white/10 text-white font-medium text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 border border-white/10 transition-all"
+                  disabled={isUploadingExcel || isLocked}
+                  title={isLocked ? cutoffMessage : undefined}
+                  onClick={() => {
+                    if (isLocked) return;
+                    handleTriggerExcelUpload();
+                  }}
+                  className={`w-full font-medium text-sm px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 border transition-all ${
+                    isLocked
+                      ? "bg-white/5 border-white/5 text-slate-500 cursor-not-allowed opacity-50"
+                      : "bg-white/5 hover:bg-white/10 text-white border-white/10"
+                  }`}
                 >
                   {isUploadingExcel ? (
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -1320,35 +1355,47 @@ export default function KuesionerPage() {
                               </span>
                             </Button>
 
-                            <label className="cursor-pointer">
+                            <label className={isLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}>
                               <input
                                 type="file"
                                 accept=".pdf, application/pdf"
+                                disabled={isLocked}
                                 onChange={(e) => {
+                                  if (isLocked) return;
                                   const file = e.target.files?.[0];
                                   if (file) handlePdfUpload(rec, file);
                                   e.target.value = "";
                                 }}
                                 className="hidden"
                               />
-                              <span className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 block transition-colors">
+                              <span className={`p-1.5 rounded-lg border block transition-colors ${
+                                isLocked
+                                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                  : "border-slate-200 bg-white hover:bg-slate-100 text-slate-600 cursor-pointer"
+                              }`}>
                                 <FileUp className="w-3.5 h-3.5" />
                               </span>
                             </label>
                           </div>
                         ) : (
-                          <label className="cursor-pointer inline-block">
+                          <label className={isLocked ? "cursor-not-allowed opacity-50 inline-block" : "cursor-pointer inline-block"}>
                             <input
                               type="file"
                               accept=".pdf, application/pdf"
+                              disabled={isLocked}
                               onChange={(e) => {
+                                if (isLocked) return;
                                 const file = e.target.files?.[0];
                                 if (file) handlePdfUpload(rec, file);
                                 e.target.value = "";
                               }}
                               className="hidden"
                             />
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                              isLocked
+                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                            }`}>
                               <UploadCloud className="w-3.5 h-3.5 text-amber-700" />
                               <span>Upload PDF</span>
                             </span>
@@ -1402,7 +1449,9 @@ export default function KuesionerPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={isLocked}
                               onClick={() => {
+                                if (isLocked) return;
                                 setUploadError(null);
                                 if (activeIndicatorId === 1) {
                                   const r = rec.responden || rec;
@@ -1439,8 +1488,12 @@ export default function KuesionerPage() {
                                 }
                                 setShowManualModal(true);
                               }}
-                              className="h-8 w-8 p-0 rounded-xl border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all shadow-xs"
-                              title="Edit Entri"
+                              className={`h-8 w-8 p-0 rounded-xl transition-all shadow-xs ${
+                                isLocked
+                                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                                  : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                              }`}
+                              title={isLocked ? cutoffMessage : "Edit Entri"}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
                             </Button>
@@ -1449,9 +1502,17 @@ export default function KuesionerPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleDeleteRecord(rec.id)}
-                              className="h-8 w-8 p-0 rounded-xl border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-all shadow-xs"
-                              title="Hapus Entri"
+                              disabled={isLocked}
+                              onClick={() => {
+                                if (isLocked) return;
+                                handleDeleteRecord(rec.id);
+                              }}
+                              className={`h-8 w-8 p-0 rounded-xl transition-all shadow-xs ${
+                                isLocked
+                                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                                  : "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                              }`}
+                              title={isLocked ? cutoffMessage : "Hapus Entri"}
                             >
                               <Trash2 className="w-4 h-4 text-rose-700" />
                             </Button>
@@ -1986,11 +2047,16 @@ export default function KuesionerPage() {
             <div className="p-6 pt-4 border-t border-slate-100 shrink-0 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowManualModal(false)}>Batal</Button>
               <Button 
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold disabled:opacity-70"
-                disabled={isSubmittingManual}
+                className={`font-bold ${
+                  isLocked 
+                    ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-70"
+                    : "bg-emerald-700 hover:bg-emerald-800 text-white disabled:opacity-70"
+                }`}
+                disabled={isSubmittingManual || isLocked}
+                title={isLocked ? cutoffMessage : undefined}
                 onClick={handleManualSubmit}
               >
-                {isSubmittingManual ? "Menyimpan..." : (activeIndicatorId === 1 ? (respondenFormData.id ? "Simpan Perubahan" : "Simpan Responden") : "Simpan Entri Kegiatan")}
+                {isLocked ? "Form Ditutup (Batas Waktu Habis)" : isSubmittingManual ? "Menyimpan..." : (activeIndicatorId === 1 ? (respondenFormData.id ? "Simpan Perubahan" : "Simpan Responden") : "Simpan Entri Kegiatan")}
               </Button>
             </div>
           </div>
@@ -2042,11 +2108,18 @@ export default function KuesionerPage() {
               <div className="space-y-1.5 pt-2">
                 <label className="text-xs font-bold text-slate-700">Dokumen Template Excel *</label>
                 <div 
-                  className="w-full border-2 border-dashed border-emerald-300 bg-emerald-50/50 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-emerald-50 transition-colors cursor-pointer group"
-                  onClick={() => excelFileInputRef.current?.click()}
+                  className={`w-full border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center transition-colors ${
+                    isLocked 
+                      ? "border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed"
+                      : "border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 cursor-pointer group"
+                  }`}
+                  onClick={() => {
+                    if (!isLocked) excelFileInputRef.current?.click();
+                  }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
+                    if (isLocked) return;
                     if (e.dataTransfer.files?.[0]) {
                       handleExcelUpload(e.dataTransfer.files[0]);
                     }
@@ -2056,15 +2129,19 @@ export default function KuesionerPage() {
                     type="file"
                     ref={excelFileInputRef}
                     accept=".xlsx, .xls"
+                    disabled={isLocked}
                     className="hidden"
                     onChange={(e) => {
+                      if (isLocked) return;
                       if (e.target.files?.[0]) handleExcelUpload(e.target.files[0]);
                     }}
                   />
                   <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-emerald-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <FileText className="w-6 h-6 text-emerald-600" />
                   </div>
-                  <span className="text-sm font-bold text-slate-700 mb-1">Pilih atau Tarik File Excel ke Sini</span>
+                  <span className="text-sm font-bold text-slate-700 mb-1">
+                    {isLocked ? "Pengunggahan Ditutup (Batas Waktu Habis)" : "Pilih atau Tarik File Excel ke Sini"}
+                  </span>
                   <span className="text-[10px] text-slate-500">Maks. 10MB (.xlsx, .xls)</span>
                 </div>
               </div>

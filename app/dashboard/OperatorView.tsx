@@ -13,10 +13,12 @@ import {
   Users,
   Trophy,
   Clock,
-  Eye
+  Eye,
+  AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
 import { useApp } from "@/lib/context/app-context";
+import { useCutoffStatus } from "@/lib/hooks/useCutoffStatus";
 
 interface DashboardStats {
   totalResponden: number;
@@ -29,6 +31,7 @@ interface DashboardStats {
 
 export function OperatorView() {
   const { currentUser } = useApp();
+  const { isLocked, message: cutoffMessage } = useCutoffStatus();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -61,12 +64,27 @@ export function OperatorView() {
 
   return (
     <div className="space-y-6">
+      {/* BANNER PERINGATAN TERKUNCI (CUTOFF) */}
+      {isLocked && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-rose-900">Mode Baca Saja (Read-Only) - Akses Ditutup</h3>
+            <p className="text-xs text-rose-700 mt-1">
+              {cutoffMessage || "Batas waktu pengisian telah lewat. Anda tidak dapat lagi menambahkan atau mengubah data."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* HEADER KONTEN */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">WORKSPACE KERJA OPERATOR KECAMATAN</span>
+            <span className={`w-2.5 h-2.5 rounded-full ${isLocked ? "bg-rose-500" : "bg-emerald-500"}`}></span>
+            <span className={`text-xs font-bold uppercase tracking-wider ${isLocked ? "text-rose-600" : "text-emerald-600"}`}>
+              {isLocked ? "WORKSPACE TERKUNCI (READ-ONLY)" : "WORKSPACE KERJA OPERATOR KECAMATAN"}
+            </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
             Pemantauan &amp; Penginputan Wilayah {wilayah}
@@ -76,13 +94,23 @@ export function OperatorView() {
           </p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
-          <Link href="/kuesioner" className="w-full sm:w-auto">
+          {isLocked ? (
             <Button
-              className="w-full sm:w-auto gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl h-11 px-6 shadow-md shadow-emerald-900/10"
+              disabled
+              title="Akses penginputan ditutup karena telah melewati batas waktu"
+              className="w-full sm:w-auto gap-2 bg-slate-200 text-slate-500 font-bold rounded-xl h-11 px-6 border border-slate-300 cursor-not-allowed opacity-70"
             >
               <span className="text-lg leading-none">+</span> Unggah Excel Kategori
             </Button>
-          </Link>
+          ) : (
+            <Link href="/kuesioner" className="w-full sm:w-auto">
+              <Button
+                className="w-full sm:w-auto gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl h-11 px-6 shadow-md shadow-emerald-900/10"
+              >
+                <span className="text-lg leading-none">+</span> Unggah Excel Kategori
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

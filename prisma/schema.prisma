@@ -201,4 +201,30 @@ model Responden {
   @@map("responden")
 }
 
+// ============================================
+// SYSTEM CONFIG & CUTOFF LOGS
+// ============================================
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("system_configs")
+}
+
+model CutoffLog {
+  id                    String   @id @default(cuid())
+  adminId               String
+  adminNama             String?
+  tanggal               DateTime @default(now())
+  perubahanBatasWaktu   DateTime?
+  statusBatasWaktu      Boolean
+  actionNote            String?  @db.Text
+
+  @@map("cutoff_logs")
+}
+
 

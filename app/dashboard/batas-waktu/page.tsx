@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   CalendarClock,
   RotateCcw,
@@ -38,23 +38,61 @@ export default function BatasWaktuPage() {
     "OTOMATIS"
   );
 
-  // UI State
+  // UI & Loading State
+  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const [logHistory, setLogHistory] = useState<LogEntry[]>([
-    {
-      id: "1",
-      timestamp: "01/01/2026 08:00 WITA",
-      user: "Drs. H. Hendra Wijaya, M.Si. (Admin)",
-      action: "Inisialisasi periode survei tahun anggaran 2026."
+  const [logHistory, setLogHistory] = useState<LogEntry[]>([]);
+
+  // Fetch initial config & logs from API
+  const fetchCutoffData = async () => {
+    setLoading(true);
+    try {
+      const [configRes, logsRes] = await Promise.all([
+        fetch("/api/config/cutoff"),
+        fetch("/api/config/cutoff/logs"),
+      ]);
+
+      const configData = await configRes.json();
+      if (configData.success && configData.config) {
+        const c = configData.config;
+        if (c.title) setNamaPeriode(c.title);
+        if (c.startDate) setTanggalMulai(c.startDate);
+        if (c.cutoffDate) setBatasAkhir(c.cutoffDate);
+        if (c.kebijakanAkses) setKebijakanAkses(c.kebijakanAkses);
+      }
+
+      const logsData = await logsRes.json();
+      if (logsData.success && Array.isArray(logsData.logs)) {
+        const formattedLogs: LogEntry[] = logsData.logs.map((item: any) => ({
+          id: item.id,
+          timestamp: new Date(item.tanggal).toLocaleString("id-ID", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+          user: item.adminNama || item.adminId || "Admin",
+          action: item.actionNote || (item.statusBatasWaktu ? "Akses Terbuka" : "Akses Terkunci"),
+        }));
+        setLogHistory(formattedLogs);
+      }
+    } catch (err) {
+      console.error("Gagal memuat data batas waktu:", err);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchCutoffData();
+  }, []);
 
   // Calculate Days Remaining
   const daysRemaining = useMemo(() => {
     try {
-      const today = new Date("2026-10-03"); // Base reference date for 2026 evaluation period
+      const today = new Date();
       const cutoff = new Date(batasAkhir);
+      cutoff.setHours(23, 59, 59, 999);
       const diffTime = cutoff.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays;
@@ -66,39 +104,64 @@ export default function BatasWaktuPage() {
   // Compute System Status
   const isLocked = kebijakanAkses === "KUNCI_MANUAL" || daysRemaining < 0;
 
+  // Handle Kebijakan Akses Change
+  const handleKebijakanChange = (mode: "OTOMATIS" | "KUNCI_MANUAL") => {
+    setKebijakanAkses(mode);
+    if (mode === "KUNCI_MANUAL") {
+      const todayStr = new Date().toISOString().split("T")[0];
+      setBatasAkhir(todayStr);
+    }
+  };
+
   // Handle Preset Selections
   const handleSelectPreset = (presetDate: string, mode: "OTOMATIS" | "KUNCI_MANUAL") => {
-    setBatasAkhir(presetDate);
     setKebijakanAkses(mode);
+    if (mode === "KUNCI_MANUAL") {
+      const todayStr = new Date().toISOString().split("T")[0];
+      setBatasAkhir(todayStr);
+    } else {
+      setBatasAkhir(presetDate);
+    }
   };
 
   // Handle Refresh / Reset
   const handleRefresh = () => {
-    setNamaPeriode("Evaluasi Capaian Keolahragaan Provinsi Kalimantan Timur 2026");
-    setTanggalMulai("2026-01-01");
-    setBatasAkhir("2026-12-31");
-    setKebijakanAkses("OTOMATIS");
-    triggerToast("Data formulir berhasil diperbarui.");
+    fetchCutoffData();
+    triggerToast("Data formulir & log berhasil diperbarui.");
   };
 
-  // Handle Save
-  const handleSave = (e: React.FormEvent) => {
+  // Handle Save to API
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const nowStr = new Date().toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    });
-    const newLog: LogEntry = {
-      id: Date.now().toString(),
-      timestamp: `${nowStr} - WITA`,
-      user: "Drs. H. Hendra Wijaya, M.Si. (Admin)",
-      action: `Mengubah cut-off date menjadi ${batasAkhir} (${
-        kebijakanAkses === "KUNCI_MANUAL" ? "Kunci Manual" : "Terbuka Otomatis"
-      }).`
-    };
-    setLogHistory((prev) => [newLog, ...prev]);
-    triggerToast("Konfigurasi batas waktu berhasil disimpan!");
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/config/cutoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: true,
+          title: namaPeriode,
+          startDate: tanggalMulai,
+          cutoffDate: batasAkhir,
+          kebijakanAkses: kebijakanAkses,
+          message: "Maaf, periode pengisian dan pengunggahan data survei telah ditutup.",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        triggerToast("Konfigurasi batas waktu berhasil disimpan!");
+        // Refresh logs from API
+        fetchCutoffData();
+      } else {
+        triggerToast(data.error || "Gagal menyimpan konfigurasi!");
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      triggerToast("Terjadi kesalahan sistem saat menyimpan.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const triggerToast = (msg: string) => {
@@ -106,6 +169,7 @@ export default function BatasWaktuPage() {
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3500);
   };
+
 
   return (
     <div className="space-y-6 pb-12">
@@ -329,7 +393,7 @@ export default function BatasWaktuPage() {
 
                 <button
                   type="button"
-                  onClick={() => setKebijakanAkses("KUNCI_MANUAL")}
+                  onClick={() => handleKebijakanChange("KUNCI_MANUAL")}
                   className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
                     kebijakanAkses === "KUNCI_MANUAL"
                       ? "bg-amber-100 text-amber-900 border-amber-400 font-semibold shadow-xs"
@@ -342,7 +406,7 @@ export default function BatasWaktuPage() {
 
                 <button
                   type="button"
-                  onClick={() => setKebijakanAkses("OTOMATIS")}
+                  onClick={() => handleKebijakanChange("OTOMATIS")}
                   className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
                     kebijakanAkses === "OTOMATIS"
                       ? "bg-slate-100 text-slate-800 border-slate-300 font-semibold"
@@ -363,7 +427,7 @@ export default function BatasWaktuPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* Radio Card 1: Akses Terbuka Otomatis */}
                 <div
-                  onClick={() => setKebijakanAkses("OTOMATIS")}
+                  onClick={() => handleKebijakanChange("OTOMATIS")}
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3.5 ${
                     kebijakanAkses === "OTOMATIS"
                       ? "border-emerald-500 bg-emerald-50/40 shadow-xs"
@@ -395,7 +459,7 @@ export default function BatasWaktuPage() {
 
                 {/* Radio Card 2: Kunci Manual */}
                 <div
-                  onClick={() => setKebijakanAkses("KUNCI_MANUAL")}
+                  onClick={() => handleKebijakanChange("KUNCI_MANUAL")}
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3.5 ${
                     kebijakanAkses === "KUNCI_MANUAL"
                       ? "border-rose-500 bg-rose-50/40 shadow-xs"

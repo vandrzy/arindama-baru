@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { verifyJwtToken } from "@/lib/auth";
 import { parseAndValidateExcelFile, ValidationErrorDetail, ParsedIndicatorRecordData } from "@/lib/services/excelService";
+import { checkIsCutoffLocked } from "@/lib/services/cutoffService";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ function isExcelFile(file: File): boolean {
 const submissionSchema = z.object({
   tahunSurvei: z.number().int().min(2020).max(2100).default(2024),
 });
+
 
 // GET: List all respondens with indicator records & validation evidences (aliased as submissions for backward compatibility)
 export async function GET(request: NextRequest) {
@@ -130,6 +132,17 @@ export async function POST(request: NextRequest) {
         { error: "Sesi tidak valid atau telah kadaluarsa. Silakan login kembali." },
         { status: 401 }
       );
+    }
+
+    // Pengecekan batas waktu (cut-off) untuk role non-admin (OPERATOR)
+    if (payload.role !== "ADMIN") {
+      const { isLocked, message } = await checkIsCutoffLocked();
+      if (isLocked) {
+        return NextResponse.json(
+          { error: message || "Maaf, periode pengisian dan pengunggahan data survei telah ditutup." },
+          { status: 403 }
+        );
+      }
     }
 
     const formData = await request.formData();

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/context/app-context";
+import { useCutoffStatus } from "@/lib/hooks/useCutoffStatus";
 import { Modal } from "@/components/ui/modal";
-import { UserCheck, Calendar, ChevronDown, Save, Search, CheckCircle2 } from "lucide-react";
+import { UserCheck, Calendar, ChevronDown, Save, Search, CheckCircle2, AlertTriangle } from "lucide-react";
 
 // Mock Data Kaltim
 const KALTIM_DATA = {
@@ -32,6 +33,7 @@ interface Responden {
 
 export default function RespondenPage() {
   const { currentUser } = useApp();
+  const { isLocked, message: cutoffMessage } = useCutoffStatus();
   const [formData, setFormData] = useState({
     nama: "",
     nik: "",
@@ -136,13 +138,26 @@ export default function RespondenPage() {
       </Modal>
       <div className="space-y-6 pb-8">
 
+      {/* Warning Banner Cutoff */}
+      {isLocked && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-rose-900">Mode Baca Saja (Read-Only) - Akses Ditutup</h3>
+            <p className="text-xs text-rose-700 mt-1">
+              {cutoffMessage || "Batas waktu pengisian telah lewat. Anda tidak dapat lagi menambahkan atau mengubah data."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header Info */}
       <div className="bg-white border border-emerald-100 rounded-2xl p-6 shadow-sm">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
-                Aktif
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isLocked ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                {isLocked ? "Terkunci (Read-Only)" : "Aktif"}
               </span>
             </div>
             <h2 className="text-xl font-bold text-slate-900">
@@ -169,142 +184,146 @@ export default function RespondenPage() {
             <h3 className="text-lg font-bold text-slate-900">Formulir Pendaftaran Responden Baru</h3>
             <p className="text-xs text-slate-500 mt-1">Kalkulasi usia otomatis berdasarkan tanggal lahir responden</p>
           </div>
-          <div className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg">Wajib Data Sah</div>
+          <div className={`px-3 py-1 text-xs font-bold rounded-lg ${isLocked ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-600"}`}>
+            {isLocked ? "Form Ditutup" : "Wajib Data Sah"}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Nama Lengkap & Gelar *</label>
-              <input
-                type="text"
-                required
-                placeholder="Contoh: Muhammad Ilham, S.Pd."
-                value={formData.nama}
-                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">NIK *</label>
-              <input
-                type="text"
-                required
-                maxLength={16}
-                placeholder="16 Digit NIK"
-                value={formData.nik}
-                onChange={(e) => setFormData({ ...formData, nik: e.target.value.replace(/\D/g, '') })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700">Jenis Kelamin *</label>
-              <div className="flex items-center gap-3">
-                <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${formData.jenisKelamin === 'Laki-laki' ? 'bg-emerald-50/50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                  <input
-                    type="radio"
-                    name="jenisKelamin"
-                    value="Laki-laki"
-                    checked={formData.jenisKelamin === 'Laki-laki'}
-                    onChange={(e) => setFormData({ ...formData, jenisKelamin: e.target.value })}
-                    className="hidden"
-                  />
-                  <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${formData.jenisKelamin === 'Laki-laki' ? 'border-emerald-500' : 'border-slate-300'}`}>
-                    {formData.jenisKelamin === 'Laki-laki' && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
-                  </div>
-                  Laki-laki
-                </label>
-                <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${formData.jenisKelamin === 'Perempuan' ? 'bg-emerald-50/50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                  <input
-                    type="radio"
-                    name="jenisKelamin"
-                    value="Perempuan"
-                    checked={formData.jenisKelamin === 'Perempuan'}
-                    onChange={(e) => setFormData({ ...formData, jenisKelamin: e.target.value })}
-                    className="hidden"
-                  />
-                  <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${formData.jenisKelamin === 'Perempuan' ? 'border-emerald-500' : 'border-slate-300'}`}>
-                    {formData.jenisKelamin === 'Perempuan' && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
-                  </div>
-                  Perempuan
-                </label>
+          <fieldset disabled={isLocked} className="space-y-5 disabled:opacity-60">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Nama Lengkap & Gelar *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Muhammad Ilham, S.Pd."
+                  value={formData.nama}
+                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">NIK *</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={16}
+                  placeholder="16 Digit NIK"
+                  value={formData.nik}
+                  onChange={(e) => setFormData({ ...formData, nik: e.target.value.replace(/\D/g, '') })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700">Jenis Kelamin *</label>
+                <div className="flex items-center gap-3">
+                  <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${formData.jenisKelamin === 'Laki-laki' ? 'bg-emerald-50/50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                    <input
+                      type="radio"
+                      name="jenisKelamin"
+                      value="Laki-laki"
+                      checked={formData.jenisKelamin === 'Laki-laki'}
+                      onChange={(e) => setFormData({ ...formData, jenisKelamin: e.target.value })}
+                      className="hidden"
+                    />
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${formData.jenisKelamin === 'Laki-laki' ? 'border-emerald-500' : 'border-slate-300'}`}>
+                      {formData.jenisKelamin === 'Laki-laki' && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
+                    </div>
+                    Laki-laki
+                  </label>
+                  <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${formData.jenisKelamin === 'Perempuan' ? 'bg-emerald-50/50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                    <input
+                      type="radio"
+                      name="jenisKelamin"
+                      value="Perempuan"
+                      checked={formData.jenisKelamin === 'Perempuan'}
+                      onChange={(e) => setFormData({ ...formData, jenisKelamin: e.target.value })}
+                      className="hidden"
+                    />
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${formData.jenisKelamin === 'Perempuan' ? 'border-emerald-500' : 'border-slate-300'}`}>
+                      {formData.jenisKelamin === 'Perempuan' && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
+                    </div>
+                    Perempuan
+                  </label>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Tanggal Lahir *</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.tanggalLahir}
+                  onChange={(e) => setFormData({ ...formData, tanggalLahir: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Usia (Kalkulasi Sistem Otomatis) *</label>
+                <input
+                  type="text"
+                  disabled
+                  value={usia}
+                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Kabupaten / Kota *</label>
+                <select
+                  required
+                  value={formData.kabupatenKota}
+                  onChange={(e) => {
+                    setFormData({ ...formData, kabupatenKota: e.target.value, kecamatan: "" });
+                  }}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none appearance-none"
+                >
+                  <option value="" disabled hidden>Pilih Kabupaten / Kota...</option>
+                  {Object.keys(KALTIM_DATA).map((kab) => (
+                    <option key={kab} value={kab}>{kab}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Kecamatan Asal *</label>
+                <select
+                  required
+                  disabled={!formData.kabupatenKota || isLocked}
+                  value={formData.kecamatan}
+                  onChange={(e) => setFormData({ ...formData, kecamatan: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="" disabled hidden>Pilih Kecamatan...</option>
+                  {kecamatanList.map((kec: string) => (
+                    <option key={kec} value={kec}>{kec}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Cabang Olahraga / Afiliasi Organisasi *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Atletik / Taekwondo"
+                  value={formData.cabangOlahraga}
+                  onChange={(e) => setFormData({ ...formData, cabangOlahraga: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Nomor Telepon / WhatsApp Aktif *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="0812-xxxx-xxxx"
+                  value={formData.nomorTelepon}
+                  onChange={(e) => setFormData({ ...formData, nomorTelepon: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Tanggal Lahir *</label>
-              <input
-                type="date"
-                required
-                value={formData.tanggalLahir}
-                onChange={(e) => setFormData({ ...formData, tanggalLahir: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Usia (Kalkulasi Sistem Otomatis) *</label>
-              <input
-                type="text"
-                disabled
-                value={usia}
-                className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Kabupaten / Kota *</label>
-              <select
-                required
-                value={formData.kabupatenKota}
-                onChange={(e) => {
-                  setFormData({ ...formData, kabupatenKota: e.target.value, kecamatan: "" });
-                }}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none appearance-none"
-              >
-                <option value="" disabled hidden>Pilih Kabupaten / Kota...</option>
-                {Object.keys(KALTIM_DATA).map((kab) => (
-                  <option key={kab} value={kab}>{kab}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Kecamatan Asal *</label>
-              <select
-                required
-                disabled={!formData.kabupatenKota}
-                value={formData.kecamatan}
-                onChange={(e) => setFormData({ ...formData, kecamatan: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="" disabled hidden>Pilih Kecamatan...</option>
-                {kecamatanList.map((kec: string) => (
-                  <option key={kec} value={kec}>{kec}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Cabang Olahraga / Afiliasi Organisasi *</label>
-              <input
-                type="text"
-                required
-                placeholder="Contoh: Atletik / Taekwondo"
-                value={formData.cabangOlahraga}
-                onChange={(e) => setFormData({ ...formData, cabangOlahraga: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Nomor Telepon / WhatsApp Aktif *</label>
-              <input
-                type="text"
-                required
-                placeholder="0812-xxxx-xxxx"
-                value={formData.nomorTelepon}
-                onChange={(e) => setFormData({ ...formData, nomorTelepon: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
-              />
-            </div>
-          </div>
+          </fieldset>
 
           {errorMessage && (
             <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-semibold flex items-start gap-3">
@@ -320,11 +339,20 @@ export default function RespondenPage() {
           <div className="flex justify-end pt-4">
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 bg-[#006644] hover:bg-[#005533] text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              disabled={isSubmitting || isLocked}
+              title={isLocked ? cutoffMessage : undefined}
+              className={`px-6 py-2.5 text-sm font-bold rounded-xl transition-colors flex items-center gap-2 ${
+                isLocked
+                  ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-70"
+                  : "bg-[#006644] hover:bg-[#005533] text-white disabled:opacity-70 disabled:cursor-not-allowed"
+              }`}
             >
               <CheckCircle2 className="w-4 h-4" />
-              {isSubmitting ? "Mengirim data responden..." : "Simpan ke Basis Data Responden"}
+              {isLocked
+                ? "Formulir Ditutup (Batas Waktu Habis)"
+                : isSubmitting
+                ? "Mengirim data responden..."
+                : "Simpan ke Basis Data Responden"}
             </button>
           </div>
         </form>
