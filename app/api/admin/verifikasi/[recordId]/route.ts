@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJwtToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { RecordStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+const STATUS_MAPPING: Record<string, RecordStatus> = {
+  "Menunggu Review": RecordStatus.MENUNGGU_REVIEW,
+  "Revisi": RecordStatus.REVISI,
+  "Sah & Terverifikasi": RecordStatus.SAH_TERVERIFIKASI,
+  "Sah": RecordStatus.SAH,
+  "Disetujui": RecordStatus.DISETUJUI,
+  "MENUNGGU_REVIEW": RecordStatus.MENUNGGU_REVIEW,
+  "REVISI": RecordStatus.REVISI,
+  "SAH_TERVERIFIKASI": RecordStatus.SAH_TERVERIFIKASI,
+  "SAH": RecordStatus.SAH,
+  "DISETUJUI": RecordStatus.DISETUJUI,
+};
 
 // Helper for verifying ADMIN role
 function checkAdminAccess(request: NextRequest) {
@@ -45,8 +59,8 @@ export async function PUT(
     const body = await request.json();
     const { status } = body;
 
-    const validStatuses = ["Menunggu Review", "Revisi", "Sah & Terverifikasi", "Sah", "Disetujui"];
-    if (!status || !validStatuses.includes(status)) {
+    const mappedStatus = status ? STATUS_MAPPING[status] : undefined;
+    if (!mappedStatus) {
       return NextResponse.json(
         { error: "Status verifikasi tidak valid. Pilih antara 'Revisi' atau 'Sah & Terverifikasi'." },
         { status: 400 }
@@ -58,12 +72,12 @@ export async function PUT(
     try {
       updatedRecord = await prisma.categoryRecord.update({
         where: { id: recordId },
-        data: { status },
+        data: { status: mappedStatus },
       });
     } catch {
       updatedRecord = await prisma.responden.update({
         where: { id: recordId },
-        data: { status },
+        data: { status: mappedStatus },
       });
     }
 
