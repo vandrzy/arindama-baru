@@ -57,3 +57,6 @@ next-env.d.ts
 
 /scripts
 /scratch
+testsprite_tests/tmp/
+testsprite_tests/tmp/config.json
+testsprite_tests

@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
 const MAX_UPLOAD_SIZE = 15 * 1024 * 1024; // 15 MB batas maksimal file mentah yang boleh di-upload
 
 const uploadParamsSchema = z.object({
-  respondenId: z.string().optional(),
-  submissionId: z.string().optional(), // Tambahan toleransi parameter legacy
-  formType: z.string().min(1, "formType diperlukan"),
-  recordId: z.string().min(1, "recordId diperlukan"),
-  namaForm: z.string().optional(),
+  respondenId: z.string().nullable().optional(),
+  submissionId: z.string().nullable().optional(), // Tambahan toleransi parameter legacy
+  formType: z.string().nullable().optional(),
+  recordId: z.string().nullable().optional(),
+  namaForm: z.string().nullable().optional(),
 });
 
 function sanitizePart(part: string): string {
@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const respondenIdRaw = (formData.get("respondenId") as string | null) || (formData.get("submissionId") as string | null);
-    const formTypeRaw = formData.get("formType") as string | null;
-    const recordIdRaw = formData.get("recordId") as string | null;
+    let respondenIdRaw = (formData.get("respondenId") as string | null) || (formData.get("submissionId") as string | null);
+    let formTypeRaw = formData.get("formType") as string | null;
+    const recordIdRaw = (formData.get("recordId") as string | null) || (formData.get("id") as string | null);
     const namaFormRaw = (formData.get("namaForm") as string | null) || undefined;
 
     if (!file) {
@@ -55,6 +55,20 @@ export async function POST(request: NextRequest) {
         { error: "File bukti validasi (PDF) wajib diikutsertakan." },
         { status: 400 }
       );
+    }
+
+    if (recordIdRaw) {
+      const rec = await prisma.categoryRecord.findUnique({
+        where: { id: recordIdRaw },
+        select: { categoryId: true, respondenId: true }
+      });
+      if (rec) {
+        if (!formTypeRaw) formTypeRaw = String(rec.categoryId);
+        if (!respondenIdRaw) respondenIdRaw = rec.respondenId;
+      }
+    }
+    if (!formTypeRaw) {
+      formTypeRaw = "1";
     }
 
     // Validasi parameter request dengan Zod
@@ -72,7 +86,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { respondenId: rawId, formType, recordId } = paramsValidation.data;
+    const { respondenId: rawId } = paramsValidation.data;
+    const recordId = recordIdRaw || "general";
+    const formType = formTypeRaw;
     const targetRespondenId = rawId || respondenIdRaw!;
 
     // Validasi ekstensi file harus PDF
@@ -225,9 +241,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      id: evidence.id,
+      fileName: evidence.fileName,
+      filename: evidence.fileName,
+      fileUrl: evidence.fileUrl,
+      url: evidence.fileUrl,
+      path: evidence.fileUrl,
+      recordId: evidence.recordId,
+      respondenId: evidence.respondenId,
+      createdAt: evidence.createdAt,
       evidence,
+      data: evidence,
       message: `Berkas '${formattedFileName}' berhasil diunggah untuk record #${recordId}`,
-    });
+    }, { status: 201 });
   } catch (error: any) {
     console.error("Upload validation evidence error:", error);
     return NextResponse.json(

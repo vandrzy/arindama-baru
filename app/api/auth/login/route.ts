@@ -36,6 +36,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return NextResponse.json(
+          { error: "Format email tidak valid" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (nip && nip.length < 16) {
+      return NextResponse.json(
+        { error: "Format NIP tidak valid" },
+        { status: 400 }
+      );
+    }
+
     // Find user by email OR nip
     const user = await prisma.user.findFirst({
       where: {

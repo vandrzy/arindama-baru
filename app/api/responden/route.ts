@@ -140,7 +140,13 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { success: true, responden: newResponden },
+      {
+        success: true,
+        id: newResponden.id,
+        respondenId: newResponden.id,
+        responden: newResponden,
+        data: newResponden,
+      },
       { status: 201 }
     );
   } catch (error) {
@@ -209,3 +215,39 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const payload = verifyJwtToken(token);
+    if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await request.json();
+        id = body?.id;
+      } catch (e) {
+        // body might be empty
+      }
+    }
+
+    if (!id) return NextResponse.json({ error: "ID tidak ditemukan" }, { status: 400 });
+
+    await prisma.responden.deleteMany({
+      where: {
+        id,
+        ...(payload.role !== "ADMIN" && { userId: payload.id }),
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("DELETE /api/responden error:", error);
+    return NextResponse.json({ error: "Gagal menghapus responden." }, { status: 500 });
+  }
+}
+

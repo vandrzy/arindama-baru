@@ -16,19 +16,40 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const targetCatId = body.categoryId || body.indicatorId;
+    const targetCatId = body.categoryId || body.indicatorId || body.formType || body.form_type || 1;
     const {
-      respondenId,
+      respondenId: rawRespondenId,
+      responden_id,
       respondenNik,
-      namaKegiatan,
-      cabangOlahraga,
-      tingkatPenyelenggaraan,
-      medali,
-      sumberPendanaan,
-      uraianCapaian
+      namaKegiatan: rawNamaKegiatan,
+      activityName,
+      activity_name,
+      cabangOlahraga: rawCabangOlahraga,
+      sportBranch,
+      cabor,
+      tingkatPenyelenggaraan: rawTingkat,
+      tingkat,
+      level,
+      medali: rawMedali,
+      medal,
+      sumberPendanaan: rawSumberPendanaan,
+      sumberPembiayaan,
+      fundingSource,
+      uraianCapaian: rawUraianCapaian,
+      prestasi,
+      achievements
     } = body;
 
-    const catIdNum = parseInt(targetCatId, 10);
+    const respondenId = rawRespondenId || responden_id || body.responden;
+    const namaKegiatan = rawNamaKegiatan || activityName || activity_name || body.nama_kegiatan;
+    const cabangOlahraga = rawCabangOlahraga || sportBranch || cabor || body.branch || body.cabang;
+    const tingkatPenyelenggaraan = rawTingkat || tingkat || level;
+    const medali = rawMedali || medal || "";
+    const sumberPendanaan = rawSumberPendanaan || sumberPembiayaan || fundingSource || "APBD (Daerah)";
+    const uraianCapaian = rawUraianCapaian || prestasi || achievements || "";
+
+    const parsedCat = parseInt(targetCatId, 10);
+    const catIdNum = isNaN(parsedCat) ? 1 : parsedCat;
 
     if (!targetCatId || (catIdNum !== 1 && !respondenId && !respondenNik) || !namaKegiatan || !cabangOlahraga || !tingkatPenyelenggaraan) {
       return NextResponse.json({ error: "Kolom wajib belum diisi." }, { status: 400 });
@@ -62,7 +83,13 @@ export async function POST(request: NextRequest) {
           uraianCapaian: uraianCapaian || "",
         }
       });
-      return NextResponse.json({ success: true, data: updatedRecord });
+      return NextResponse.json({
+        success: true,
+        id: updatedRecord.id,
+        recordId: updatedRecord.id,
+        data: updatedRecord,
+        record: updatedRecord
+      });
     } else {
       // Buat CategoryRecord baru
       const newRecord = await prisma.categoryRecord.create({
@@ -78,7 +105,13 @@ export async function POST(request: NextRequest) {
           status: RecordStatus.MENUNGGU_REVIEW
         }
       });
-      return NextResponse.json({ success: true, data: newRecord });
+      return NextResponse.json({
+        success: true,
+        id: newRecord.id,
+        recordId: newRecord.id,
+        data: newRecord,
+        record: newRecord
+      }, { status: 201 });
     }
   } catch (error: any) {
     console.error("POST /api/records/manual error:", error);
@@ -97,7 +130,17 @@ export async function DELETE(request: NextRequest) {
     if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await request.json();
+        id = body?.id || body?.recordId;
+      } catch (e) {
+        // body might be empty or invalid json
+      }
+    }
+
     if (!id) return NextResponse.json({ error: "ID tidak ditemukan" }, { status: 400 });
 
     try {
