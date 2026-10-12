@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CutoffQuickAdmin } from "@/components/CutoffQuickAdmin";
 import {
   Users,
   User,
@@ -134,6 +135,9 @@ export function AdminView() {
             Sistem evaluasi komprehensif 9 Kategori Keolahragaan tingkat Kabupaten/Kota &amp; Provinsi
           </p>
         </div>
+
+        {/* BANNER UBAH CEPAT BATAS WAKTU CUT-OFF (ADMIN) */}
+        <CutoffQuickAdmin />
 
         {/* Filter Pilar (Berada di bawah Header) */}
         <div className="flex items-center gap-1 sm:gap-1.5 bg-white p-1.5 rounded-full border border-slate-200/80 shadow-sm overflow-x-auto self-start">

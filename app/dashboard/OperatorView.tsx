@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useApp } from "@/lib/context/app-context";
 import { useCutoffStatus } from "@/lib/hooks/useCutoffStatus";
+import { CutoffBannerOperator } from "@/components/CutoffBannerOperator";
 
 interface DashboardStats {
   totalResponden: number;
@@ -113,6 +114,9 @@ export function OperatorView() {
           )}
         </div>
       </div>
+
+      {/* BANNER BATAS WAKTU (CUT-OFF DATE) */}
+      <CutoffBannerOperator />
 
       {/* STATISTIK UTAMA (4 CARDS) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
