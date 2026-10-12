@@ -69,7 +69,28 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.id) {
-      // Update data jika id dikirimkan
+      // Periksa keberadaan data dan proteksi status data sah
+      const existingRecord = await prisma.categoryRecord.findUnique({
+        where: { id: body.id },
+      });
+
+      if (!existingRecord) {
+        return NextResponse.json({ error: "Data entri tidak ditemukan." }, { status: 404 });
+      }
+
+      const isSah =
+        existingRecord.status === RecordStatus.SAH_TERVERIFIKASI ||
+        existingRecord.status === RecordStatus.SAH ||
+        existingRecord.status === RecordStatus.DISETUJUI;
+
+      if (isSah && payload.role === "OPERATOR") {
+        return NextResponse.json(
+          { error: "Data yang telah berstatus Sah & Terverifikasi tidak dapat diedit kembali." },
+          { status: 403 }
+        );
+      }
+
+      // Update data jika id dikirimkan & otomatis ubah status ke MENUNGGU_REVIEW
       const updatedRecord = await prisma.categoryRecord.update({
         where: { id: body.id },
         data: {
@@ -81,6 +102,7 @@ export async function POST(request: NextRequest) {
           medali: medali || "",
           sumberPendanaan: sumberPendanaan || "APBD (Daerah)",
           uraianCapaian: uraianCapaian || "",
+          status: RecordStatus.MENUNGGU_REVIEW,
         }
       });
       return NextResponse.json({
@@ -142,6 +164,36 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (!id) return NextResponse.json({ error: "ID tidak ditemukan" }, { status: 400 });
+
+    if (payload.role === "OPERATOR") {
+      const existingCatRecord = await prisma.categoryRecord.findUnique({ where: { id } });
+      if (existingCatRecord) {
+        const isSah =
+          existingCatRecord.status === RecordStatus.SAH_TERVERIFIKASI ||
+          existingCatRecord.status === RecordStatus.SAH ||
+          existingCatRecord.status === RecordStatus.DISETUJUI;
+        if (isSah) {
+          return NextResponse.json(
+            { error: "Data yang telah berstatus Sah & Terverifikasi tidak dapat dihapus." },
+            { status: 403 }
+          );
+        }
+      } else {
+        const existingResponden = await prisma.responden.findUnique({ where: { id } });
+        if (existingResponden) {
+          const isSah =
+            existingResponden.status === RecordStatus.SAH_TERVERIFIKASI ||
+            existingResponden.status === RecordStatus.SAH ||
+            existingResponden.status === RecordStatus.DISETUJUI;
+          if (isSah) {
+            return NextResponse.json(
+              { error: "Data responden yang telah berstatus Sah & Terverifikasi tidak dapat dihapus." },
+              { status: 403 }
+            );
+          }
+        }
+      }
+    }
 
     try {
       await prisma.categoryRecord.delete({ where: { id } });

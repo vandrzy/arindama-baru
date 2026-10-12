@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { RecordStatus } from "@prisma/client";
 import { verifyJwtToken } from "@/lib/auth";
 import { z } from "zod";
 import fs from "fs/promises";
@@ -134,6 +135,43 @@ export async function POST(request: NextRequest) {
         { error: "Responden tidak ditemukan atau Anda tidak memiliki akses." },
         { status: 404 }
       );
+    }
+
+    // Validasi status data: Operator tidak boleh upload/ganti berkas jika status data sudah sah
+    if (payload.role === "OPERATOR") {
+      if (recordIdRaw && recordIdRaw !== "general") {
+        const targetRec = await prisma.categoryRecord.findUnique({
+          where: { id: recordIdRaw },
+          select: { status: true },
+        });
+        if (targetRec) {
+          const isSah =
+            targetRec.status === RecordStatus.SAH_TERVERIFIKASI ||
+            targetRec.status === RecordStatus.SAH ||
+            targetRec.status === RecordStatus.DISETUJUI;
+          if (isSah) {
+            return NextResponse.json(
+              { error: "Data yang telah berstatus Sah & Terverifikasi tidak dapat mengunggah atau mengganti berkas bukti fisik." },
+              { status: 403 }
+            );
+          }
+        }
+      }
+
+      // Jika berupa data responden (Kategori 1)
+      const isRespondenTarget = formType === "RESPONDEN" || formType === "1" || recordId === responden.id || recordId === "general";
+      if (isRespondenTarget) {
+        const isSah =
+          responden.status === RecordStatus.SAH_TERVERIFIKASI ||
+          responden.status === RecordStatus.SAH ||
+          responden.status === RecordStatus.DISETUJUI;
+        if (isSah) {
+          return NextResponse.json(
+            { error: "Data responden yang telah berstatus Sah & Terverifikasi tidak dapat diubah bukti fisiknya." },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     const existingEvidence = responden.validationEvidences[0] || null;

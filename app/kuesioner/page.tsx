@@ -115,6 +115,7 @@ function calculateRecordPoints(rec: any, dynamicWeightsList: any[]): number {
 export default function KuesionerPage() {
   const { currentUser, isLoading: isSessionLoading } = useApp();
   const { isLocked, message: cutoffMessage } = useCutoffStatus();
+  const isAdmin = currentUser?.role === "ADMIN";
 
   // Tab Active State: Indicator ID (1 - 8)
   const [activeIndicatorId, setActiveIndicatorId] = useState<number>(1);
@@ -225,7 +226,8 @@ export default function KuesionerPage() {
         await loadSubmissions();
         await loadRespondens();
       } else {
-        alert("Gagal menghapus entri.");
+        const data = await res.json().catch(() => null);
+        alert(data?.error || "Gagal menghapus entri.");
       }
     } catch (err) {
       console.error(err);
@@ -266,7 +268,7 @@ export default function KuesionerPage() {
 
         const data = await res.json();
         if (res.ok && data.success) {
-          setNotification(isEdit ? "Berhasil memperbarui data responden." : "Berhasil menambahkan responden baru.");
+          setNotification(isEdit ? "Berhasil memperbarui data responden (Status: Menunggu Review)." : "Berhasil menambahkan responden baru.");
           setTimeout(() => setNotification(null), 4000);
           setShowManualModal(false);
           setRespondenFormData({
@@ -301,6 +303,7 @@ export default function KuesionerPage() {
       }
       setIsSubmittingManual(true);
       try {
+        const isEdit = Boolean(manualFormData.id);
         const res = await fetch("/api/records/manual", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -312,7 +315,7 @@ export default function KuesionerPage() {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          setNotification("Berhasil menyimpan entri kegiatan.");
+          setNotification(isEdit ? "Berhasil memperbarui entri kegiatan (Status: Menunggu Review)." : "Berhasil menyimpan entri kegiatan.");
           setTimeout(() => setNotification(null), 4000);
           setShowManualModal(false);
           setManualFormData({
@@ -1235,7 +1238,17 @@ export default function KuesionerPage() {
                 {paginatedRecords.map((rec, index) => {
                   const isUploadingPdf = uploadingEvidences[rec.evidenceKey];
                   const hasMedali = activeIndicatorId === 2 || activeIndicatorId === 7;
-                  const isAdmin = currentUser?.role === "ADMIN";
+                  const isSah =
+                    rec.status === "Sah & Terverifikasi" ||
+                    rec.status === "Disetujui" ||
+                    rec.status === "Sah" ||
+                    rec.status === "SAH_TERVERIFIKASI";
+                  const isActionDisabled = isLocked || (!isAdmin && isSah);
+                  const disabledMessage = isLocked
+                    ? cutoffMessage
+                    : !isAdmin && isSah
+                    ? "Data telah berstatus Sah & Terverifikasi sehingga tidak dapat diubah kembali."
+                    : undefined;
 
                   return (
                     <tr key={rec.id || index} className="hover:bg-slate-50/80 transition-colors">
@@ -1355,47 +1368,53 @@ export default function KuesionerPage() {
                               </span>
                             </Button>
 
-                            <label className={isLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}>
+                            <label className={isActionDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}>
                               <input
                                 type="file"
                                 accept=".pdf, application/pdf"
-                                disabled={isLocked}
+                                disabled={isActionDisabled}
                                 onChange={(e) => {
-                                  if (isLocked) return;
+                                  if (isActionDisabled) return;
                                   const file = e.target.files?.[0];
                                   if (file) handlePdfUpload(rec, file);
                                   e.target.value = "";
                                 }}
                                 className="hidden"
                               />
-                              <span className={`p-1.5 rounded-lg border block transition-colors ${
-                                isLocked
-                                  ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
-                                  : "border-slate-200 bg-white hover:bg-slate-100 text-slate-600 cursor-pointer"
-                              }`}>
+                              <span
+                                title={disabledMessage || "Unggah berkas bukti baru"}
+                                className={`p-1.5 rounded-lg border block transition-colors ${
+                                  isActionDisabled
+                                    ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    : "border-slate-200 bg-white hover:bg-slate-100 text-slate-600 cursor-pointer"
+                                }`}
+                              >
                                 <FileUp className="w-3.5 h-3.5" />
                               </span>
                             </label>
                           </div>
                         ) : (
-                          <label className={isLocked ? "cursor-not-allowed opacity-50 inline-block" : "cursor-pointer inline-block"}>
+                          <label className={isActionDisabled ? "cursor-not-allowed opacity-50 inline-block" : "cursor-pointer inline-block"}>
                             <input
                               type="file"
                               accept=".pdf, application/pdf"
-                              disabled={isLocked}
+                              disabled={isActionDisabled}
                               onChange={(e) => {
-                                if (isLocked) return;
+                                if (isActionDisabled) return;
                                 const file = e.target.files?.[0];
                                 if (file) handlePdfUpload(rec, file);
                                 e.target.value = "";
                               }}
                               className="hidden"
                             />
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
-                              isLocked
-                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                                : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                            }`}>
+                            <span
+                              title={disabledMessage || "Upload PDF"}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                                isActionDisabled
+                                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                  : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                              }`}
+                            >
                               <UploadCloud className="w-3.5 h-3.5 text-amber-700" />
                               <span>Upload PDF</span>
                             </span>
@@ -1449,9 +1468,9 @@ export default function KuesionerPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={isLocked}
+                              disabled={isActionDisabled}
                               onClick={() => {
-                                if (isLocked) return;
+                                if (isActionDisabled) return;
                                 setUploadError(null);
                                 if (activeIndicatorId === 1) {
                                   const r = rec.responden || rec;
@@ -1489,11 +1508,11 @@ export default function KuesionerPage() {
                                 setShowManualModal(true);
                               }}
                               className={`h-8 w-8 p-0 rounded-xl transition-all shadow-xs ${
-                                isLocked
+                                isActionDisabled
                                   ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
                                   : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
                               }`}
-                              title={isLocked ? cutoffMessage : "Edit Entri"}
+                              title={disabledMessage || "Edit Entri"}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
                             </Button>
@@ -1502,17 +1521,17 @@ export default function KuesionerPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={isLocked}
+                              disabled={isActionDisabled}
                               onClick={() => {
-                                if (isLocked) return;
+                                if (isActionDisabled) return;
                                 handleDeleteRecord(rec.id);
                               }}
                               className={`h-8 w-8 p-0 rounded-xl transition-all shadow-xs ${
-                                isLocked
+                                isActionDisabled
                                   ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
                                   : "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
                               }`}
-                              title={isLocked ? cutoffMessage : "Hapus Entri"}
+                              title={disabledMessage || "Hapus Entri"}
                             >
                               <Trash2 className="w-4 h-4 text-rose-700" />
                             </Button>
@@ -1719,20 +1738,45 @@ export default function KuesionerPage() {
                 </div>
               ) : selectedRecordForVerification && (
                 <div className="flex items-center">
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors">
-                    <input
-                      type="file"
-                      accept=".pdf, application/pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handlePdfUpload(selectedRecordForVerification, file);
-                        e.target.value = "";
-                      }}
-                      className="hidden"
-                    />
-                    <UploadCloud className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Ganti File PDF</span>
-                  </label>
+                  {(() => {
+                    const isSahModal =
+                      selectedRecordForVerification.status === "Sah & Terverifikasi" ||
+                      selectedRecordForVerification.status === "Disetujui" ||
+                      selectedRecordForVerification.status === "Sah" ||
+                      selectedRecordForVerification.status === "SAH_TERVERIFIKASI";
+                    const isModalUploadDisabled = isLocked || (!isAdmin && isSahModal);
+                    if (isModalUploadDisabled) {
+                      return (
+                        <span
+                          title={
+                            isLocked
+                              ? cutoffMessage
+                              : "Data telah berstatus Sah & Terverifikasi sehingga berkas bukti tidak dapat diubah kembali."
+                          }
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Ganti File PDF</span>
+                        </span>
+                      );
+                    }
+                    return (
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors">
+                        <input
+                          type="file"
+                          accept=".pdf, application/pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePdfUpload(selectedRecordForVerification, file);
+                            e.target.value = "";
+                          }}
+                          className="hidden"
+                        />
+                        <UploadCloud className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Ganti File PDF</span>
+                      </label>
+                    );
+                  })()}
                 </div>
               )}
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { JenisKelamin } from "@prisma/client";
+import { JenisKelamin, RecordStatus } from "@prisma/client";
 import { z } from "zod";
 import { verifyJwtToken } from "@/lib/auth";
 
@@ -187,6 +187,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Responden tidak ditemukan atau Anda tidak memiliki akses." }, { status: 404 });
     }
 
+    const isSah =
+      responden.status === RecordStatus.SAH_TERVERIFIKASI ||
+      responden.status === RecordStatus.SAH ||
+      responden.status === RecordStatus.DISETUJUI;
+
+    if (isSah && payload.role === "OPERATOR") {
+      return NextResponse.json(
+        { error: "Data responden yang telah berstatus Sah & Terverifikasi tidak dapat diedit kembali." },
+        { status: 403 }
+      );
+    }
+
     const jenisKelaminEnum =
       jenisKelamin === "Perempuan" || jenisKelamin === "PEREMPUAN"
         ? JenisKelamin.PEREMPUAN
@@ -203,6 +215,7 @@ export async function PUT(request: NextRequest) {
         ...(kecamatan && { kecamatan }),
         ...(cabangOlahraga && { cabangOlahraga }),
         ...(nomorTelepon && { nomorTelepon }),
+        status: RecordStatus.MENUNGGU_REVIEW,
       },
     });
 
@@ -236,6 +249,22 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (!id) return NextResponse.json({ error: "ID tidak ditemukan" }, { status: 400 });
+
+    if (payload.role === "OPERATOR") {
+      const existingResponden = await prisma.responden.findUnique({ where: { id } });
+      if (existingResponden) {
+        const isSah =
+          existingResponden.status === RecordStatus.SAH_TERVERIFIKASI ||
+          existingResponden.status === RecordStatus.SAH ||
+          existingResponden.status === RecordStatus.DISETUJUI;
+        if (isSah) {
+          return NextResponse.json(
+            { error: "Data responden yang telah berstatus Sah & Terverifikasi tidak dapat dihapus." },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     await prisma.responden.deleteMany({
       where: {
