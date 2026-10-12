@@ -13,6 +13,25 @@ async function verifyAdmin(request: NextRequest) {
   });
 }
 
+function parseSafeDate(dateStr: string | null | undefined, isEndOfDay: boolean = false): Date | null {
+  if (!dateStr || typeof dateStr !== "string") return null;
+  const trimmed = dateStr.trim();
+  if (!trimmed) return null;
+
+  let parsed: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const timePart = isEndOfDay ? "T23:59:59.999Z" : "T00:00:00.000Z";
+    parsed = new Date(`${trimmed}${timePart}`);
+  } else {
+    parsed = new Date(trimmed);
+    if (isEndOfDay && !isNaN(parsed.getTime())) {
+      parsed.setUTCHours(23, 59, 59, 999);
+    }
+  }
+
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await verifyAdmin(req);
@@ -25,8 +44,9 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "8");
     const search = searchParams.get("search") || "";
     const action = searchParams.get("action") || "";
-    const startDate = searchParams.get("startDate") || "";
-    const endDate = searchParams.get("endDate") || "";
+    const singleDate = searchParams.get("date") || "";
+    const startDateParam = searchParams.get("startDate") || (singleDate ? singleDate : "");
+    const endDateParam = searchParams.get("endDate") || (singleDate ? singleDate : "");
 
     const skip = (page - 1) * limit;
 
@@ -36,25 +56,29 @@ export async function GET(req: NextRequest) {
       where.action = action;
     }
 
+    // Filter Tanggal yang Aman
+    const startDate = parseSafeDate(startDateParam, false);
+    const endDate = parseSafeDate(endDateParam, true);
+
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) {
-        where.createdAt.gte = new Date(`${startDate}T00:00:00.000Z`);
+        where.createdAt.gte = startDate;
       }
       if (endDate) {
-        where.createdAt.lte = new Date(`${endDate}T23:59:59.999Z`);
+        where.createdAt.lte = endDate;
       }
     }
 
     if (search) {
       where.OR = [
-        { action: { contains: search, mode: "insensitive" } },
-        { entityId: { contains: search, mode: "insensitive" } },
+        { action: { contains: search } },
+        { entityId: { contains: search } },
         {
           user: {
             OR: [
-              { nama: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
+              { nama: { contains: search } },
+              { email: { contains: search } },
             ],
           },
         },
